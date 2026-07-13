@@ -13,7 +13,7 @@
 
         <geom name="floor" type="plane" size="0 0 .25" material="grid_floor" contype="1" conaffinity="7"/>
 
-        <body name="body" pos="0 0 1.5">
+        <body name="body" pos="0 0 0.5">
             <freejoint name="body_joint"/>
             <geom type="ellipsoid" size="0.25 0.25 0.175" rgba="0 0 0 1" mass="0.5" friction="1 0.01 0.0001" contype="2" conaffinity="1"/>
             
@@ -24,16 +24,16 @@
             </body>
 
             <! Left back leg>
-            <body name="left_back_hip" pos="-0.175 -0.2 -0.05" euler="0 0 -45">
+            <body name="left_back_hip" pos="-0.175 -0.2 -0.05" euler="0 0 135">
                 <joint name="left_back_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
                 <geom type="sphere" size="0.04" rgba="0.7 0.1 0.4 1" mass="1" contype="4" conaffinity="1"/>
 
-                <body name="left_back_upper_leg" pos="0 -0.04 0" euler="-45 0 0">
-                    <joint name="left_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
+                <body name="left_back_upper_leg" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="left_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.4 1" mass="1"/>
 
-                    <body name="left_back_lower_leg" pos="0 0 -0.25" euler="45 0 0">
-                        <joint name="left_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <body name="left_back_lower_leg" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="left_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.4 1" mass="1"/>
                         
                         <body name="left_back_foot_tip" pos="0 0 -0.25" euler="0 0 0">
@@ -44,16 +44,16 @@
             </body>
 
             <! Left center back leg>
-            <body name="left_center_back_hip" pos="-0.25 -0.075 -0.05" euler="0 0 -65">
+            <body name="left_center_back_hip" pos="-0.25 -0.075 -0.05" euler="0 0 115">
                 <joint name="left_center_back_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
                 <geom type="sphere" size="0.04" rgba="0.7 0.1 0.3 1" mass="1" contype="4" conaffinity="1"/>
 
-                <body name="left_center_back_upper_leg" pos="0 -0.04 0" euler="-45 0 0">
-                    <joint name="left_center_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
+                <body name="left_center_back_upper_leg" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="left_center_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.3 1" mass="1"/>
 
-                    <body name="left_center_back_lower_leg" pos="0 0 -0.25" euler="45 0 0">
-                        <joint name="left_center_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <body name="left_center_back_lower_leg" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="left_center_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.3 1" mass="1"/>
 
                         <body name="left_center_back_foot_tip" pos="0 0 -0.25" euler="0 0 0">
@@ -72,8 +72,8 @@
                     <joint name="left_center_front_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.2 1" mass="1"/>
 
-                    <body name="left_center_front_lower_leg" pos="0 0 -0.25" euler="-45 0 0">
-                        <joint name="left_center_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
+                    <body name="left_center_front_lower_leg" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="left_center_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.2 1" mass="1"/>
                         
                         <body name="left_center_front_foot_tip" pos="0 0 -0.25" euler="0 0 0">
@@ -92,8 +92,8 @@
                     <joint name="left_front_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.1 1" mass="1"/>
                     
-                    <body name="left_front_lower_leg" pos="0 0 -0.25" euler="-45 0 0">
-                        <joint name="left_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
+                    <body name="left_front_lower_leg" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="left_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.1 1" mass="1"/>
                         
                         <body name="left_front_foot_tip" pos="0 0 -0.25" euler="0 0 0">
@@ -105,16 +105,16 @@
             
 
             <! Right back leg>
-            <body name="right_back_hip" pos="0.175 -0.2 -0.05" euler="0 0 45">
+            <body name="right_back_hip" pos="0.175 -0.2 -0.05" euler="0 0 225">
                 <joint name="right_back_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
                 <geom type="sphere" size="0.04" rgba="0.1 0.7 0.4 1" mass="1" contype="4" conaffinity="1"/>
 
-                <body name="right_back_upper_leg" pos="0 -0.04 0" euler="-45 0 0">
-                    <joint name="right_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
+                <body name="right_back_upper_leg" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="right_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.4 1" mass="1"/>
                     
-                    <body name="right_back_lower_leg" pos="0 0 -0.25" euler="45 0 0">
-                        <joint name="right_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <body name="right_back_lower_leg" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="right_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.4 1" mass="1"/>
 
                         <body name="right_back_foot_tip" pos="0 0 -0.25" euler="0 0 0">
@@ -125,16 +125,16 @@
             </body>
 
             <! Right center back leg>
-            <body name="right_center_back_hip" pos="0.25 -0.075 -0.05" euler="0 0 65">
+            <body name="right_center_back_hip" pos="0.25 -0.075 -0.05" euler="0 0 245">
                 <joint name="right_center_back_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
                 <geom type="sphere" size="0.04" rgba="0.1 0.7 0.3 1" mass="1" contype="4" conaffinity="1"/>
 
-                <body name="right_center_back_upper_leg" pos="0 -0.04 0" euler="-45 0 0">
-                    <joint name="right_center_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
+                <body name="right_center_back_upper_leg" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="right_center_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.3 1" mass="1"/>
 
-                    <body name="right_center_back_lower_leg" pos="0 0 -0.25" euler="45 0 0">
-                        <joint name="right_center_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <body name="right_center_back_lower_leg" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="right_center_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.3 1" mass="1"/>
                         
                         <body name="right_center_back_foot_tip" pos="0 0 -0.25" euler="0 0 0">
@@ -145,7 +145,7 @@
             </body>
 
             <! Right center front leg>
-            <body name="right_center_front_hip" pos="0.25 0.075 -0.05" euler="0 0 -65">
+            <body name="right_center_front_hip" pos="0.25 0.075 -0.05" euler="0 0 285">
                 <joint name="right_center_front_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
                 <geom type="sphere" size="0.04" rgba="0.1 0.7 0.2 1" mass="1" contype="4" conaffinity="1"/>
 
@@ -153,8 +153,8 @@
                     <joint name="right_center_front_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.2 1" mass="1"/>
 
-                    <body name="rightt_center_front_lower_leg" pos="0 0 -0.25" euler="-45 0 0">
-                        <joint name="right_center_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
+                    <body name="rightt_center_front_lower_leg" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="right_center_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.2 1" mass="1"/>
                         
                         <body name="right_center_front_foot_tip" pos="0 0 -0.25" euler="0 0 0">
@@ -165,7 +165,7 @@
             </body>
             
             <! Right front leg>
-            <body name="right_front_hip" pos="0.175 0.2 -0.05" euler="0 0 -45">
+            <body name="right_front_hip" pos="0.175 0.2 -0.05" euler="0 0 315">
                 <joint name="right_front_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
                 <geom type="sphere" size="0.04" rgba="0.1 0.7 0.1 1" mass="1" contype="4" conaffinity="1"/>
 
@@ -173,8 +173,8 @@
                     <joint name="right_front_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.1 1" mass="1"/>
 
-                    <body name="right_front_lower_leg" pos="0 0 -0.25" euler="-45 0 0">
-                        <joint name="right_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
+                    <body name="right_front_lower_leg" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="right_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.1 1" mass="1"/>
                         
                         <body name="right_front_foot_tip" pos="0 0 -0.25" euler="0 0 0">
@@ -185,7 +185,6 @@
             </body>
         </body>
     </worldbody>
-
 
     <! Left hip to body>
     <actuator>
@@ -203,10 +202,10 @@
 
     <! Left upper to hip>
     <actuator>
-        <position name="servo_left_back_upper_leg_pitch" joint="left_back_hip_upper_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_left_back_upper_leg_pitch" joint="left_back_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_center_back_upper_leg_pitch" joint="left_center_back_hip_upper_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_left_center_back_upper_leg_pitch" joint="left_center_back_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
         <position name="servo_left_center_front_upper_leg_pitch" joint="left_center_front_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
@@ -223,10 +222,10 @@
         <position name="servo_left_center_back_lower_leg_pitch" joint="left_center_back_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_center_front_lower_leg_pitch" joint="left_center_front_upper_leg_lower_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_left_center_front_lower_leg_pitch" joint="left_center_front_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_front_lower_leg_pitch" joint="left_front_upper_leg_lower_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_left_front_lower_leg_pitch" joint="left_front_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
 
     <! Right hip to body>
@@ -245,7 +244,7 @@
 
     <! Right upper to hip>
     <actuator>
-        <position name="servo_right_back_upper_leg_pitch" joint="right_back_hip_upper_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_right_back_upper_leg_pitch" joint="right_back_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
         <position name="servo_right_center_back_upper_leg_pitch" joint="right_center_back_hip_upper_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
