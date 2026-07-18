@@ -14,7 +14,7 @@
         <geom name="floor" type="plane" size="0 0 .25" material="grid_floor" contype="1" conaffinity="7"/>
 
         <body name="cephalothorax" pos="0 0 0.5">
-            <freejoint name="body_joint"/>
+            <freejoint name="cephalothorax_joint"/>
             <geom type="ellipsoid" size="0.25 0.25 0.125" rgba="0 0 0 1" mass="0.5" friction="1 0.01 0.0001" contype="2" conaffinity="1"/>
             
             <body name="abdomen" pos="0 -0.5 0">
@@ -25,251 +25,254 @@
             <camera name="left_eye" pos="-0.045 0.25 0" euler="90 0 0"/>
             <camera name="right_eye" pos="0.045 0.25 0" euler="90 0 0"/>
 
-            <! Left back leg>
-            <body name="left_back_hip" pos="-0.175 -0.2 0" euler="0 0 135">
-                <joint name="left_back_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.4 1" mass="1" contype="4" conaffinity="1"/>
-
-                <body name="left_back_upper_leg" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.4 1" mass="1"/>
-
-                    <body name="left_back_lower_leg" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.4 1" mass="1"/>
-                        
-                        <body name="left_back_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Left center back leg>
-            <body name="left_center_back_hip" pos="-0.25 -0.075 0" euler="0 0 115">
-                <joint name="left_center_back_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.3 1" mass="1" contype="4" conaffinity="1"/>
-
-                <body name="left_center_back_upper_leg" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_center_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.3 1" mass="1"/>
-
-                    <body name="left_center_back_lower_leg" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_center_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.3 1" mass="1"/>
-
-                        <body name="left_center_back_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Left center front leg>
-            <body name="left_center_front_hip" pos="-0.25 0.075 0" euler="0 0 65">
-                <joint name="left_center_front_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.2 1" mass="1" contype="4" conaffinity="1"/>
-
-                <body name="left_center_front_upper_leg" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_center_front_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.2 1" mass="1"/>
-
-                    <body name="left_center_front_lower_leg" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_center_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.2 1" mass="1"/>
-                        
-                        <body name="left_center_front_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
+            <! cephalothorax connects to coxa [then trochanter] then femur [then patella] then tibia [then metatarsus] [then tarsus] [then claws] />
             
-            <! Left front leg>
-            <body name="left_front_hip" pos="-0.175 0.2 0" euler="0 0 45">
-                <joint name="left_front_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+            <! Left first foremost leg>
+            <body name="left_i_coxa" pos="-0.175 0.2 0" euler="0 0 45">
+                <joint name="left_i_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
                 <geom type="sphere" size="0.04" rgba="0.7 0.1 0.1 1" mass="1" contype="4" conaffinity="1"/>
 
-                <body name="left_front_upper_leg" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_front_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                <body name="left_i_femur" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="left_i_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.1 1" mass="1"/>
                     
-                    <body name="left_front_lower_leg" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+                    <body name="left_i_tibia" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="left_i_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.1 1" mass="1"/>
                         
-                        <body name="left_front_foot_tip" pos="0 0 -0.25" euler="0 0 0">
+                        <body name="left_i_foot_tip" pos="0 0 -0.25" euler="0 0 0">
+                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+            <! Left second foremost leg />
+            <body name="left_ii_coxa" pos="-0.25 0.075 0" euler="0 0 65">
+                <joint name="left_ii_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.2 1" mass="1" contype="4" conaffinity="1"/>
+
+                <body name="left_ii_femur" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="left_ii_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.2 1" mass="1"/>
+
+                    <body name="left_ii_tibia" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="left_ii_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.2 1" mass="1"/>
+                        
+                        <body name="left_ii_foot_tip" pos="0 0 -0.25" euler="0 0 0">
+                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+            <! Left third foremost leg />
+            <body name="left_iii_coxa" pos="-0.25 -0.075 0" euler="0 0 115">
+                <joint name="left_iii_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.3 1" mass="1" contype="4" conaffinity="1"/>
+
+                <body name="left_iii_femur" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="left_iii_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.3 1" mass="1"/>
+
+                    <body name="left_iii_tibia" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="left_iii_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.3 1" mass="1"/>
+
+                        <body name="left_iii_foot_tip" pos="0 0 -0.25" euler="0 0 0">
+                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+            <! Left fourth foremost leg />
+            <body name="left_iv_coxa" pos="-0.175 -0.2 0" euler="0 0 135">
+                <joint name="left_iv_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.4 1" mass="1" contype="4" conaffinity="1"/>
+
+                <body name="left_iv_femur" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="left_iv_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.4 1" mass="1"/>
+
+                    <body name="left_iv_tibia" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="left_iv_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.4 1" mass="1"/>
+                        
+                        <body name="left_iv_foot_tip" pos="0 0 -0.25" euler="0 0 0">
                             <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
                         </body>
                     </body>
                 </body>
             </body>
             
-
-            <! Right back leg>
-            <body name="right_back_hip" pos="0.175 -0.2 0" euler="0 0 225">
-                <joint name="right_back_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.4 1" mass="1" contype="4" conaffinity="1"/>
-
-                <body name="right_back_upper_leg" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.4 1" mass="1"/>
-                    
-                    <body name="right_back_lower_leg" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.4 1" mass="1"/>
-
-                        <body name="right_back_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Right center back leg>
-            <body name="right_center_back_hip" pos="0.25 -0.075 0" euler="0 0 245">
-                <joint name="right_center_back_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.3 1" mass="1" contype="4" conaffinity="1"/>
-
-                <body name="right_center_back_upper_leg" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_center_back_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.3 1" mass="1"/>
-
-                    <body name="right_center_back_lower_leg" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_center_back_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.3 1" mass="1"/>
-                        
-                        <body name="right_center_back_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Right center front leg>
-            <body name="right_center_front_hip" pos="0.25 0.075 0" euler="0 0 285">
-                <joint name="right_center_front_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.2 1" mass="1" contype="4" conaffinity="1"/>
-
-                <body name="right_center_front_upper_leg" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_center_front_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.2 1" mass="1"/>
-
-                    <body name="rightt_center_front_lower_leg" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_center_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.2 1" mass="1"/>
-                        
-                        <body name="right_center_front_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
             
-            <! Right front leg>
-            <body name="right_front_hip" pos="0.175 0.2 0" euler="0 0 315">
-                <joint name="right_front_body_hip_upper_leg_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+            <! Right first foremost leg />
+            <body name="right_i_coxa" pos="0.175 0.2 0" euler="0 0 315">
+                <joint name="right_i_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
                 <geom type="sphere" size="0.04" rgba="0.1 0.7 0.1 1" mass="1" contype="4" conaffinity="1"/>
 
-                <body name="right_front_upper_leg" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_front_hip_upper_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                <body name="right_i_femur" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="right_i_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
                     <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.1 1" mass="1"/>
 
-                    <body name="right_front_lower_leg" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_front_upper_leg_lower_leg_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+                    <body name="right_i_tibia" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="right_i_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
                         <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.1 1" mass="1"/>
                         
-                        <body name="right_front_foot_tip" pos="0 0 -0.25" euler="0 0 0">
+                        <body name="right_i_foot_tip" pos="0 0 -0.25" euler="0 0 0">
                             <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
                         </body>
                     </body>
                 </body>
             </body>
+
+            <! Right second foremost leg />
+            <body name="right_ii_coxa" pos="0.25 0.075 0" euler="0 0 285">
+                <joint name="right_ii_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.2 1" mass="1" contype="4" conaffinity="1"/>
+
+                <body name="right_ii_femur" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="right_ii_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.2 1" mass="1"/>
+
+                    <body name="rightt_center_front_tibia" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="right_ii_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.2 1" mass="1"/>
+                        
+                        <body name="right_ii_foot_tip" pos="0 0 -0.25" euler="0 0 0">
+                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+            <! Right third foremost leg />
+            <body name="right_iii_coxa" pos="0.25 -0.075 0" euler="0 0 245">
+                <joint name="right_iii_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.3 1" mass="1" contype="4" conaffinity="1"/>
+
+                <body name="right_iii_femur" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="right_iii_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.3 1" mass="1"/>
+
+                    <body name="right_iii_tibia" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="right_iii_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.3 1" mass="1"/>
+                        
+                        <body name="right_iii_foot_tip" pos="0 0 -0.25" euler="0 0 0">
+                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
+            <! Right fourth foremost leg />
+            <body name="right_iv_coxa" pos="0.175 -0.2 0" euler="0 0 225">
+                <joint name="right_iv_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.4 1" mass="1" contype="4" conaffinity="1"/>
+
+                <body name="right_iv_femur" pos="0 0.04 0" euler="45 0 0">
+                    <joint name="right_iv_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.4 1" mass="1"/>
+                    
+                    <body name="right_iv_tibia" pos="0 0 -0.25" euler="315 0 0">
+                        <joint name="right_iv_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.4 1" mass="1"/>
+
+                        <body name="right_iv_foot_tip" pos="0 0 -0.25" euler="0 0 0">
+                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        </body>
+                    </body>
+                </body>
+            </body>
+
         </body>
     </worldbody>
 
-    <! Left hip to body>
+    <! Left coxa to cephalothorax />
     <actuator>
-        <position name="servo_left_back_hip_pitch" joint="left_back_body_hip_upper_leg_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_left_i_coxa_pitch" joint="left_i_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_center_back_hip_pitch" joint="left_center_back_body_hip_upper_leg_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_left_ii_coxa_pitch" joint="left_ii_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_center_front_hip_pitch" joint="left_center_front_body_hip_upper_leg_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_left_iii_coxa_pitch" joint="left_iii_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_front_hip_pitch" joint="left_front_body_hip_upper_leg_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
-    </actuator>
-
-    <! Left upper to hip>
-    <actuator>
-        <position name="servo_left_back_upper_leg_pitch" joint="left_back_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
-    </actuator>
-    <actuator>
-        <position name="servo_left_center_back_upper_leg_pitch" joint="left_center_back_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
-    </actuator>
-    <actuator>
-        <position name="servo_left_center_front_upper_leg_pitch" joint="left_center_front_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
-    </actuator>
-    <actuator>
-        <position name="servo_left_front_upper_leg_pitch" joint="left_front_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_left_iv_coxa_pitch" joint="left_iv_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
 
-    <! Left lower to upper>
+    <! Left femur to coxa />
     <actuator>
-        <position name="servo_left_back_lower_leg_pitch" joint="left_back_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_left_i_femur_pitch" joint="left_i_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_center_back_lower_leg_pitch" joint="left_center_back_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_left_ii_femur_pitch" joint="left_ii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_center_front_lower_leg_pitch" joint="left_center_front_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_left_iii_femur_pitch" joint="left_iii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_front_lower_leg_pitch" joint="left_front_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
-    </actuator>
-
-    <! Right hip to body>
-    <actuator>
-        <position name="servo_right_back_hip_pitch" joint="right_back_body_hip_upper_leg_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
-    </actuator>
-    <actuator>
-        <position name="servo_right_center_back_hip_pitch" joint="right_center_back_body_hip_upper_leg_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
-    </actuator>
-    <actuator>
-        <position name="servo_right_center_front_hip_pitch" joint="right_center_front_body_hip_upper_leg_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
-    </actuator>
-    <actuator>
-        <position name="servo_right_front_hip_pitch" joint="right_front_body_hip_upper_leg_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_left_iv_femur_pitch" joint="left_iv_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
 
-    <! Right upper to hip>
+    <! Left tibia to femur />
     <actuator>
-        <position name="servo_right_back_upper_leg_pitch" joint="right_back_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_left_i_tibia_pitch" joint="left_i_femur_tibia_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_center_back_upper_leg_pitch" joint="right_center_back_hip_upper_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_left_ii_tibia_pitch" joint="left_ii_femur_tibia_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_center_front_upper_leg_pitch" joint="right_center_front_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_left_iii_tibia_pitch" joint="left_iii_femur_tibia_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_front_upper_leg_pitch" joint="right_front_hip_upper_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_left_iv_tibia_pitch" joint="left_iv_femur_tibia_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
 
-    <! Right lower to upper>
+    <! Right coxa to body />
     <actuator>
-        <position name="servo_right_back_lower_leg_pitch" joint="right_back_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_right_i_coxa_pitch" joint="right_i_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_center_back_lower_leg_pitch" joint="right_center_back_upper_leg_lower_leg_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_right_ii_coxa_pitch" joint="right_ii_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_center_front_lower_leg_pitch" joint="right_center_front_upper_leg_lower_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_right_iii_coxa_pitch" joint="right_iii_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_front_lower_leg_pitch" joint="right_front_upper_leg_lower_leg_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_right_iv_coxa_pitch" joint="right_iv_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+    </actuator>
+
+    <! Right femur to coxa />
+    <actuator>
+        <position name="servo_right_i_femur_pitch" joint="right_i_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+    </actuator>
+    <actuator>
+        <position name="servo_right_ii_femur_pitch" joint="right_ii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+    </actuator>
+    <actuator>
+        <position name="servo_right_iii_femur_pitch" joint="right_iii_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+    </actuator>
+    <actuator>
+        <position name="servo_right_iv_femur_pitch" joint="right_iv_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+    </actuator>
+
+    <! Right tibia to femur />
+    <actuator>
+        <position name="servo_right_i_tibia_pitch" joint="right_i_femur_tibia_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+    </actuator>
+    <actuator>
+        <position name="servo_right_ii_tibia_pitch" joint="right_ii_femur_tibia_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+    </actuator>
+    <actuator>
+        <position name="servo_right_iii_tibia_pitch" joint="right_iii_femur_tibia_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+    </actuator>
+    <actuator>
+        <position name="servo_right_iv_tibia_pitch" joint="right_iv_femur_tibia_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
 
 </mujoco>
