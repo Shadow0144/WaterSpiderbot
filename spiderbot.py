@@ -1,7 +1,38 @@
 
 import math
 import numpy as np
-import mujoco
+#import mujoco
+
+class spiderleg:
+    def __init__(self, model, data, id):
+        self.model = model
+        self.data = data
+        self.id = id
+        self.load_leg()
+
+    def load_leg(self):
+        try:
+            self.servo_hip_actuator_id = self.model.actuator("servo_" + self.id + "_hip_pitch").id
+            self.servo_upper_leg_actuator_id = self.model.actuator("servo_" + self.id + "_upper_leg_pitch").id
+            self.servo_lower_leg_actuator_id = self.model.actuator("servo_" + self.id + "_lower_leg_pitch").id
+        except KeyError:
+            print(f"Key error")
+            exit()
+
+    def set_hip_target(self, target_angle_rad):
+        self.data.ctrl[self.servo_hip_actuator_id] = target_angle_rad
+
+    def set_upper_leg_target(self, target_angle_rad):
+        self.data.ctrl[self.servo_upper_leg_actuator_id] = target_angle_rad
+
+    def set_lower_leg_target(self, target_angle_rad):
+        self.data.ctrl[self.servo_lower_leg_actuator_id] = target_angle_rad
+
+    def set_leg_targets(self, hip_target_angle_rad, upper_leg_target_angle_rad, lower_leg_target_angle_rad):
+        self.set_hip_target(hip_target_angle_rad)
+        self.set_upper_leg_target(upper_leg_target_angle_rad)
+        self.set_lower_leg_target(lower_leg_target_angle_rad)
+
 
 class spiderbot:
     def __init__(self, model, data):
@@ -10,45 +41,16 @@ class spiderbot:
         self.load_model()
 
     def load_model(self):
-        try:
-            # Left hips
-            self.servo_left_back_hip_actuator_id = self.model.actuator("servo_left_back_hip_pitch").id
-            self.servo_left_center_back_hip_actuator_id = self.model.actuator("servo_left_center_back_hip_pitch").id
-            self.servo_left_center_front_hip_actuator_id = self.model.actuator("servo_left_center_front_hip_pitch").id
-            self.servo_left_front_hip_actuator_id = self.model.actuator("servo_left_front_hip_pitch").id
-            
-            # Left upper legs
-            self.servo_left_back_upper_leg_actuator_id = self.model.actuator("servo_left_back_upper_leg_pitch").id
-            self.servo_left_center_back_upper_leg_actuator_id = self.model.actuator("servo_left_center_back_upper_leg_pitch").id
-            self.servo_left_center_front_upper_leg_actuator_id = self.model.actuator("servo_left_center_front_upper_leg_pitch").id
-            self.servo_left_front_upper_leg_actuator_id = self.model.actuator("servo_left_front_upper_leg_pitch").id
-            
-            # Left lower legs
-            self.servo_left_back_lower_leg_actuator_id = self.model.actuator("servo_left_back_lower_leg_pitch").id
-            self.servo_left_center_back_lower_leg_actuator_id = self.model.actuator("servo_left_center_back_lower_leg_pitch").id
-            self.servo_left_center_front_lower_leg_actuator_id = self.model.actuator("servo_left_center_front_lower_leg_pitch").id
-            self.servo_left_front_lower_leg_actuator_id = self.model.actuator("servo_left_front_lower_leg_pitch").id
-
-            # Right hips
-            self.servo_right_back_hip_actuator_id = self.model.actuator("servo_right_back_hip_pitch").id
-            self.servo_right_center_back_hip_actuator_id = self.model.actuator("servo_right_center_back_hip_pitch").id
-            self.servo_right_center_front_hip_actuator_id = self.model.actuator("servo_right_center_front_hip_pitch").id
-            self.servo_right_front_hip_actuator_id = self.model.actuator("servo_right_front_hip_pitch").id
-
-            # Right upper legs
-            self.servo_right_back_upper_leg_actuator_id = self.model.actuator("servo_right_back_upper_leg_pitch").id
-            self.servo_right_center_back_upper_leg_actuator_id = self.model.actuator("servo_right_center_back_upper_leg_pitch").id
-            self.servo_right_center_front_upper_leg_actuator_id = self.model.actuator("servo_right_center_front_upper_leg_pitch").id
-            self.servo_right_front_upper_leg_actuator_id = self.model.actuator("servo_right_front_upper_leg_pitch").id
-
-            # Right lower legs
-            self.servo_right_back_lower_leg_actuator_id = self.model.actuator("servo_right_back_lower_leg_pitch").id
-            self.servo_right_center_back_lower_leg_actuator_id = self.model.actuator("servo_right_center_back_lower_leg_pitch").id
-            self.servo_right_center_front_lower_leg_actuator_id = self.model.actuator("servo_right_center_front_lower_leg_pitch").id
-            self.servo_right_front_lower_leg_actuator_id = self.model.actuator("servo_right_front_lower_leg_pitch").id
-        except KeyError:
-            print(f"Key error")
-            exit()
+        # Left side
+        self.left_back_leg = spiderleg(self.model, self.data, "left_back")
+        self.left_center_back_leg = spiderleg(self.model, self.data, "left_center_back")
+        self.left_center_front_leg = spiderleg(self.model, self.data, "left_center_front")
+        self.left_front_leg = spiderleg(self.model, self.data, "left_front")
+        # Right side
+        self.right_back_leg = spiderleg(self.model, self.data, "right_back")
+        self.right_center_back_leg = spiderleg(self.model, self.data, "right_center_back")
+        self.right_center_front_leg = spiderleg(self.model, self.data, "right_center_front")
+        self.right_front_leg = spiderleg(self.model, self.data, "right_front")
 
     def walk_forward(self, time):
         sin_phase = np.sin(time)
@@ -61,42 +63,14 @@ class spiderbot:
         upper_leg_target_angle = math.radians(45)
         lower_leg_target_angle = math.radians(5)
 
-        # Left back
-        self.data.ctrl[self.servo_left_back_hip_actuator_id] = -hip_target_angle * sin_phase
-        self.data.ctrl[self.servo_left_back_upper_leg_actuator_id] = upper_leg_target_angle * sin_half_phase
-        self.data.ctrl[self.servo_left_back_lower_leg_actuator_id] = lower_leg_target_angle * sin_half_phase
-
-        # Left center back
-        self.data.ctrl[self.servo_left_center_back_hip_actuator_id] = -hip_target_angle * cos_phase
-        self.data.ctrl[self.servo_left_center_back_upper_leg_actuator_id] = upper_leg_target_angle * cos_half_phase
-        self.data.ctrl[self.servo_left_center_back_lower_leg_actuator_id] = lower_leg_target_angle * cos_half_phase
-
-        # Left center front
-        self.data.ctrl[self.servo_left_center_front_hip_actuator_id] = -hip_target_angle * sin_phase
-        self.data.ctrl[self.servo_left_center_front_upper_leg_actuator_id] = upper_leg_target_angle * sin_half_phase
-        self.data.ctrl[self.servo_left_center_front_lower_leg_actuator_id] = lower_leg_target_angle * sin_half_phase
-
-        # Left front
-        self.data.ctrl[self.servo_left_front_hip_actuator_id] = -hip_target_angle * cos_phase
-        self.data.ctrl[self.servo_left_front_upper_leg_actuator_id] = upper_leg_target_angle * cos_half_phase
-        self.data.ctrl[self.servo_left_front_lower_leg_actuator_id] = lower_leg_target_angle * cos_half_phase
+        # Left side
+        self.left_back_leg.set_leg_targets(-hip_target_angle * sin_phase, upper_leg_target_angle * sin_half_phase, lower_leg_target_angle * sin_half_phase)
+        self.left_center_back_leg.set_leg_targets(-hip_target_angle * cos_phase, upper_leg_target_angle * cos_half_phase, lower_leg_target_angle * cos_half_phase)
+        self.left_center_front_leg.set_leg_targets(-hip_target_angle * sin_phase, upper_leg_target_angle * sin_half_phase, lower_leg_target_angle * sin_half_phase)
+        self.left_front_leg.set_leg_targets(-hip_target_angle * cos_phase, upper_leg_target_angle * cos_half_phase, lower_leg_target_angle * cos_half_phase)
         
         # Right back
-        self.data.ctrl[self.servo_right_back_hip_actuator_id] = hip_target_angle * cos_phase
-        self.data.ctrl[self.servo_right_back_upper_leg_actuator_id] = upper_leg_target_angle * cos_half_phase
-        self.data.ctrl[self.servo_right_back_lower_leg_actuator_id] = lower_leg_target_angle * cos_half_phase
-
-        # Right center back
-        self.data.ctrl[self.servo_right_center_back_hip_actuator_id] = hip_target_angle * sin_phase
-        self.data.ctrl[self.servo_right_center_back_upper_leg_actuator_id] = upper_leg_target_angle * sin_half_phase
-        self.data.ctrl[self.servo_right_center_back_lower_leg_actuator_id] = lower_leg_target_angle * sin_half_phase
-
-        # Right center front
-        self.data.ctrl[self.servo_right_center_front_hip_actuator_id] = hip_target_angle * cos_phase
-        self.data.ctrl[self.servo_right_center_front_upper_leg_actuator_id] = upper_leg_target_angle * cos_half_phase
-        self.data.ctrl[self.servo_right_center_front_lower_leg_actuator_id] = lower_leg_target_angle * cos_half_phase
-
-        # Right front
-        self.data.ctrl[self.servo_right_front_hip_actuator_id] = hip_target_angle * sin_phase
-        self.data.ctrl[self.servo_right_front_upper_leg_actuator_id] = upper_leg_target_angle * sin_half_phase
-        self.data.ctrl[self.servo_right_front_lower_leg_actuator_id] = lower_leg_target_angle * sin_half_phase
+        self.right_back_leg.set_leg_targets(hip_target_angle * cos_phase, upper_leg_target_angle * cos_half_phase, lower_leg_target_angle * cos_half_phase)
+        self.right_center_back_leg.set_leg_targets(hip_target_angle * sin_phase, upper_leg_target_angle * sin_half_phase, lower_leg_target_angle * sin_half_phase)
+        self.right_center_front_leg.set_leg_targets(hip_target_angle * cos_phase, upper_leg_target_angle * cos_half_phase,  lower_leg_target_angle * cos_half_phase)
+        self.right_front_leg.set_leg_targets(hip_target_angle * sin_phase, upper_leg_target_angle * sin_half_phase, lower_leg_target_angle * sin_half_phase)
