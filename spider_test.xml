@@ -44,183 +44,23 @@
             <camera name="right_eye" pos="0.045 0.25 0" euler="90 0 0"/>
 
             <! cephalothorax connects to coxa [then trochanter] then femur [then patella] then tibia [then metatarsus] [then tarsus] then claws />
-            
-            <! Left first foremost leg>
-            <body name="left_i_coxa" pos="-0.175 0.2 0" euler="0 0 45">
-                <joint name="left_i_body_coxa_femur_joint" class="coxa"/>
-                <geom rgba="0.7 0.1 0.1 1" class="coxa"/>
-
-                <body name="left_i_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_i_coxa_femur_joint" class="femur"/>
-                    <geom rgba="0.8 0.2 0.1 1" class="femur"/>
-                    
-                    <body name="left_i_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_i_femur_tibia_joint" class="tibia"/>
-                        <geom rgba="0.9 0.3 0.1 1" class="tibia"/>
-                        
-                        <body name="left_i_claw" pos="0 0 -0.25" euler="0 0 0">
-                            <geom class="claw"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Left second foremost leg />
-            <body name="left_ii_coxa" pos="-0.25 0.075 0" euler="0 0 65">
-                <joint name="left_ii_body_coxa_femur_joint" class="coxa"/>
-                <geom rgba="0.7 0.1 0.2 1" class="coxa"/>
-
-                <body name="left_ii_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_ii_coxa_femur_joint" class="femur"/>
-                    <geom rgba="0.8 0.2 0.2 1" class="femur"/>
-
-                    <body name="left_ii_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_ii_femur_tibia_joint" class="tibia"/>
-                        <geom rgba="0.9 0.3 0.2 1" class="tibia"/>
-                        
-                        <body name="left_ii_claw" pos="0 0 -0.25" euler="0 0 0">
-                            <geom class="claw"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Left third foremost leg />
-            <body name="left_iii_coxa" pos="-0.25 -0.075 0" euler="0 0 115">
-                <joint name="left_iii_body_coxa_femur_joint" class="coxa"/>
-                <geom rgba="0.7 0.1 0.3 1" class="coxa"/>
-
-                <body name="left_iii_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_iii_coxa_femur_joint" class="femur"/>
-                    <geom rgba="0.8 0.2 0.3 1" class="femur"/>
-
-                    <body name="left_iii_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_iii_femur_tibia_joint" class="tibia"/>
-                        <geom rgba="0.9 0.3 0.3 1" class="tibia"/>
-
-                        <body name="left_iii_claw" pos="0 0 -0.25" euler="0 0 0">
-                            <geom class="claw"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Left fourth foremost leg />
-            <body name="left_iv_coxa" pos="-0.175 -0.2 0" euler="0 0 135">
-                <joint name="left_iv_body_coxa_femur_joint" class="coxa"/>
-                <geom rgba="0.7 0.1 0.4 1" class="coxa"/>
-
-                <body name="left_iv_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_iv_coxa_femur_joint" class="femur"/>
-                    <geom rgba="0.8 0.2 0.4 1" class="femur"/>
-
-                    <body name="left_iv_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_iv_femur_tibia_joint" class="tibia"/>
-                        <geom rgba="0.9 0.3 0.4 1" class="tibia"/>
-                        
-                        <body name="left_iv_claw" pos="0 0 -0.25" euler="0 0 0">
-                            <geom class="claw"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-            
-            
-            <! Right first foremost leg />
-            <body name="right_i_coxa" pos="0.175 0.2 0" euler="0 0 315">
-                <joint name="right_i_body_coxa_femur_joint" class="coxa"/>
-                <geom rgba="0.1 0.7 0.1 1" class="coxa"/>
-
-                <body name="right_i_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_i_coxa_femur_joint" class="femur"/>
-                    <geom rgba="0.2 0.8 0.1 1" class="femur"/>
-
-                    <body name="right_i_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_i_femur_tibia_joint" class="tibia"/>
-                        <geom rgba="0.3 0.9 0.1 1" class="tibia"/>
-                        
-                        <body name="right_i_claw" pos="0 0 -0.25" euler="0 0 0">
-                            <geom class="claw"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Right second foremost leg />
-            <body name="right_ii_coxa" pos="0.25 0.075 0" euler="0 0 285">
-                <joint name="right_ii_body_coxa_femur_joint" class="coxa"/>
-                <geom rgba="0.1 0.7 0.2 1" class="coxa"/>
-
-                <body name="right_ii_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_ii_coxa_femur_joint" class="femur"/>
-                    <geom rgba="0.2 0.8 0.2 1" class="femur"/>
-
-                    <body name="rightt_center_front_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_ii_femur_tibia_joint" class="tibia"/>
-                        <geom rgba="0.3 0.9 0.2 1" class="tibia"/>
-                        
-                        <body name="right_ii_claw" pos="0 0 -0.25" euler="0 0 0">
-                            <geom class="claw"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Right third foremost leg />
-            <body name="right_iii_coxa" pos="0.25 -0.075 0" euler="0 0 245">
-                <joint name="right_iii_body_coxa_femur_joint" class="coxa"/>
-                <geom rgba="0.1 0.7 0.3 1" class="coxa"/>
-
-                <body name="right_iii_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_iii_coxa_femur_joint" class="femur"/>
-                    <geom rgba="0.2 0.8 0.3 1" class="femur"/>
-
-                    <body name="right_iii_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_iii_femur_tibia_joint" class="tibia"/>
-                        <geom rgba="0.3 0.9 0.3 1" class="tibia"/>
-                        
-                        <body name="right_iii_claw" pos="0 0 -0.25" euler="0 0 0">
-                            <geom class="claw"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
-
-            <! Right fourth foremost leg />
-            <body name="right_iv_coxa" pos="0.175 -0.2 0" euler="0 0 225">
-                <joint name="right_iv_body_coxa_femur_joint" class="coxa"/>
-                <geom rgba="0.1 0.7 0.4 1" class="coxa"/>
-
-                <body name="right_iv_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_iv_coxa_femur_joint" class="femur"/>
-                    <geom rgba="0.2 0.8 0.4 1" class="femur"/>
-                    
-                    <body name="right_iv_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_iv_femur_tibia_joint" class="tibia"/>
-                        <geom rgba="0.3 0.9 0.4 1" class="tibia"/>
-
-                        <body name="right_iv_claw" pos="0 0 -0.25" euler="0 0 0">
-                            <geom class="claw"/>
-                        </body>
-                    </body>
-                </body>
-            </body>
+            <! legs are built dynamically in the python code />
 
         </body>
     </worldbody>
 
     <! Left coxa to cephalothorax />
     <actuator>
-        <position name="servo_left_i_coxa_pitch" joint="left_i_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_left_i_coxa_pitch" joint="left_i_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_ii_coxa_pitch" joint="left_ii_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_left_ii_coxa_pitch" joint="left_ii_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_iii_coxa_pitch" joint="left_iii_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_left_iii_coxa_pitch" joint="left_iii_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_left_iv_coxa_pitch" joint="left_iv_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_left_iv_coxa_pitch" joint="left_iv_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
 
     <! Left femur to coxa />
@@ -253,16 +93,16 @@
 
     <! Right coxa to body />
     <actuator>
-        <position name="servo_right_i_coxa_pitch" joint="right_i_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_right_i_coxa_pitch" joint="right_i_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_ii_coxa_pitch" joint="right_ii_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_right_ii_coxa_pitch" joint="right_ii_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_iii_coxa_pitch" joint="right_iii_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_right_iii_coxa_pitch" joint="right_iii_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_iv_coxa_pitch" joint="right_iv_body_coxa_femur_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_right_iv_coxa_pitch" joint="right_iv_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
 
     <! Right femur to coxa />

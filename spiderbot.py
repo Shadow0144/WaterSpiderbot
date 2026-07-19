@@ -4,11 +4,10 @@ import numpy as np
 import mujoco
 
 class spiderleg:
-    def __init__(self, spec, model, data, id):
-        self.model = model
-        self.data = data
+    def __init__(self, spec, id, base_rgb, pos, euler, length_ratio):
         self.id = id
-        self.load_leg(spec)
+        self.base_rgb = base_rgb
+        self.load_leg(spec, pos, euler, length_ratio)
 
     # Leg ratios:
     # I: 1.00
@@ -23,14 +22,42 @@ class spiderleg:
     # [Metatarsus: 1.0 / 1.05]
     # [Tarsus: 0.4]
 
-    def load_leg(self, spec):
+    def load_leg(self, spec, pos, euler, length_ratio):
         try:
-            self.servo_coxa_actuator_id = self.model.actuator("servo_" + self.id + "_coxa_pitch").id
-            self.servo_femur_actuator_id = self.model.actuator("servo_" + self.id + "_femur_pitch").id
-            self.servo_tibia_actuator_id = self.model.actuator("servo_" + self.id + "_tibia_pitch").id
+            cephalothorax = spec.body("cephalothorax")
+            if not cephalothorax:
+                raise ValueError("Could not find cephalothorax")
+                
+            coxa = cephalothorax.add_body(name=f"{self.id}_coxa", pos=pos, euler=euler)
+            coxa.childclass = "coxa"
+            coxa.add_joint(name=f"{self.id}_cephalothorax_coxa_joint")
+            coxa.add_geom(rgba=[self.base_rgb[0], self.base_rgb[1], self.base_rgb[2], 1])
+            
+            femur = coxa.add_body(name=f"{self.id}_femur", pos=[0, 0.04, 0], euler=[45, 0, 0])
+            femur.childclass = "femur"
+            femur.add_joint(name=f"{self.id}_coxa_femur_joint")
+            femur.add_geom(rgba=[self.base_rgb[0] + 0.1, self.base_rgb[1] + 0.1, self.base_rgb[2], 1], fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -0.25 * length_ratio]))
+
+            tibia = femur.add_body(name=f"{self.id}_tibia", pos=[0, 0, -0.25 * length_ratio], euler=[315, 0, 0])
+            tibia.childclass = "tibia"
+            tibia.add_joint(name=f"{self.id}_femur_tibia_joint")
+            tibia.add_geom(rgba=[self.base_rgb[0] + 0.2, self.base_rgb[1] + 0.2, self.base_rgb[2], 1], fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -0.25 * length_ratio]))
+
+            claw = tibia.add_body(name=f"{self.id}_claw", pos=[0, 0, -0.25 * length_ratio])
+            claw.childclass = "claw"
+            claw.add_geom()
+
         except KeyError:
             print(f"Key error: " + self.id)
             exit()
+
+    def set_model_data(self, model, data):
+        self.model = model
+        self.data = data
+
+        self.servo_coxa_actuator_id = self.model.actuator("servo_" + self.id + "_coxa_pitch").id
+        self.servo_femur_actuator_id = self.model.actuator("servo_" + self.id + "_femur_pitch").id
+        self.servo_tibia_actuator_id = self.model.actuator("servo_" + self.id + "_tibia_pitch").id
 
     def set_coxa_target(self, target_angle_rad):
         self.data.ctrl[self.servo_coxa_actuator_id] = target_angle_rad
@@ -49,23 +76,36 @@ class spiderleg:
 
 class spiderbot:
     def __init__(self, path_to_xml):
-        self.model = mujoco.MjModel.from_xml_path(path_to_xml)
-        self.data = mujoco.MjData(self.model)
+        self.path_to_xml = path_to_xml
         self.load_model()
 
     def load_model(self):
-        spec = mujoco.MjSpec()
+        spec = mujoco.MjSpec.from_file(self.path_to_xml)
+
+        # Cephalothorax connects to coxa [then trochanter] then femur [then patella] then tibia [then metatarsus] [then tarsus] then claws
 
         # Left side
-        self.left_i_leg = spiderleg(spec, self.model, self.data, "left_i")
-        self.left_ii_leg = spiderleg(spec, self.model, self.data, "left_ii")
-        self.left_iii_leg = spiderleg(spec, self.model, self.data, "left_iii")
-        self.left_iv_leg = spiderleg(spec, self.model, self.data, "left_iv")
+        self.left_i_leg = spiderleg(spec, "left_i", [0.7, 0.1, 0.1], [-0.175, 0.2, 0.0], [0, 0, 45], 1.00)
+        self.left_ii_leg = spiderleg(spec, "left_ii", [0.7, 0.1, 0.2], [-0.25, 0.075, 0.0], [0, 0, 65], 0.90)
+        self.left_iii_leg = spiderleg(spec, "left_iii", [0.7, 0.1, 0.3], [-0.25, -0.075, 0.0], [0, 0, 115], 0.75)
+        self.left_iv_leg = spiderleg(spec, "left_iv", [0.7, 0.1, 0.4], [-0.175, -0.2, 0.0], [0, 0, 135], 1.10)
         # Right side
-        self.right_i_leg = spiderleg(spec, self.model, self.data, "right_i")
-        self.right_ii_leg = spiderleg(spec, self.model, self.data, "right_ii")
-        self.right_iii_leg = spiderleg(spec, self.model, self.data, "right_iii")
-        self.right_iv_leg = spiderleg(spec, self.model, self.data, "right_iv")
+        self.right_i_leg = spiderleg(spec, "right_i", [0.1, 0.7, 0.1], [0.175, 0.2, 0.0], [0, 0, 315], 1.00)
+        self.right_ii_leg = spiderleg(spec, "right_ii", [0.1, 0.7, 0.2], [0.25, 0.075, 0.0], [0, 0, 285], 0.90)
+        self.right_iii_leg = spiderleg(spec, "right_iii", [0.1, 0.7, 0.3], [0.25, -0.075, 0.0], [0, 0, 245], 0.75)
+        self.right_iv_leg = spiderleg(spec, "right_iv", [0.1, 0.7, 0.4], [0.175, -0.2, 0.0], [0, 0, 225], 1.10)
+
+        self.model = spec.compile()
+        self.data = mujoco.MjData(self.model)
+
+        self.left_i_leg.set_model_data(self.model, self.data)
+        self.left_ii_leg.set_model_data(self.model, self.data)
+        self.left_iii_leg.set_model_data(self.model, self.data)
+        self.left_iv_leg.set_model_data(self.model, self.data)
+        self.right_i_leg.set_model_data(self.model, self.data)
+        self.right_ii_leg.set_model_data(self.model, self.data)
+        self.right_iii_leg.set_model_data(self.model, self.data)
+        self.right_iv_leg.set_model_data(self.model, self.data)
 
     def walk_forward(self, time):
         sin_phase = np.sin(time)
