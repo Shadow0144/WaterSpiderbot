@@ -8,6 +8,24 @@
         <material name="grid_floor" texture="grid" texrepeat="1 1" texuniform="true"/>
     </asset>
 
+    <default>
+        <default class="coxa">
+            <joint type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
+            <geom type="sphere" size="0.04" mass="1" contype="4" conaffinity="1"/>
+        </default>
+        <default class="femur">
+            <joint type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+            <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" mass="1"/>
+        </default>
+        <default class="tibia">
+            <joint type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
+            <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" mass="1"/>
+        </default>
+        <default class="claw">
+            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+        </default>
+    </default>
+
     <worldbody>
         <light pos="0 0 4" dir="0 0 -1" castshadow="true"/>
 
@@ -25,23 +43,23 @@
             <camera name="left_eye" pos="-0.045 0.25 0" euler="90 0 0"/>
             <camera name="right_eye" pos="0.045 0.25 0" euler="90 0 0"/>
 
-            <! cephalothorax connects to coxa [then trochanter] then femur [then patella] then tibia [then metatarsus] [then tarsus] [then claws] />
+            <! cephalothorax connects to coxa [then trochanter] then femur [then patella] then tibia [then metatarsus] [then tarsus] then claws />
             
             <! Left first foremost leg>
             <body name="left_i_coxa" pos="-0.175 0.2 0" euler="0 0 45">
-                <joint name="left_i_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.1 1" mass="1" contype="4" conaffinity="1"/>
+                <joint name="left_i_body_coxa_femur_joint" class="coxa"/>
+                <geom rgba="0.7 0.1 0.1 1" class="coxa"/>
 
                 <body name="left_i_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_i_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.1 1" mass="1"/>
+                    <joint name="left_i_coxa_femur_joint" class="femur"/>
+                    <geom rgba="0.8 0.2 0.1 1" class="femur"/>
                     
                     <body name="left_i_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_i_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.1 1" mass="1"/>
+                        <joint name="left_i_femur_tibia_joint" class="tibia"/>
+                        <geom rgba="0.9 0.3 0.1 1" class="tibia"/>
                         
-                        <body name="left_i_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        <body name="left_i_claw" pos="0 0 -0.25" euler="0 0 0">
+                            <geom class="claw"/>
                         </body>
                     </body>
                 </body>
@@ -49,19 +67,19 @@
 
             <! Left second foremost leg />
             <body name="left_ii_coxa" pos="-0.25 0.075 0" euler="0 0 65">
-                <joint name="left_ii_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.2 1" mass="1" contype="4" conaffinity="1"/>
+                <joint name="left_ii_body_coxa_femur_joint" class="coxa"/>
+                <geom rgba="0.7 0.1 0.2 1" class="coxa"/>
 
                 <body name="left_ii_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_ii_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.2 1" mass="1"/>
+                    <joint name="left_ii_coxa_femur_joint" class="femur"/>
+                    <geom rgba="0.8 0.2 0.2 1" class="femur"/>
 
                     <body name="left_ii_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_ii_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.2 1" mass="1"/>
+                        <joint name="left_ii_femur_tibia_joint" class="tibia"/>
+                        <geom rgba="0.9 0.3 0.2 1" class="tibia"/>
                         
-                        <body name="left_ii_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        <body name="left_ii_claw" pos="0 0 -0.25" euler="0 0 0">
+                            <geom class="claw"/>
                         </body>
                     </body>
                 </body>
@@ -69,19 +87,19 @@
 
             <! Left third foremost leg />
             <body name="left_iii_coxa" pos="-0.25 -0.075 0" euler="0 0 115">
-                <joint name="left_iii_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.3 1" mass="1" contype="4" conaffinity="1"/>
+                <joint name="left_iii_body_coxa_femur_joint" class="coxa"/>
+                <geom rgba="0.7 0.1 0.3 1" class="coxa"/>
 
                 <body name="left_iii_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_iii_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.3 1" mass="1"/>
+                    <joint name="left_iii_coxa_femur_joint" class="femur"/>
+                    <geom rgba="0.8 0.2 0.3 1" class="femur"/>
 
                     <body name="left_iii_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_iii_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.3 1" mass="1"/>
+                        <joint name="left_iii_femur_tibia_joint" class="tibia"/>
+                        <geom rgba="0.9 0.3 0.3 1" class="tibia"/>
 
-                        <body name="left_iii_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        <body name="left_iii_claw" pos="0 0 -0.25" euler="0 0 0">
+                            <geom class="claw"/>
                         </body>
                     </body>
                 </body>
@@ -89,19 +107,19 @@
 
             <! Left fourth foremost leg />
             <body name="left_iv_coxa" pos="-0.175 -0.2 0" euler="0 0 135">
-                <joint name="left_iv_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.7 0.1 0.4 1" mass="1" contype="4" conaffinity="1"/>
+                <joint name="left_iv_body_coxa_femur_joint" class="coxa"/>
+                <geom rgba="0.7 0.1 0.4 1" class="coxa"/>
 
                 <body name="left_iv_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="left_iv_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.8 0.2 0.4 1" mass="1"/>
+                    <joint name="left_iv_coxa_femur_joint" class="femur"/>
+                    <geom rgba="0.8 0.2 0.4 1" class="femur"/>
 
                     <body name="left_iv_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="left_iv_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.9 0.3 0.4 1" mass="1"/>
+                        <joint name="left_iv_femur_tibia_joint" class="tibia"/>
+                        <geom rgba="0.9 0.3 0.4 1" class="tibia"/>
                         
-                        <body name="left_iv_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        <body name="left_iv_claw" pos="0 0 -0.25" euler="0 0 0">
+                            <geom class="claw"/>
                         </body>
                     </body>
                 </body>
@@ -110,19 +128,19 @@
             
             <! Right first foremost leg />
             <body name="right_i_coxa" pos="0.175 0.2 0" euler="0 0 315">
-                <joint name="right_i_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.1 1" mass="1" contype="4" conaffinity="1"/>
+                <joint name="right_i_body_coxa_femur_joint" class="coxa"/>
+                <geom rgba="0.1 0.7 0.1 1" class="coxa"/>
 
                 <body name="right_i_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_i_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.1 1" mass="1"/>
+                    <joint name="right_i_coxa_femur_joint" class="femur"/>
+                    <geom rgba="0.2 0.8 0.1 1" class="femur"/>
 
                     <body name="right_i_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_i_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.1 1" mass="1"/>
+                        <joint name="right_i_femur_tibia_joint" class="tibia"/>
+                        <geom rgba="0.3 0.9 0.1 1" class="tibia"/>
                         
-                        <body name="right_i_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        <body name="right_i_claw" pos="0 0 -0.25" euler="0 0 0">
+                            <geom class="claw"/>
                         </body>
                     </body>
                 </body>
@@ -130,19 +148,19 @@
 
             <! Right second foremost leg />
             <body name="right_ii_coxa" pos="0.25 0.075 0" euler="0 0 285">
-                <joint name="right_ii_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.2 1" mass="1" contype="4" conaffinity="1"/>
+                <joint name="right_ii_body_coxa_femur_joint" class="coxa"/>
+                <geom rgba="0.1 0.7 0.2 1" class="coxa"/>
 
                 <body name="right_ii_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_ii_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.2 1" mass="1"/>
+                    <joint name="right_ii_coxa_femur_joint" class="femur"/>
+                    <geom rgba="0.2 0.8 0.2 1" class="femur"/>
 
                     <body name="rightt_center_front_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_ii_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.2 1" mass="1"/>
+                        <joint name="right_ii_femur_tibia_joint" class="tibia"/>
+                        <geom rgba="0.3 0.9 0.2 1" class="tibia"/>
                         
-                        <body name="right_ii_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        <body name="right_ii_claw" pos="0 0 -0.25" euler="0 0 0">
+                            <geom class="claw"/>
                         </body>
                     </body>
                 </body>
@@ -150,19 +168,19 @@
 
             <! Right third foremost leg />
             <body name="right_iii_coxa" pos="0.25 -0.075 0" euler="0 0 245">
-                <joint name="right_iii_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.3 1" mass="1" contype="4" conaffinity="1"/>
+                <joint name="right_iii_body_coxa_femur_joint" class="coxa"/>
+                <geom rgba="0.1 0.7 0.3 1" class="coxa"/>
 
                 <body name="right_iii_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_iii_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.3 1" mass="1"/>
+                    <joint name="right_iii_coxa_femur_joint" class="femur"/>
+                    <geom rgba="0.2 0.8 0.3 1" class="femur"/>
 
                     <body name="right_iii_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_iii_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.3 1" mass="1"/>
+                        <joint name="right_iii_femur_tibia_joint" class="tibia"/>
+                        <geom rgba="0.3 0.9 0.3 1" class="tibia"/>
                         
-                        <body name="right_iii_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        <body name="right_iii_claw" pos="0 0 -0.25" euler="0 0 0">
+                            <geom class="claw"/>
                         </body>
                     </body>
                 </body>
@@ -170,19 +188,19 @@
 
             <! Right fourth foremost leg />
             <body name="right_iv_coxa" pos="0.175 -0.2 0" euler="0 0 225">
-                <joint name="right_iv_body_coxa_femur_joint" type="hinge" axis="0 1 0" pos="0 0 0" limited="true" range="-45 45"/>
-                <geom type="sphere" size="0.04" rgba="0.1 0.7 0.4 1" mass="1" contype="4" conaffinity="1"/>
+                <joint name="right_iv_body_coxa_femur_joint" class="coxa"/>
+                <geom rgba="0.1 0.7 0.4 1" class="coxa"/>
 
                 <body name="right_iv_femur" pos="0 0.04 0" euler="45 0 0">
-                    <joint name="right_iv_coxa_femur_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
-                    <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" rgba="0.2 0.8 0.4 1" mass="1"/>
+                    <joint name="right_iv_coxa_femur_joint" class="femur"/>
+                    <geom rgba="0.2 0.8 0.4 1" class="femur"/>
                     
                     <body name="right_iv_tibia" pos="0 0 -0.25" euler="315 0 0">
-                        <joint name="right_iv_femur_tibia_joint" type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 45"/>
-                        <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" rgba="0.3 0.9 0.4 1" mass="1"/>
+                        <joint name="right_iv_femur_tibia_joint" class="tibia"/>
+                        <geom rgba="0.3 0.9 0.4 1" class="tibia"/>
 
-                        <body name="right_iv_foot_tip" pos="0 0 -0.25" euler="0 0 0">
-                            <geom type="capsule" fromto="0 0 0  0 0 -0.025" size="0.02" rgba="0.5 0.5 0.5 1" friction="5.0 0.01 0.001"/>
+                        <body name="right_iv_claw" pos="0 0 -0.25" euler="0 0 0">
+                            <geom class="claw"/>
                         </body>
                     </body>
                 </body>

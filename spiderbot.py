@@ -1,16 +1,29 @@
 
 import math
 import numpy as np
-#import mujoco
+import mujoco
 
 class spiderleg:
-    def __init__(self, model, data, id):
+    def __init__(self, spec, model, data, id):
         self.model = model
         self.data = data
         self.id = id
-        self.load_leg()
+        self.load_leg(spec)
 
-    def load_leg(self):
+    # Leg ratios:
+    # I: 1.00
+    # II: 0.90
+    # III: 0.75
+    # IV: 1.10
+
+    # Leg segment ratios:
+    # Femur: 1.0
+    # [Patella: 0.4]
+    # Tibia: 1.0
+    # [Metatarsus: 1.0 / 1.05]
+    # [Tarsus: 0.4]
+
+    def load_leg(self, spec):
         try:
             self.servo_coxa_actuator_id = self.model.actuator("servo_" + self.id + "_coxa_pitch").id
             self.servo_femur_actuator_id = self.model.actuator("servo_" + self.id + "_femur_pitch").id
@@ -35,22 +48,24 @@ class spiderleg:
 
 
 class spiderbot:
-    def __init__(self, model, data):
-        self.model = model
-        self.data = data
+    def __init__(self, path_to_xml):
+        self.model = mujoco.MjModel.from_xml_path(path_to_xml)
+        self.data = mujoco.MjData(self.model)
         self.load_model()
 
     def load_model(self):
+        spec = mujoco.MjSpec()
+
         # Left side
-        self.left_i_leg = spiderleg(self.model, self.data, "left_i")
-        self.left_ii_leg = spiderleg(self.model, self.data, "left_ii")
-        self.left_iii_leg = spiderleg(self.model, self.data, "left_iii")
-        self.left_iv_leg = spiderleg(self.model, self.data, "left_iv")
+        self.left_i_leg = spiderleg(spec, self.model, self.data, "left_i")
+        self.left_ii_leg = spiderleg(spec, self.model, self.data, "left_ii")
+        self.left_iii_leg = spiderleg(spec, self.model, self.data, "left_iii")
+        self.left_iv_leg = spiderleg(spec, self.model, self.data, "left_iv")
         # Right side
-        self.right_i_leg = spiderleg(self.model, self.data, "right_i")
-        self.right_ii_leg = spiderleg(self.model, self.data, "right_ii")
-        self.right_iii_leg = spiderleg(self.model, self.data, "right_iii")
-        self.right_iv_leg = spiderleg(self.model, self.data, "right_iv")
+        self.right_i_leg = spiderleg(spec, self.model, self.data, "right_i")
+        self.right_ii_leg = spiderleg(spec, self.model, self.data, "right_ii")
+        self.right_iii_leg = spiderleg(spec, self.model, self.data, "right_iii")
+        self.right_iv_leg = spiderleg(spec, self.model, self.data, "right_iv")
 
     def walk_forward(self, time):
         sin_phase = np.sin(time)

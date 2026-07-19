@@ -1,17 +1,13 @@
 import time
-import math
-import numpy as np
 import mujoco
 import mujoco.viewer
 
 import spiderbot
 
 def main():
-    model = mujoco.MjModel.from_xml_path('spider_test.xml')
-    data = mujoco.MjData(model)
-    spider = spiderbot.spiderbot(model, data)
+    spider = spiderbot.spiderbot('spider_test.xml')
 
-    with mujoco.viewer.launch_passive(model, data) as viewer:
+    with mujoco.viewer.launch_passive(spider.model, spider.data) as viewer:
         viewer.cam.azimuth = 270
         viewer.cam.elevation = -20
         viewer.cam.distance = 2.0
@@ -21,12 +17,12 @@ def main():
 
         while viewer.is_running():
             step_start = time.time()
-            mujoco.mj_step(model, data)
+            mujoco.mj_step(spider.model, spider.data)
 
             spider.walk_forward(step_start)
 
             viewer.sync()
-            time_until_next_step = model.opt.timestep - (time.time() - step_start)
+            time_until_next_step = spider.model.opt.timestep - (time.time() - step_start)
             if time_until_next_step > 0:
                 time.sleep(time_until_next_step)
 
