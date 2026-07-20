@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "waterspiderbot"
+version = "0.1.0"
+description = "A MujoCo-based spiderbot designed to bring me water"
+requires-python = ">=3.8"
+dependencies = [
+    "mujoco",
+    "numpy",
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
