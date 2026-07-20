@@ -2,10 +2,10 @@ import time
 import mujoco
 import mujoco.viewer
 
-import spiderbot
+from .spiderbot import Spiderbot
 
-def main():
-    spider = spiderbot.spiderbot('spider_test.xml')
+def run_spiderbot_test():
+    spider = Spiderbot()
 
     with mujoco.viewer.launch_passive(spider.model, spider.data) as viewer:
         viewer.cam.azimuth = 270
@@ -32,6 +32,3 @@ def main():
             time_until_next_step = spider.model.opt.timestep - (time.time() - step_start)
             if time_until_next_step > 0:
                 time.sleep(time_until_next_step)
-
-if __name__ == "__main__":
-    main()
