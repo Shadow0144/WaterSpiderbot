@@ -13,19 +13,22 @@ def run_spiderbot_test():
         viewer.cam.distance = 2.0
         viewer.cam.lookat[:] = [0, 0, 0.25]
 
-        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CAMERA] = 1
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CAMERA] = True
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_LIMIT] = True
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
 
-        time_until_start_sec = 5.0 # 5 seconds
+        time_until_start_sec = 3.0 # 3 seconds
         last_step = time.time()
 
         while viewer.is_running():
             step_start = time.time()
             mujoco.mj_step(spider.model, spider.data)
 
+            delta_time = step_start - last_step
             if time_until_start_sec <= 0.0:
-                spider.walk_forward(step_start)
+                spider.walk_forward(delta_time)
             else:
-                time_until_start_sec -= (step_start - last_step)
+                time_until_start_sec -= delta_time
                 last_step = step_start
 
             viewer.sync()
