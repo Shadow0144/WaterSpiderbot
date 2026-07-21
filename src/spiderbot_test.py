@@ -14,7 +14,6 @@ def run_spiderbot_test():
         viewer.cam.lookat[:] = [0, 0, 0.25]
 
         viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CAMERA] = True
-        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_LIMIT] = True
         viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
 
         time_until_start_sec = 3.0 # 3 seconds
