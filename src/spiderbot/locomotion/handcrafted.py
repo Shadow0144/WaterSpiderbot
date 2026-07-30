@@ -4,7 +4,7 @@ from enum import Enum, auto
 
 from .locomotion import LocomotionModule
 
-phase_timer = 4500
+phase_timer = 4.5
 
 front_lifting_targets = [math.radians(20), math.radians(30), math.radians(15)]
 front_reaching_targets = [math.radians(-20), math.radians(30), math.radians(15)]

@@ -29,14 +29,14 @@
     <worldbody>
         <light pos="0 0 4" dir="0 0 -1" castshadow="true"/>
 
-        <geom name="floor" type="plane" size="0 0 .25" material="grid_floor" contype="1" conaffinity="7"/>
+        <geom name="floor" type="plane" size="0 0 0.25" material="grid_floor" contype="1" conaffinity="7"/>
 
         <body name="cephalothorax" pos="0 0 0.5">
             <freejoint name="cephalothorax_joint"/>
             <geom type="ellipsoid" size="0.25 0.25 0.125" rgba="0 0 0 1" mass="0.5" friction="1 0.01 0.0001" contype="2" conaffinity="1"/>
             
             <body name="abdomen" pos="0 -0.5 0">
-                <geom type="ellipsoid" size="0.3 0.3 0.175"  rgba="0.2 0.2 0.2 1" mass="0.05" friction="1 0.01 0.0001"/>
+                <geom type="ellipsoid" size="0.3 0.3 0.175" rgba="0.2 0.2 0.2 1" mass="0.05" friction="1 0.01 0.0001"/>
             </body>
             
             <! Eyes>
@@ -113,7 +113,7 @@
         <position name="servo_right_ii_femur_pitch" joint="right_ii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_right_iii_femur_pitch" joint="right_iii_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
+        <position name="servo_right_iii_femur_pitch" joint="right_iii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
     </actuator>
     <actuator>
         <position name="servo_right_iv_femur_pitch" joint="right_iv_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>

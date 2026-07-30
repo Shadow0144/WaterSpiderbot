@@ -6,6 +6,7 @@ import mujoco
 from .spiderleg import SpiderLegSet
 from .locomotion import SimpleSinLocomotionModule
 from .locomotion import HandcraftedLocomotionModule
+from .locomotion import MoveToPointLocomotionModule
 
 class Spiderbot:
     def __init__(self):
@@ -23,7 +24,10 @@ class Spiderbot:
 
         self.leg_set.set_model_data(self.model, self.data)
 
-        self.locomotion_module = HandcraftedLocomotionModule(self.leg_set)
+        self.locomotion_module = MoveToPointLocomotionModule(self.leg_set)
 
     def walk_forward(self, delta_time):
         self.locomotion_module.walk_forward(delta_time, self.leg_set)
+
+    def test_leg(self, delta_time):
+        self.leg_set.left_i_leg.move_claw_to_cartesian([0, 10, 0])
