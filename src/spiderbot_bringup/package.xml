@@ -3,6 +3,7 @@
 <package format="3">
   <name>spiderbot_bringup</name>
   <version>0.0.0</version>
+  <maintainer email="1351027+Shadow0144@users.noreply.github.com">Shadow0144</maintainer>
   <description>Contains launch files etc. for a Spiderbot</description>
   <license>MIT</license>
 
