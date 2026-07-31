@@ -29,7 +29,7 @@ def run_spiderbot_test():
             last_step = step_start
             if time_until_start_sec <= 0.0:
                 spider.walk_forward(delta_time)
-                #spider.test_leg(delta_time)
+                #spider.test_leg()
             else:
                 time_until_start_sec -= delta_time
 

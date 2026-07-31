@@ -32,7 +32,7 @@ class Spiderbot:
     def walk_forward(self, delta_time):
         self.locomotion_module.walk_forward(delta_time, self.leg_set)
 
-    def test_leg(self, delta_time):
+    def test_leg(self):
         self.leg_set.left_i_leg.move_claw_to_cartesian([0, 10, 0])
 
     def visualize_leg_space(self):
