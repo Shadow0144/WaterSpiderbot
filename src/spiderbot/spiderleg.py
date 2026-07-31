@@ -57,6 +57,7 @@ class SpiderLeg:
     def __init__(self, spec, id, base_rgb, pos, euler, leg_length, left_side):
         self.id = id
         self.base_rgb = base_rgb
+        self.leg_length = leg_length
 
         self.damping = 0.01
 
@@ -72,12 +73,13 @@ class SpiderLeg:
                 coxa_axis = [0, 1, 0]
             else:
                 coxa_axis = [0, -1, 0]
+
+            cephalothorax.add_site(name=f"{self.id}_leg_base", pos=pos, euler=euler)
                 
             coxa = cephalothorax.add_body(name=f"{self.id}_coxa", pos=pos, euler=euler)
             coxa.childclass = "coxa"
             coxa.add_joint(name=f"{self.id}_cephalothorax_coxa_joint", axis=coxa_axis)
             coxa.add_geom(rgba=[self.base_rgb[0], self.base_rgb[1], self.base_rgb[2], 1])
-            coxa.add_site(name=f"{self.id}_leg_base", pos=[0, 0, 0])
 
             femur = coxa.add_body(name=f"{self.id}_femur", pos=[0, 0.04, 0], euler=[45, 0, 0])
             femur.childclass = "femur"
@@ -110,6 +112,7 @@ class SpiderLeg:
         coxa_joint_id = self.model.joint(f"{self.id}_cephalothorax_coxa_joint").id
         femur_joint_id = self.model.joint(f"{self.id}_coxa_femur_joint").id
         tibia_joint_id = self.model.joint(f"{self.id}_femur_tibia_joint").id
+        self.leg_joint_ids = [coxa_joint_id, femur_joint_id, tibia_joint_id]
 
         coxa_joint_dof = self.model.jnt_dofadr[coxa_joint_id]
         femur_joint_dof = self.model.jnt_dofadr[femur_joint_id]
@@ -124,8 +127,8 @@ class SpiderLeg:
 
         self.coxa_body_id = self.model.body(f"{self.id}_coxa").id
 
-        self.claw_tip_site_id = self.model.site(f"{self.id}_claw_tip").id
         self.leg_base_site_id = self.model.site(f"{self.id}_leg_base").id
+        self.claw_tip_site_id = self.model.site(f"{self.id}_claw_tip").id
 
         target_mocap_body_id = self.model.body(f"{self.id}_target").id
         self.target_mocap_id = self.model.body_mocapid[target_mocap_body_id]
@@ -168,11 +171,11 @@ class SpiderLeg:
         j_leg = jac_p[:, self.leg_dof_adrs]
 
         if relative:
-            r_coxa = self.data.body(self.coxa_body_id).xmat.reshape(3, 3)
-            coxa_xyz = self.data.body(self.coxa_body_id).xpos
-            current_xyz = r_coxa.T @ (current_xyz - coxa_xyz)
-            j_leg = r_coxa.T @ j_leg
-            self.data.mocap_pos[self.target_mocap_id] = coxa_xyz + (r_coxa @ target_xyz)
+            r_leg_base = self.data.site(self.leg_base_site_id).xmat.reshape(3, 3)
+            leg_base_xyz = self.data.site(self.leg_base_site_id).xpos
+            current_xyz = r_leg_base.T @ (current_xyz - leg_base_xyz)
+            j_leg = r_leg_base.T @ j_leg
+            self.data.mocap_pos[self.target_mocap_id] = leg_base_xyz + (r_leg_base @ target_xyz)
         else:
             self.data.mocap_pos[self.target_mocap_id] = target_xyz
 
