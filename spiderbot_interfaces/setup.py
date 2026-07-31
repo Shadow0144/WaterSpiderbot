@@ -1,3 +1,5 @@
+"""Set up Spiderbot interfaces."""
+
 from setuptools import find_packages, setup
 
 package_name = 'spiderbot_interfaces'

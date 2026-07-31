@@ -1,7 +1,9 @@
-from .spiderbot_test import run_spiderbot_test
+"""Simulation module."""
+
 from .spiderbot import Spiderbot
+from .spiderbot_test import run_spiderbot_test
 
 __all__ = [
-    "run_spiderbot_test",
-    "Spiderbot",
+    'Spiderbot',
+    'run_spiderbot_test',
 ]

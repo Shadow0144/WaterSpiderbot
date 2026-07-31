@@ -1,10 +1,15 @@
+"""Simulate a Spiderbot and launch an interactive viewer."""
+
 import time
+
 import mujoco
 import mujoco.viewer
 
 from .spiderbot import Spiderbot
 
+
 def run_spiderbot_test():
+    """Run the simulation to test the Spiderbot."""
     spider = Spiderbot()
 
     with mujoco.viewer.launch_passive(spider.model, spider.data) as viewer:
@@ -18,7 +23,7 @@ def run_spiderbot_test():
 
         viewer.opt.frame = mujoco.mjtFrame.mjFRAME_SITE
 
-        time_until_start_sec = 3.0 # 3 seconds
+        time_until_start_sec = 3.0  # 3 seconds
         last_step = time.time()
 
         while viewer.is_running():
@@ -29,11 +34,14 @@ def run_spiderbot_test():
             last_step = step_start
             if time_until_start_sec <= 0.0:
                 spider.walk_forward(delta_time)
-                #spider.test_leg()
+                # spider.test_leg()
             else:
                 time_until_start_sec -= delta_time
 
             viewer.sync()
-            time_until_next_step = spider.model.opt.timestep - (time.time() - step_start)
+
+            time_until_next_step = (
+                spider.model.opt.timestep - (time.time() - step_start)
+            )
             if time_until_next_step > 0:
                 time.sleep(time_until_next_step)

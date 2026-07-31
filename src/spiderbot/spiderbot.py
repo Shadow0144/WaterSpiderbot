@@ -1,25 +1,35 @@
+"""Constructs a description and model of a Spiderbot."""
 
-import math
-import numpy as np
 import mujoco
 
-from .spiderleg import SpiderLegSet
-from .locomotion import SimpleSinLocomotionModule
-from .locomotion import HandcraftedLocomotionModule
+# from .locomotion import SimpleSinLocomotionModule
+# from .locomotion import HandcraftedLocomotionModule
 from .locomotion import MoveToPointLocomotionModule
+from .spiderleg import SpiderLegSet
+from .util import draw_leg_space_in_mujoco
+from .util import sample_reachable_leg_space
 
-from . import util
 
 class Spiderbot:
+    """Main description of a Spiderbot robot."""
+
     def __init__(self):
+        """Initialize a Spiderbot."""
         self.visualized = False
         self.path_to_xml = 'assets/models/spider_test.xml'
         self.load_model()
 
     def load_model(self):
+        """
+        Load and finish the model and data.
+
+        Loads the Spiderbot partial description from a file
+        and adds the legs, completing the model and data.
+        """
         self.spec = mujoco.MjSpec.from_file(self.path_to_xml)
 
-        # Cephalothorax connects to coxa [then trochanter] then femur [then patella] then tibia [then metatarsus] [then tarsus] then claws
+        # Cephalothorax connects to coxa [then trochanter] then femur
+        # [then patella] then tibia [then metatarsus] [then tarsus] then claws
         self.leg_set = SpiderLegSet(self.spec)
 
         self.model = self.spec.compile()
@@ -30,15 +40,20 @@ class Spiderbot:
         self.locomotion_module = MoveToPointLocomotionModule(self.leg_set)
 
     def walk_forward(self, delta_time):
+        """Walk the Spiderbot forward using the locomotion module."""
         self.locomotion_module.walk_forward(delta_time, self.leg_set)
 
     def test_leg(self):
+        """Test the leg moves to a position."""
         self.leg_set.left_i_leg.move_claw_to_cartesian([0, 10, 0])
 
     def visualize_leg_space(self):
+        """Calculate and visualize the points a leg end can reach."""
         if not self.visualized:
             self.visualized = True
-            util.draw_leg_space_in_mujoco(self.spec, self.leg_set.left_i_leg, util.sample_reachable_leg_space(self.leg_set.left_i_leg))
+            draw_leg_space_in_mujoco(self.spec, self.leg_set.left_i_leg,
+                                     sample_reachable_leg_space(
+                                         self.leg_set.left_i_leg))
 
             self.model = self.spec.compile()
             self.data = mujoco.MjData(self.model)

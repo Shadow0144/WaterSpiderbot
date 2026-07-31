@@ -1,7 +1,9 @@
-from .util import sample_reachable_leg_space
+"""Utility functions for a Spiderbot."""
+
 from .util import draw_leg_space_in_mujoco
+from .util import sample_reachable_leg_space
 
 __all__ = [
-    "sample_reachable_leg_space",
-    "draw_leg_space_in_mujoco",
+    'draw_leg_space_in_mujoco',
+    'sample_reachable_leg_space',
 ]
