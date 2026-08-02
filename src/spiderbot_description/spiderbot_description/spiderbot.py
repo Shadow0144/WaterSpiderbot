@@ -2,9 +2,10 @@
 
 import mujoco
 
-# from .locomotion import SimpleSinLocomotionModule
-# from .locomotion import HandcraftedLocomotionModule
-from .locomotion import MoveToPointLocomotionModule
+# from spiderbot_locomotion import SimpleSinLocomotionModule
+# from spiderbot_locomotion import HandcraftedLocomotionModule
+from spiderbot_locomotion import MoveToPointLocomotionModule
+
 from .spiderleg import SpiderLegSet
 from .util import draw_leg_space_in_mujoco
 from .util import sample_reachable_leg_space

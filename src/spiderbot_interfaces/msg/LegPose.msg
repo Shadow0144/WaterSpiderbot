@@ -1,0 +1,4 @@
+string leg_name
+float64 coxa_angle_rads
+float64 femur_angle_rads
+float64 tibia_angle_rads

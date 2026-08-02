@@ -7,6 +7,8 @@
   <description>Contains launch files etc. for a Spiderbot</description>
   <license>MIT</license>
 
+  <exec_depend>spiderbot_simulation</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

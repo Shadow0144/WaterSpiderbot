@@ -26,6 +26,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'simulation_node = spiderbot_bringup.main:main',
         ],
     },
 )

@@ -88,7 +88,7 @@ class SpiderLeg:
         self.damping = 0.01
 
         try:
-            self.target = spec.worldbody.add_body(name=f'{self.id}_target',
+            self.target = spec.worldbody.add_body(name=f'{self.leg_id}_target',
                                                   pos=[0, 0, 0], mocap=True)
             self.target.add_geom(type=mujoco.mjtGeom.mjGEOM_SPHERE,
                                  size=[0.015, 0.0, 0.0],
@@ -106,32 +106,32 @@ class SpiderLeg:
             else:
                 coxa_axis = [0, -1, 0]
 
-            cephalothorax.add_site(name=f'{self.id}_leg_base',
+            cephalothorax.add_site(name=f'{self.leg_id}_leg_base',
                                    pos=pos, euler=euler)
 
-            coxa = cephalothorax.add_body(name=f'{self.id}_coxa',
+            coxa = cephalothorax.add_body(name=f'{self.leg_id}_coxa',
                                           pos=pos, euler=euler)
             coxa.childclass = 'coxa'
-            coxa.add_joint(name=f'{self.id}_cephalothorax_coxa_joint',
+            coxa.add_joint(name=f'{self.leg_id}_cephalothorax_coxa_joint',
                            axis=coxa_axis)
             coxa.add_geom(
                 rgba=[self.base_rgb[0], self.base_rgb[1], self.base_rgb[2], 1])
 
-            femur = coxa.add_body(name=f'{self.id}_femur',
+            femur = coxa.add_body(name=f'{self.leg_id}_femur',
                                   pos=[0, 0.04, 0], euler=[45, 0, 0])
             femur.childclass = 'femur'
-            femur.add_joint(name=f'{self.id}_coxa_femur_joint')
+            femur.add_joint(name=f'{self.leg_id}_coxa_femur_joint')
             femur.add_geom(
                 rgba=[self.base_rgb[0] + 0.1,
                       self.base_rgb[1] + 0.1,
                       self.base_rgb[2], 1],
                 fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -leg_length]))
 
-            tibia = femur.add_body(name=f'{self.id}_tibia',
+            tibia = femur.add_body(name=f'{self.leg_id}_tibia',
                                    pos=[0, 0, -leg_length],
                                    euler=[-45, 0, 0])
             tibia.childclass = 'tibia'
-            tibia.add_joint(name=f'{self.id}_femur_tibia_joint')
+            tibia.add_joint(name=f'{self.leg_id}_femur_tibia_joint')
             tibia.add_geom(
                 rgba=[self.base_rgb[0] + 0.2,
                       self.base_rgb[1] + 0.2,
@@ -139,9 +139,9 @@ class SpiderLeg:
                 fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -leg_length]))
 
             claw_length = 0.025
-            claw = tibia.add_body(name=f'{self.id}_claw',
+            claw = tibia.add_body(name=f'{self.leg_id}_claw',
                                   pos=[0, 0, -leg_length])
-            claw.add_site(name=f'{self.id}_claw_tip', pos=[0, 0, -claw_length])
+            claw.add_site(name=f'{self.leg_id}_claw_tip', pos=[0, 0, -claw_length])
             claw.childclass = 'claw'
             claw.add_geom()
 
@@ -155,18 +155,18 @@ class SpiderLeg:
         self.data = data
 
         self.servo_coxa_actuator_id = self.model.actuator(
-            'servo_' + self.id + '_coxa_pitch').id
+            'servo_' + self.leg_id + '_coxa_pitch').id
         self.servo_femur_actuator_id = self.model.actuator(
-            'servo_' + self.id + '_femur_pitch').id
+            'servo_' + self.leg_id + '_femur_pitch').id
         self.servo_tibia_actuator_id = self.model.actuator(
-            'servo_' + self.id + '_tibia_pitch').id
+            'servo_' + self.leg_id + '_tibia_pitch').id
 
         coxa_joint_id = self.model.joint(
-            f'{self.id}_cephalothorax_coxa_joint').id
+            f'{self.leg_id}_cephalothorax_coxa_joint').id
         femur_joint_id = self.model.joint(
-            f'{self.id}_coxa_femur_joint').id
+            f'{self.leg_id}_coxa_femur_joint').id
         tibia_joint_id = self.model.joint(
-            f'{self.id}_femur_tibia_joint').id
+            f'{self.leg_id}_femur_tibia_joint').id
         self.leg_joint_ids = [coxa_joint_id, femur_joint_id, tibia_joint_id]
 
         coxa_joint_dof = self.model.jnt_dofadr[coxa_joint_id]
@@ -184,12 +184,12 @@ class SpiderLeg:
                               femur_joint_qpos,
                               tibia_joint_qpos]
 
-        self.coxa_body_id = self.model.body(f'{self.id}_coxa').id
+        self.coxa_body_id = self.model.body(f'{self.leg_id}_coxa').id
 
-        self.leg_base_site_id = self.model.site(f'{self.id}_leg_base').id
-        self.claw_tip_site_id = self.model.site(f'{self.id}_claw_tip').id
+        self.leg_base_site_id = self.model.site(f'{self.leg_id}_leg_base').id
+        self.claw_tip_site_id = self.model.site(f'{self.leg_id}_claw_tip').id
 
-        target_mocap_body_id = self.model.body(f'{self.id}_target').id
+        target_mocap_body_id = self.model.body(f'{self.leg_id}_target').id
         self.target_mocap_id = self.model.body_mocapid[target_mocap_body_id]
 
     def set_coxa_target(self, target_angle_rad):

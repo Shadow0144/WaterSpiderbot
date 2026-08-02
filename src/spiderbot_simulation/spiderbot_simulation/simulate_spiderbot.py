@@ -5,7 +5,7 @@ import time
 import mujoco
 import mujoco.viewer
 
-from .spiderbot import Spiderbot
+from spiderbot_description import Spiderbot
 
 
 def run_spiderbot_test():
