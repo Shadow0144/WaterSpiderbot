@@ -1,5 +1,9 @@
 """Constructs a description and model of a Spiderbot."""
 
+import os
+
+from ament_index_python.packages import get_package_share_directory
+
 import mujoco
 
 from .spiderleg import SpiderLegSet
@@ -13,8 +17,14 @@ class Spiderbot:
     def __init__(self):
         """Initialize a Spiderbot."""
         self.visualized = False
-        self.path_to_xml = 'assets/models/spider_test.xml'
+        self.path_to_xml = self.get_spider_model_path()
         self.load_model()
+
+    def get_spider_model_path(self):
+        """Get the path to the model file from the share directory."""
+        share_dir = get_package_share_directory('spiderbot_description')
+        model_path = os.path.join(share_dir, 'models', 'spider_test.xml')
+        return model_path
 
     def load_model(self):
         """
