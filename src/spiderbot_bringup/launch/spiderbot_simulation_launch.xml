@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="spiderbot_simulation" exec="simulation_node"/>
+    <node pkg="spiderbot_locomotion" exec="locomotion_node"/>
+</launch>

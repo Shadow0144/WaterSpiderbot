@@ -15,10 +15,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='shadow0144',
-    maintainer_email='CorbinCogswell@gmail.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    maintainer='Shadow0144',
+    maintainer_email='1351027+Shadow0144@users.noreply.github.com',
+    description='Spiderbot interfaces',
+    license='MIT',
     extras_require={
         'test': [
             'pytest',

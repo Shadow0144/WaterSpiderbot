@@ -73,6 +73,17 @@ class SpiderLegSet:
         self.right_iii_leg.set_model_data(self.model, self.data)
         self.right_iv_leg.set_model_data(self.model, self.data)
 
+    def set_claw_targets(self, targets):
+        """Set the target for each leg's claw in Cartesian space."""
+        self.left_i_leg.move_claw_to_cartesian(targets['l_i'])
+        self.left_ii_leg.move_claw_to_cartesian(targets['l_ii'])
+        self.left_iii_leg.move_claw_to_cartesian(targets['l_iii'])
+        self.left_iv_leg.move_claw_to_cartesian(targets['l_iv'])
+        self.right_i_leg.move_claw_to_cartesian(targets['r_i'])
+        self.right_ii_leg.move_claw_to_cartesian(targets['r_ii'])
+        self.right_iii_leg.move_claw_to_cartesian(targets['r_iii'])
+        self.right_iv_leg.move_claw_to_cartesian(targets['r_iv'])
+
 
 class SpiderLeg:
     """A single spider's leg with 3 joints."""

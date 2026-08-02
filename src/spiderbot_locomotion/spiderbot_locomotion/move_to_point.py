@@ -18,10 +18,24 @@ class MoveToPointLocomotionModule(LocomotionModule):
         Planting = auto()
         Passing = auto()
 
-    def __init__(self, leg_set, phase_shift=1):
+    def __init__(self, phase_shift=1):
         """Initialize the locomotion module."""
         self.phase_length = 1.5
         self.phase_shift = phase_shift % 4
+
+        self.current_phase_group_1 = self.LegCyclePhase.Lifting
+        match self.phase_shift:
+            case 0:
+                self.current_phase_group_2 = self.LegCyclePhase.Lifting
+            case 1:
+                self.current_phase_group_2 = self.LegCyclePhase.Reaching
+            case 2:
+                self.current_phase_group_2 = self.LegCyclePhase.Planting
+            case 3:
+                self.current_phase_group_2 = self.LegCyclePhase.Passing
+            case _:  # Should be prevented by the modulus
+                raise ValueError('phase_shift should be [0, 3]')
+        self.timer = self.phase_length
 
         front_l_lifting_targets = [-0.40, 1.40, -0.80]
         front_r_lifting_targets = [0.40, 1.40, -0.80]
@@ -40,29 +54,6 @@ class MoveToPointLocomotionModule(LocomotionModule):
         back_r_planting_targets = [-0.60, 1.20, -1.40]
         back_l_passing_targets = [-1.00, 1.40, -1.20]
         back_r_passing_targets = [1.00, 1.40, -1.20]
-
-        leg_l_i_start = [1.20, 0.80, -1.40]
-        leg_r_i_start = [-1.20, 0.80, -1.40]
-        leg_l_ii_start = [1.20, 0.80, -1.40]
-        leg_r_ii_start = [-1.20, 0.80, -1.40]
-        leg_l_iii_start = [1.20, 0.80, -1.40]
-        leg_r_iii_start = [-1.20, 0.80, -1.40]
-        leg_l_iv_start = [1.20, 0.80, -1.40]
-        leg_r_iv_start = [-1.20, 0.80, -1.40]
-
-        self.current_phase_group_1 = self.LegCyclePhase.Lifting
-        match self.phase_shift:
-            case 0:
-                self.current_phase_group_2 = self.LegCyclePhase.Lifting
-            case 1:
-                self.current_phase_group_2 = self.LegCyclePhase.Reaching
-            case 2:
-                self.current_phase_group_2 = self.LegCyclePhase.Planting
-            case 3:
-                self.current_phase_group_2 = self.LegCyclePhase.Passing
-            case _:  # Should be prevented by the modulus
-                raise ValueError('phase_shift should be [0, 3]')
-        self.timer = self.phase_length
 
         lifting_targets = {
             'l_i': front_l_lifting_targets,
@@ -117,42 +108,50 @@ class MoveToPointLocomotionModule(LocomotionModule):
             self.LegCyclePhase.Passing: 'passing',
         }
 
-        self.left_i_leg_targets = leg_l_i_start
-        self.left_ii_leg_targets = leg_l_ii_start
-        self.right_iii_leg_targets = leg_r_iii_start
-        self.left_iv_leg_targets = leg_l_iv_start
-        self.right_i_leg_targets = leg_r_i_start
-        self.right_ii_leg_targets = leg_r_ii_start
-        self.left_iii_leg_targets = leg_l_iii_start
-        self.right_iv_leg_targets = leg_r_iv_start
-
         # Group 1 (li, lii, rii, riv)
 
         targets_group_1 = self.targets[
             self.target_strings[self.current_phase_group_1]]
+
+        self.left_i_leg_targets = targets_group_1['l_i']
         self.left_i_next_leg_targets = targets_group_1['l_i']
+
+        self.left_iii_leg_targets = targets_group_1['l_iii']
         self.left_iii_next_leg_targets = targets_group_1['l_iii']
+
+        self.right_ii_leg_targets = targets_group_1['r_ii']
         self.right_ii_next_leg_targets = targets_group_1['r_ii']
+
+        self.right_iv_leg_targets = targets_group_1['r_iv']
         self.right_iv_next_leg_targets = targets_group_1['r_iv']
 
         # Group 2 (lii, liv, ri, riii)
 
         targets_group_2 = self.targets[
             self.target_strings[self.current_phase_group_2]]
+
+        self.left_ii_leg_targets = targets_group_2['l_ii']
         self.left_ii_next_leg_targets = targets_group_2['l_ii']
+
+        self.left_iv_leg_targets = targets_group_2['l_iv']
         self.left_iv_next_leg_targets = targets_group_2['l_iv']
+
+        self.right_i_leg_targets = targets_group_2['r_ii']
         self.right_i_next_leg_targets = targets_group_2['r_ii']
+
+        self.right_iii_leg_targets = targets_group_2['r_iii']
         self.right_iii_next_leg_targets = targets_group_2['r_iii']
 
-        leg_set.left_i_leg.move_claw_to_cartesian(leg_l_i_start)
-        leg_set.left_ii_leg.move_claw_to_cartesian(leg_l_ii_start)
-        leg_set.left_iii_leg.move_claw_to_cartesian(leg_l_iii_start)
-        leg_set.left_iv_leg.move_claw_to_cartesian(leg_l_iv_start)
-
-        leg_set.right_i_leg.move_claw_to_cartesian(leg_r_i_start)
-        leg_set.right_ii_leg.move_claw_to_cartesian(leg_r_ii_start)
-        leg_set.right_iii_leg.move_claw_to_cartesian(leg_r_iii_start)
-        leg_set.right_iv_leg.move_claw_to_cartesian(leg_r_iv_start)
+        self.current_targets = {
+            'l_i': self.left_i_leg_targets,
+            'l_ii': self.left_ii_leg_targets,
+            'l_iii': self.left_iii_leg_targets,
+            'l_iv': self.left_iv_leg_targets,
+            'r_i': self.right_i_leg_targets,
+            'r_ii': self.right_ii_leg_targets,
+            'r_iii': self.right_iii_leg_targets,
+            'r_iv': self.right_iv_leg_targets,
+        }
 
     def print_primary_cycle(self):
         """Print the current primary phase."""
@@ -180,6 +179,7 @@ class MoveToPointLocomotionModule(LocomotionModule):
 
     def interpolate_leg_to_target(self,
                                   leg,
+                                  leg_length,
                                   leg_targets,
                                   next_leg_targets,
                                   percentage):
@@ -188,10 +188,10 @@ class MoveToPointLocomotionModule(LocomotionModule):
             (np.asarray(next_leg_targets) - np.asarray(leg_targets))
             * percentage)
         # Scale to the leg
-        scaled_target_pos = np.multiply(target_pos, leg.leg_length)
-        leg.move_claw_to_cartesian(scaled_target_pos)
+        scaled_target_pos = np.multiply(target_pos, leg_length)
+        self.current_targets[leg] = scaled_target_pos
 
-    def walk_forward(self, delta_time, leg_set):
+    def walk_forward(self, delta_time):
         """Walk the Spiderbot forward."""
         self.timer -= delta_time
 
@@ -233,36 +233,44 @@ class MoveToPointLocomotionModule(LocomotionModule):
 
         percentage = 1.0 - min(1.0, max(0.0, self.timer / self.phase_length))
 
-        self.interpolate_leg_to_target(leg_set.left_i_leg,
+        self.interpolate_leg_to_target('l_i',
+                                       1.00 * 0.25,  # TODO
                                        self.left_i_leg_targets,
                                        self.left_i_next_leg_targets,
                                        percentage)
-        self.interpolate_leg_to_target(leg_set.left_ii_leg,
+        self.interpolate_leg_to_target('l_ii',
+                                       0.90 * 0.25,  # TODO
                                        self.left_ii_leg_targets,
                                        self.left_ii_next_leg_targets,
                                        percentage)
-        self.interpolate_leg_to_target(leg_set.left_iii_leg,
+        self.interpolate_leg_to_target('l_iii',
+                                       0.75 * 0.25,  # TODO
                                        self.left_iii_leg_targets,
                                        self.left_iii_next_leg_targets,
                                        percentage)
-        self.interpolate_leg_to_target(leg_set.left_iv_leg,
+        self.interpolate_leg_to_target('l_iv',
+                                       1.10 * 0.25,  # TODO
                                        self.left_iv_leg_targets,
                                        self.left_iv_next_leg_targets,
                                        percentage)
 
-        self.interpolate_leg_to_target(leg_set.right_i_leg,
+        self.interpolate_leg_to_target('r_i',
+                                       1.00 * 0.25,  # TODO
                                        self.right_i_leg_targets,
                                        self.right_i_next_leg_targets,
                                        percentage)
-        self.interpolate_leg_to_target(leg_set.right_ii_leg,
+        self.interpolate_leg_to_target('r_ii',
+                                       0.90 * 0.25,  # TODO
                                        self.right_ii_leg_targets,
                                        self.right_ii_next_leg_targets,
                                        percentage)
-        self.interpolate_leg_to_target(leg_set.right_iii_leg,
+        self.interpolate_leg_to_target('r_iii',
+                                       0.75 * 0.25,  # TODO
                                        self.right_iii_leg_targets,
                                        self.right_iii_next_leg_targets,
                                        percentage)
-        self.interpolate_leg_to_target(leg_set.right_iv_leg,
+        self.interpolate_leg_to_target('r_iv',
+                                       1.10 * 0.25,  # TODO
                                        self.right_iv_leg_targets,
                                        self.right_iv_next_leg_targets,
                                        percentage)

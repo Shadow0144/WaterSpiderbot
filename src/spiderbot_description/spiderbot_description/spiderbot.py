@@ -2,10 +2,6 @@
 
 import mujoco
 
-# from spiderbot_locomotion import SimpleSinLocomotionModule
-# from spiderbot_locomotion import HandcraftedLocomotionModule
-from spiderbot_locomotion import MoveToPointLocomotionModule
-
 from .spiderleg import SpiderLegSet
 from .util import draw_leg_space_in_mujoco
 from .util import sample_reachable_leg_space
@@ -38,8 +34,6 @@ class Spiderbot:
 
         self.leg_set.set_model_data(self.model, self.data)
 
-        self.locomotion_module = MoveToPointLocomotionModule(self.leg_set)
-
     def walk_forward(self, delta_time):
         """Walk the Spiderbot forward using the locomotion module."""
         self.locomotion_module.walk_forward(delta_time, self.leg_set)
@@ -60,3 +54,7 @@ class Spiderbot:
             self.data = mujoco.MjData(self.model)
 
             self.leg_set.set_model_data(self.model, self.data)
+
+    def set_claw_targets(self, targets):
+        """Set the target for every leg's claw in Cartesian space."""
+        self.leg_set.set_claw_targets(targets)

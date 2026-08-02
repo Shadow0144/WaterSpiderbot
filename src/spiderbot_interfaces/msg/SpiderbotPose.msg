@@ -1,11 +1,4 @@
 float64 cephalothorax_roll
 float64 cephalothorax_pitch
 float64 cephalothorax_yaw
-LegPose leg_l_i_pose
-LegPose leg_l_ii_pose
-LegPose leg_l_iii_pose
-LegPose leg_l_iv_pose
-LegPose leg_r_i_pose
-LegPose leg_r_ii_pose
-LegPose leg_r_iii_pose
-LegPose leg_r_iv_pose
+LegSetPoses leg_poses
