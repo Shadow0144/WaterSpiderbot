@@ -141,7 +141,8 @@ class SpiderLeg:
             claw_length = 0.025
             claw = tibia.add_body(name=f'{self.leg_id}_claw',
                                   pos=[0, 0, -leg_length])
-            claw.add_site(name=f'{self.leg_id}_claw_tip', pos=[0, 0, -claw_length])
+            claw.add_site(name=f'{self.leg_id}_claw_tip',
+                          pos=[0, 0, -claw_length])
             claw.childclass = 'claw'
             claw.add_geom()
 
