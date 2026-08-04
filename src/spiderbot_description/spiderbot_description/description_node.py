@@ -4,7 +4,7 @@ from rclpy.node import Node
 
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
-from . import Spiderbot
+from .spiderbot import Spiderbot
 
 
 def convert_vector3_to_list(vector3):

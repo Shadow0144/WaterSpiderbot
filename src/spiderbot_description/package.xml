@@ -4,10 +4,10 @@
   <name>spiderbot_description</name>
   <version>0.0.0</version>
   <maintainer email="1351027+Shadow0144@users.noreply.github.com">Shadow0144</maintainer>
-  <description>Holds the descripton of the Spiderbot</description>
+  <description>Provides a description of a Spiderbot</description>
   <license>MIT</license>
 
-  <exec_depend>spiderbot_locomotion</exec_depend>
+  <exec_depend>spiderbot_utilities</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

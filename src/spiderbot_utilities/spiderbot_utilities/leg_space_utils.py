@@ -1,4 +1,4 @@
-"""Utility functions for a Spiderbot."""
+"""Utility functions for the leg space of a Spiderbot."""
 
 import mujoco
 

@@ -1,18 +1,11 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>spiderbot_simulation</name>
+  <name>spiderbot_utilities</name>
   <version>0.0.0</version>
-  <maintainer email="1351027+Shadow0144@users.noreply.github.com">Shadow0144</maintainer>
-  <description>Runs a simulation of the Spiderbot</description>
+  <description>Utility and common functions for a Spiderbot</description>
+  <maintainer email="1351027+Shadow0144@users.noreply.github.com">shadow0144</maintainer>
   <license>MIT</license>
-
-  <exec_depend>spiderbot_description</exec_depend>
-  <exec_depend>spiderbot_utilities</exec_depend>
-  
-  <exec_depend>spiderbot_interfaces</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>geometry_msgs</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -6,8 +6,6 @@ from ament_index_python.packages import get_package_share_directory
 
 import mujoco
 
-from .spider_leg import SpiderLeg
-
 
 class Spiderbot:
     """Main description of a Spiderbot robot."""
@@ -40,16 +38,9 @@ class Spiderbot:
         self.model = self.spec.compile()
         self.data = mujoco.MjData(self.model)
 
-        for leg_name in self.leg_names:
-            self.legs[leg_name].set_model_data(self.model, self.data)
-
-    def set_claw_targets(self, targets):
-        """Set the target for every leg's claw in Cartesian space."""
-        for leg_name in self.leg_names:
-            self.legs[leg_name].set_claw_target(targets[leg_name])
-
     def create_legs(self, spec, use_anatomical_lengths=True):
         """Create the legs of the Spiderbot."""
+        self.damping = 0.01
         self.base_segment_length = 0.25
         self.rest_angles = {'coxa': 0.0, 'femur': 0.0, 'tibia': 0.0}
 
@@ -111,9 +102,8 @@ class Spiderbot:
             [0, 0, 225]
         ]
 
-        self.legs = {}
         for i in range(0, 8):
-            self.legs[self.leg_names[i]] = SpiderLeg(
+            self.build_leg(
                 spec,
                 self.leg_names[i],
                 base_rgb[i],
@@ -121,3 +111,75 @@ class Spiderbot:
                 eulers[i],
                 self.segment_lengths[i],
                 i < 4)
+
+    def build_leg(self, spec, leg_id,
+                  base_rgb, pos, euler,
+                  segment_length, left_side):
+        """Build a spider leg."""
+        try:
+            target = spec.worldbody.add_body(
+                name=f'{leg_id}_target', pos=[0, 0, 0], mocap=True)
+            target.add_geom(
+                type=mujoco.mjtGeom.mjGEOM_SPHERE,
+                size=[0.015, 0.0, 0.0],
+                rgba=[base_rgb[0] + 0.5,
+                      base_rgb[1] + 0.5,
+                      base_rgb[2] + 0.5,
+                      0.75])
+
+            cephalothorax = spec.body('cephalothorax')
+            if not cephalothorax:
+                raise ValueError('Could not find cephalothorax')
+
+            if left_side:
+                coxa_axis = [0, 1, 0]
+            else:
+                coxa_axis = [0, -1, 0]
+
+            cephalothorax.add_site(
+                name=f'{leg_id}_leg_base', pos=pos, euler=euler)
+
+            coxa = cephalothorax.add_body(
+                name=f'{leg_id}_coxa', pos=pos, euler=euler)
+            coxa.childclass = 'coxa'
+            coxa.add_joint(
+                name=f'{leg_id}_cephalothorax_coxa_joint', axis=coxa_axis)
+            coxa.add_geom(
+                rgba=[base_rgb[0], base_rgb[1], base_rgb[2], 1])
+
+            femur = coxa.add_body(
+                name=f'{leg_id}_femur',
+                pos=[0, 0.04, 0], euler=[45, 0, 0])
+            femur.childclass = 'femur'
+            femur.add_joint(name=f'{leg_id}_coxa_femur_joint')
+            femur.add_geom(
+                rgba=[base_rgb[0] + 0.1,
+                      base_rgb[1] + 0.1,
+                      base_rgb[2], 1],
+                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_length]))
+
+            tibia = femur.add_body(
+                name=f'{leg_id}_tibia',
+                pos=[0, 0, -segment_length],
+                euler=[-45, 0, 0])
+            tibia.childclass = 'tibia'
+            tibia.add_joint(name=f'{leg_id}_femur_tibia_joint')
+            tibia.add_geom(
+                rgba=[base_rgb[0] + 0.2,
+                      base_rgb[1] + 0.2,
+                      base_rgb[2], 1],
+                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_length]))
+
+            claw_length = 0.025
+            claw = tibia.add_body(
+                name=f'{leg_id}_claw',
+                pos=[0, 0, -segment_length])
+            claw.add_site(
+                name=f'{leg_id}_claw_tip',
+                pos=[0, 0, -claw_length])
+            claw.childclass = 'claw'
+            claw.add_geom()
+
+        except KeyError:
+            print(f'Key error: {leg_id}')
+            exit()

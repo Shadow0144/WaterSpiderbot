@@ -1,17 +1,19 @@
-"""Create a leg for quickly referencing joints."""
+"""Common class for a spider leg."""
 
 import numpy as np
 
 
 class SpiderLeg:
-    """A single Spiderbot leg with 3 joints."""
+    """Common class for a spider leg."""
 
     def __init__(self, leg_id, segment_length, model, data):
-        """Initialize the spider leg."""
+        """Initialize a spider leg."""
         self.leg_id = leg_id
         self.segment_length = segment_length
         self.model = model
         self.data = data
+
+        self.damping = 0.01
 
         self.servo_coxa_actuator_id = self.model.actuator(
             'servo_' + self.leg_id + '_coxa_pitch').id
@@ -50,6 +52,26 @@ class SpiderLeg:
 
         target_mocap_body_id = self.model.body(f'{self.leg_id}_target').id
         self.target_mocap_id = self.model.body_mocapid[target_mocap_body_id]
+
+    def set_coxa_target(self, target_angle_rad):
+        """Set the target angle for the coxa joint."""
+        self.data.ctrl[self.servo_coxa_actuator_id] = target_angle_rad
+
+    def set_femur_target(self, target_angle_rad):
+        """Set the target angle for the femur joint."""
+        self.data.ctrl[self.servo_femur_actuator_id] = target_angle_rad
+
+    def set_tibia_target(self, target_angle_rad):
+        """Set the target angle for the tibia joint."""
+        self.data.ctrl[self.servo_tibia_actuator_id] = target_angle_rad
+
+    def set_leg_targets(self, coxa_target_angle_rad,
+                        femur_target_angle_rad,
+                        tibia_target_angle_rad):
+        """Set the target angles for the leg joints."""
+        self.set_coxa_target(coxa_target_angle_rad)
+        self.set_femur_target(femur_target_angle_rad)
+        self.set_tibia_target(tibia_target_angle_rad)
 
     def get_qposes(self):
         """Return the qposes of all actuators."""

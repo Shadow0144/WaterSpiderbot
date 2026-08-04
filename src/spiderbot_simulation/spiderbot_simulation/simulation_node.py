@@ -8,14 +8,12 @@ import mujoco.viewer
 import rclpy
 from rclpy.node import Node
 
-from sensor_msgs.msg import JointState
-
-from spiderbot_interfaces.msg import LegPose
 from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
-from .spider_leg import SpiderLeg
+import spiderbot_utilities as utils
+from spiderbot_utilities import SpiderLeg
 
 
 def convert_vector3_to_list(vector3):
@@ -25,9 +23,6 @@ def convert_vector3_to_list(vector3):
 
 class SimulationNode(Node):
     """A simulation node for a Spiderbot."""
-
-    leg_names = ['l_i', 'l_ii', 'l_iii', 'l_iv',
-                 'r_i', 'r_ii', 'r_iii', 'r_iv']
 
     def __init__(self):
         """Initialize and run a simulation."""
@@ -107,22 +102,22 @@ class SimulationNode(Node):
 
         self.viewer.opt.frame = mujoco.mjtFrame.mjFRAME_SITE
 
-    def convert_vector3_to_list(self, vector3):
-        """Convert geometry_msg Vector3 to a Python list."""
-        return [vector3.x, vector3.y, vector3.z]
-
     def set_leg_targets_callback(self, msg):
         """Move the mocaps to the targets."""
         leg_target_values = msg.leg_targets
+        if len(leg_target_values) != len(self.leg_names):
+            return  # Break early
         leg_targets = dict(zip(self.leg_names, leg_target_values))
         for leg_name in self.leg_names:
             # Move the mocap to the target point
             self.legs[leg_name].set_mocap_target(
-                self.convert_vector3_to_list(leg_targets[leg_name]))
+                utils.convert_vector3_to_list(leg_targets[leg_name]))
 
     def spiderbot_target_pose_callback(self, msg):
         """Update the targets for the actuators."""
         leg_poses_values = msg.leg_poses
+        if len(leg_poses_values) != len(self.leg_names):
+            return  # Break early
         leg_poses = dict(zip(self.leg_names, leg_poses_values))
         for leg_name in self.leg_names:
             leg_pose = leg_poses[leg_name]
@@ -131,39 +126,19 @@ class SimulationNode(Node):
                 leg_pose.femur_qpos,
                 leg_pose.tibia_qpos)
 
-    def create_joint_state(self, name, qpose):
-        """Construct a JointStateObject."""
-        joint_state = JointState()
-        joint_state.name = name
-        joint_state.position = qpose
-        return joint_state
-
-    def construct_pose_msg(self):
-        """Construct a pose message."""
-        msg = SpiderbotPose()
-        msg.timestamp = self.last_timestamp
-        msg.body_joint_state = self.create_joint_state(
-            'cephalothorax_joint',
-            self.data.qpos[
-                self.body_joint_qpos_adr:(self.body_joint_qpos_adr + 7)])
-        leg_qposes = []
-        for leg_name in self.leg_names:
-            qposes = self.legs[leg_name].get_qposes()
-            leg_pose = LegPose()
-            leg_pose.leg_name = leg_name
-            leg_pose.coxa_qpos = qposes[0]
-            leg_pose.femur_qpos = qposes[1]
-            leg_pose.tibia_qpos = qposes[2]
-            leg_qposes.append(leg_pose)
-        return msg
-
     def update_viewer(self):
         """Update the simulation viewer."""
         if self.viewer.is_running():
             step_start = time.time()
 
             self.last_timestamp = step_start
-            spiderbot_pose_msg = self.construct_pose_msg()
+            spiderbot_pose_msg = utils.construct_pose_msg(
+                self.last_timestamp,
+                self.data.qpos[self.body_joint_qpos_adr:
+                               (self.body_joint_qpos_adr + 7)],
+                self.leg_names,
+                self.legs
+            )
             self.spiderbot_pose_publisher.publish(spiderbot_pose_msg)
 
             mujoco.mj_step(self.model, self.data)

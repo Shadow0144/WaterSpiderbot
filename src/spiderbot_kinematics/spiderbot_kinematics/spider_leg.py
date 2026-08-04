@@ -4,94 +4,15 @@ import mujoco
 
 import numpy as np
 
+from spiderbot_utilities import SpiderLeg
 
-class SpiderLeg:
+
+class KinematicSpiderLeg(SpiderLeg):
     """Resolves and keeps track of spider leg kinematics."""
 
     def __init__(self, leg_id, segment_length, model, data):
-        """Create a spider leg."""
-        self.leg_id = leg_id
-        self.segment_length = segment_length
-        self.model = model
-        self.data = data
-
-        self.damping = 0.01
-
-        self.servo_coxa_actuator_id = self.model.actuator(
-            'servo_' + self.leg_id + '_coxa_pitch').id
-        self.servo_femur_actuator_id = self.model.actuator(
-            'servo_' + self.leg_id + '_femur_pitch').id
-        self.servo_tibia_actuator_id = self.model.actuator(
-            'servo_' + self.leg_id + '_tibia_pitch').id
-
-        coxa_joint_id = self.model.joint(
-            f'{self.leg_id}_cephalothorax_coxa_joint').id
-        femur_joint_id = self.model.joint(
-            f'{self.leg_id}_coxa_femur_joint').id
-        tibia_joint_id = self.model.joint(
-            f'{self.leg_id}_femur_tibia_joint').id
-        self.leg_joint_ids = [coxa_joint_id, femur_joint_id, tibia_joint_id]
-
-        coxa_joint_dof = self.model.jnt_dofadr[coxa_joint_id]
-        femur_joint_dof = self.model.jnt_dofadr[femur_joint_id]
-        tibia_joint_dof = self.model.jnt_dofadr[tibia_joint_id]
-
-        coxa_joint_qpos = self.model.jnt_qposadr[coxa_joint_id]
-        femur_joint_qpos = self.model.jnt_qposadr[femur_joint_id]
-        tibia_joint_qpos = self.model.jnt_qposadr[tibia_joint_id]
-
-        self.leg_dof_adrs = [coxa_joint_dof,
-                             femur_joint_dof,
-                             tibia_joint_dof]
-        self.leg_qpos_adrs = [coxa_joint_qpos,
-                              femur_joint_qpos,
-                              tibia_joint_qpos]
-
-        self.coxa_body_id = self.model.body(f'{self.leg_id}_coxa').id
-
-        self.leg_base_site_id = self.model.site(f'{self.leg_id}_leg_base').id
-        self.claw_tip_site_id = self.model.site(f'{self.leg_id}_claw_tip').id
-
-        target_mocap_body_id = self.model.body(f'{self.leg_id}_target').id
-        self.target_mocap_id = self.model.body_mocapid[target_mocap_body_id]
-
-    def set_coxa_target(self, target_angle_rad):
-        """Set the target angle for the coxa joint."""
-        self.data.ctrl[self.servo_coxa_actuator_id] = target_angle_rad
-
-    def set_femur_target(self, target_angle_rad):
-        """Set the target angle for the femur joint."""
-        self.data.ctrl[self.servo_femur_actuator_id] = target_angle_rad
-
-    def set_tibia_target(self, target_angle_rad):
-        """Set the target angle for the tibia joint."""
-        self.data.ctrl[self.servo_tibia_actuator_id] = target_angle_rad
-
-    def set_leg_targets(self, coxa_target_angle_rad,
-                        femur_target_angle_rad,
-                        tibia_target_angle_rad):
-        """Set the target angles for the leg joints."""
-        self.set_coxa_target(coxa_target_angle_rad)
-        self.set_femur_target(femur_target_angle_rad)
-        self.set_tibia_target(tibia_target_angle_rad)
-
-    def set_rest_targets(self, coxa_target_angle_rad,
-                         femur_target_angle_rad,
-                         tibia_target_angle_rad):
-        """Set the angles for the leg joints to return to when resting."""
-        self.rest_angles = {'coxa': coxa_target_angle_rad,
-                            'femur': femur_target_angle_rad,
-                            'tibia': tibia_target_angle_rad}
-
-    def return_to_rest(self):
-        """Move the leg joints to their rest positions."""
-        self.set_leg_targets(self.rest_angles['coxa'],
-                             self.rest_angles['femur'],
-                             self.rest_angles['tibia'])
-
-    def get_qposes(self):
-        """Return the qposes of all actuators."""
-        return self.data.qpos[self.leg_qpos_adrs]
+        """Initialize a spider leg."""
+        super().__init__(leg_id, segment_length, model, data)
 
     # target_xyz is a vector of the target x, y, and z position
     # target_rpy is desired the roll, pitch, and yaw of the end effector
