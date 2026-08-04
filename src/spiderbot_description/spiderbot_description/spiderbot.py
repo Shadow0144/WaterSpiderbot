@@ -21,7 +21,7 @@ class Spiderbot:
     def get_spider_model_path(self):
         """Get the path to the model file from the share directory."""
         share_dir = get_package_share_directory('spiderbot_description')
-        model_path = os.path.join(share_dir, 'models', 'spider_test.xml')
+        model_path = os.path.join(share_dir, 'models', 'spiderbot_base.xml')
         return model_path
 
     def load_model(self):
