@@ -1,4 +1,3 @@
-float64 cephalothorax_roll
-float64 cephalothorax_pitch
-float64 cephalothorax_yaw
-LegSetPoses leg_poses
+float64 timestamp
+sensor_msgs/JointState body_joint_state
+LegPose[] leg_poses

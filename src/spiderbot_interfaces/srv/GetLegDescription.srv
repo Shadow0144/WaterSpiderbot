@@ -1,9 +1,0 @@
-string leg_name
----
-float64 coxa_x
-float64 coxa_y
-float64 coxa_z
-float64 coxa_pitch
-float64 coxa_roll
-float64 coxa_yaw
-float64 leg_length

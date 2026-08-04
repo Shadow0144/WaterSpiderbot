@@ -6,9 +6,7 @@ from ament_index_python.packages import get_package_share_directory
 
 import mujoco
 
-from .spiderleg import SpiderLegSet
-from .util import draw_leg_space_in_mujoco
-from .util import sample_reachable_leg_space
+from .spider_leg import SpiderLeg
 
 
 class Spiderbot:
@@ -37,34 +35,89 @@ class Spiderbot:
 
         # Cephalothorax connects to coxa [then trochanter] then femur
         # [then patella] then tibia [then metatarsus] [then tarsus] then claws
-        self.leg_set = SpiderLegSet(self.spec)
+        self.create_legs(self.spec)
 
         self.model = self.spec.compile()
         self.data = mujoco.MjData(self.model)
 
-        self.leg_set.set_model_data(self.model, self.data)
-
-    def walk_forward(self, delta_time):
-        """Walk the Spiderbot forward using the locomotion module."""
-        self.locomotion_module.walk_forward(delta_time, self.leg_set)
-
-    def test_leg(self):
-        """Test the leg moves to a position."""
-        self.leg_set.left_i_leg.move_claw_to_cartesian([0, 10, 0])
-
-    def visualize_leg_space(self):
-        """Calculate and visualize the points a leg end can reach."""
-        if not self.visualized:
-            self.visualized = True
-            draw_leg_space_in_mujoco(self.spec, self.leg_set.left_i_leg,
-                                     sample_reachable_leg_space(
-                                         self.leg_set.left_i_leg))
-
-            self.model = self.spec.compile()
-            self.data = mujoco.MjData(self.model)
-
-            self.leg_set.set_model_data(self.model, self.data)
+        for leg_name in self.leg_names:
+            self.legs[leg_name].set_model_data(self.model, self.data)
 
     def set_claw_targets(self, targets):
         """Set the target for every leg's claw in Cartesian space."""
-        self.leg_set.set_claw_targets(targets)
+        for leg_name in self.leg_names:
+            self.legs[leg_name].set_claw_target(targets[leg_name])
+
+    def create_legs(self, spec, use_anatomical_lengths=True):
+        """Create the legs of the Spiderbot."""
+        self.base_segment_length = 0.25
+        self.rest_angles = {'coxa': 0.0, 'femur': 0.0, 'tibia': 0.0}
+
+        self.leg_names = ['l_i', 'l_ii', 'l_iii', 'l_iv',
+                          'r_i', 'r_ii', 'r_iii', 'r_iv']
+
+        self.segment_lengths = [1.0, 1.0, 1.0, 1.0]
+        # Leg ratios:
+        if use_anatomical_lengths:
+            self.segment_lengths[0] = self.base_segment_length * 1.00
+            self.segment_lengths[1] = self.base_segment_length * 0.90
+            self.segment_lengths[2] = self.base_segment_length * 0.75
+            self.segment_lengths[3] = self.base_segment_length * 1.10
+        else:
+            self.segment_lengths[0] = self.base_segment_length * 1.00
+            self.segment_lengths[1] = self.base_segment_length * 1.00
+            self.segment_lengths[2] = self.base_segment_length * 1.00
+            self.segment_lengths[3] = self.base_segment_length * 1.00
+
+        self.segment_lengths.extend(self.segment_lengths)  # Left + right
+
+        # Leg segment ratios:
+        # Femur: 1.0
+        # [Patella: 0.4]
+        # Tibia: 1.0
+        # [Metatarsus: 1.0 / 1.05]
+        # [Tarsus: 0.4]
+
+        base_rgb = [
+            [0.7, 0.1, 0.1],
+            [0.7, 0.1, 0.2],
+            [0.7, 0.1, 0.3],
+            [0.7, 0.1, 0.4],
+            [0.1, 0.7, 0.1],
+            [0.1, 0.7, 0.2],
+            [0.1, 0.7, 0.3],
+            [0.1, 0.7, 0.4]
+        ]
+
+        poses = [
+            [-0.175, 0.2, 0.0],
+            [-0.25, 0.075, 0.0],
+            [-0.25, -0.075, 0.0],
+            [-0.175, -0.2, 0.0],
+            [0.175, 0.2, 0.0],
+            [0.25, 0.075, 0.0],
+            [0.25, -0.075, 0.0],
+            [0.175, -0.2, 0.0]
+        ]
+
+        eulers = [
+            [0, 0, 45],
+            [0, 0, 65],
+            [0, 0, 115],
+            [0, 0, 135],
+            [0, 0, 315],
+            [0, 0, 295],
+            [0, 0, 245],
+            [0, 0, 225]
+        ]
+
+        self.legs = {}
+        for i in range(0, 8):
+            self.legs[self.leg_names[i]] = SpiderLeg(
+                spec,
+                self.leg_names[i],
+                base_rgb[i],
+                poses[i],
+                eulers[i],
+                self.segment_lengths[i],
+                i < 4)

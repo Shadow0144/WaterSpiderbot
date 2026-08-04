@@ -1,0 +1,4 @@
+---
+string[] leg_names
+float32[] segment_lengths
+string spec_xml

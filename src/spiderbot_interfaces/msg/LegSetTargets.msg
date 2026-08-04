@@ -1,8 +1,0 @@
-geometry_msgs/Vector3 leg_l_i_target
-geometry_msgs/Vector3 leg_l_ii_target
-geometry_msgs/Vector3 leg_l_iii_target
-geometry_msgs/Vector3 leg_l_iv_target
-geometry_msgs/Vector3 leg_r_i_target
-geometry_msgs/Vector3 leg_r_ii_target
-geometry_msgs/Vector3 leg_r_iii_target
-geometry_msgs/Vector3 leg_r_iv_target

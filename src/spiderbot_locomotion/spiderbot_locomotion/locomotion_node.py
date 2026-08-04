@@ -2,11 +2,12 @@
 
 from geometry_msgs.msg import Vector3
 
+import rclpy
 from rclpy.node import Node
 
-from spiderbot_interfaces.msg import LegSetTargets
-
-from std_msgs.msg import Float32
+from spiderbot_interfaces.msg import LegTargets
+from spiderbot_interfaces.msg import SpiderbotPose
+from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 from . import MoveToPointLocomotionModule
 
@@ -20,67 +21,65 @@ class SpiderbotLocomotionNode(Node):
 
         self.locomotion_module = MoveToPointLocomotionModule()
 
-        self.leg_set_targets_publisher = self.create_publisher(
-            LegSetTargets, 'set_leg_set_targets', 10)
+        self.last_timestamp = -1.0
 
-        self.simulation_delta_time_subscription = self.create_subscription(
-            Float32,
-            'simulation_delta_time',
-            self.simulation_delta_time_callback,
+        self.spiderbot_description_client = self.create_client(
+            GetSpiderbotDescription,
+            'get_spiderbot_description')
+        while not self.spiderbot_description_client.wait_for_service(
+            timeout_sec=1.0
+        ):
+            self.get_logger().info('Waiting on get_spec_xml service')
+        spiderbot_description = self.request_spiderbot_description()
+
+        self.leg_names = spiderbot_description.leg_names
+        self.segment_lengths = dict(zip(self.leg_names,
+                                        spiderbot_description.segment_lengths))
+
+        self.leg_set_targets_publisher = self.create_publisher(
+            LegTargets, 'set_leg_targets', 10)
+
+        self.spiderbot_pose_subscription = self.create_subscription(
+            SpiderbotPose,
+            'spiderbot_pose',
+            self.spiderbot_pose_callback,
             10
         )
-        self.simulation_delta_time_subscription
+        self.spiderbot_pose_subscription
 
-    def simulation_delta_time_callback(self, msg):
-        """Publish a set of leg targets."""
-        self.locomotion_module.walk_forward(msg.data)
-        msg = LegSetTargets()
-        msg.leg_l_i_target = (Vector3(
-                x=self.locomotion_module.current_targets['l_i'][0],
-                y=self.locomotion_module.current_targets['l_i'][1],
-                z=self.locomotion_module.current_targets['l_i'][2],
-            )
+    def request_spiderbot_description(self):
+        """Get the spec xml from the description."""
+        request = GetSpiderbotDescription.Request()
+        future = self.spiderbot_description_client.call_async(request)
+        rclpy.spin_until_future_complete(self, future)
+        return future.result()
+
+    def create_vector3(self, target):
+        """Construct a Vector3."""
+        vector3 = Vector3(
+            x=target[0],
+            y=target[1],
+            z=target[2]
         )
-        msg.leg_l_ii_target = (Vector3(
-                x=self.locomotion_module.current_targets['l_ii'][0],
-                y=self.locomotion_module.current_targets['l_ii'][1],
-                z=self.locomotion_module.current_targets['l_ii'][2],
-            )
-        )
-        msg.leg_l_iii_target = (Vector3(
-                x=self.locomotion_module.current_targets['l_iii'][0],
-                y=self.locomotion_module.current_targets['l_iii'][1],
-                z=self.locomotion_module.current_targets['l_iii'][2],
-            )
-        )
-        msg.leg_l_iv_target = (Vector3(
-                x=self.locomotion_module.current_targets['l_iv'][0],
-                y=self.locomotion_module.current_targets['l_iv'][1],
-                z=self.locomotion_module.current_targets['l_iv'][2],
-            )
-        )
-        msg.leg_r_i_target = (Vector3(
-                x=self.locomotion_module.current_targets['r_i'][0],
-                y=self.locomotion_module.current_targets['r_i'][1],
-                z=self.locomotion_module.current_targets['r_i'][2],
-            )
-        )
-        msg.leg_r_ii_target = (Vector3(
-                x=self.locomotion_module.current_targets['r_ii'][0],
-                y=self.locomotion_module.current_targets['r_ii'][1],
-                z=self.locomotion_module.current_targets['r_ii'][2],
-            )
-        )
-        msg.leg_r_iii_target = (Vector3(
-                x=self.locomotion_module.current_targets['r_iii'][0],
-                y=self.locomotion_module.current_targets['r_iii'][1],
-                z=self.locomotion_module.current_targets['r_iii'][2],
-            )
-        )
-        msg.leg_r_iv_target = (Vector3(
-                x=self.locomotion_module.current_targets['r_iv'][0],
-                y=self.locomotion_module.current_targets['r_iv'][1],
-                z=self.locomotion_module.current_targets['r_iv'][2],
-            )
-        )
-        self.leg_set_targets_publisher.publish(msg)
+        return vector3
+
+    def spiderbot_pose_callback(self, msg):
+        """Publish a set of leg targets whenever a new pose is received."""
+        if (self.last_timestamp < 0.0):
+            # Skip the first update to make sure we have an
+            # appropriate delta time
+            self.last_timestamp = msg.timestamp
+        else:
+            delta_time = msg.timestamp - self.last_timestamp
+            self.last_timestamp = msg.timestamp
+            self.locomotion_module.walk_forward(delta_time)
+            msg = LegTargets()
+            leg_targets = []
+            for leg_name in self.leg_names:
+                current_target = (
+                    self.locomotion_module.current_targets[leg_name]
+                )
+                leg_target = self.create_vector3(current_target)
+                leg_targets.append(leg_target)
+            msg.leg_targets = leg_targets
+            self.leg_set_targets_publisher.publish(msg)

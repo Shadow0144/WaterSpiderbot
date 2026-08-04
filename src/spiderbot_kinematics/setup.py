@@ -1,11 +1,8 @@
-"""Set up Spiderbot description."""
-
-import os
-from glob import glob
+"""Set up Spiderbot kinematics."""
 
 from setuptools import find_packages, setup
 
-package_name = 'spiderbot_description'
+package_name = 'spiderbot_kinematics'
 
 setup(
     name=package_name,
@@ -15,14 +12,12 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'models'),
-         glob(os.path.join('models', '*')))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='Shadow0144',
+    maintainer='shadow0144',
     maintainer_email='1351027+Shadow0144@users.noreply.github.com',
-    description='Spiderbot description',
+    description='Spiderbot kinematics',
     license='MIT',
     extras_require={
         'test': [
@@ -31,7 +26,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'description_node = spiderbot_description.main:main',
+            'kinematics_node = spiderbot_kinematics.main:main',
         ],
     },
 )
