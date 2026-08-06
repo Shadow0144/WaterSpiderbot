@@ -11,6 +11,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     "msg/LegPose.msg"
     "msg/LegTargets.msg"
     "msg/SpiderbotPose.msg"
+    "msg/SpiderbotTargetPose.msg"
     "srv/GetSpiderbotDescription.srv"
     DEPENDENCIES
         geometry_msgs

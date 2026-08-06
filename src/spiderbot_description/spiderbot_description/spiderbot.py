@@ -125,7 +125,10 @@ class Spiderbot:
                 rgba=[base_rgb[0] + 0.5,
                       base_rgb[1] + 0.5,
                       base_rgb[2] + 0.5,
-                      0.75])
+                      0.75],
+                contype=0,
+                conaffinity=0
+            )
 
             cephalothorax = spec.body('cephalothorax')
             if not cephalothorax:

@@ -8,7 +8,7 @@ import rclpy
 from rclpy.node import Node
 
 from spiderbot_interfaces.msg import LegTargets
-from spiderbot_interfaces.msg import SpiderbotPose
+from spiderbot_interfaces.msg import SpiderbotTargetPose
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 import spiderbot_utilities as utils
@@ -60,7 +60,7 @@ class SpiderbotKinematicsNode(Node):
         self.set_leg_targets_subscription
 
         self.spiderbot_target_pose_publisher = self.create_publisher(
-            SpiderbotPose, 'spiderbot_target_pose', 10)
+            SpiderbotTargetPose, 'spiderbot_target_pose', 10)
 
     def request_spiderbot_description(self):
         """Get the spec xml from the description."""
@@ -79,10 +79,8 @@ class SpiderbotKinematicsNode(Node):
                 utils.convert_vector3_to_list(leg_targets[leg_name]))
         mujoco.mj_step(self.model, self.data)
 
-        pose_msg = utils.construct_pose_msg(
+        pose_msg = utils.construct_target_pose_msg_from_legs(
             time.time(),
-            self.data.qpos[self.body_joint_qpos_adr:
-                           (self.body_joint_qpos_adr + 7)],
             self.leg_names,
             self.legs
         )

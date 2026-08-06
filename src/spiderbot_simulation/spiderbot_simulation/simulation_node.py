@@ -10,6 +10,7 @@ from rclpy.node import Node
 
 from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
+from spiderbot_interfaces.msg import SpiderbotTargetPose
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 import spiderbot_utilities as utils
@@ -72,7 +73,7 @@ class SimulationNode(Node):
         self.set_leg_targets_subscription
 
         self.spiderbot_target_pose_subscription = self.create_subscription(
-            SpiderbotPose,
+            SpiderbotTargetPose,
             'spiderbot_target_pose',
             self.spiderbot_target_pose_callback,
             10
@@ -110,6 +111,7 @@ class SimulationNode(Node):
         leg_targets = dict(zip(self.leg_names, leg_target_values))
         for leg_name in self.leg_names:
             # Move the mocap to the target point
+            self.legs[leg_name].set_mocap_target_visible(True)
             self.legs[leg_name].set_mocap_target(
                 utils.convert_vector3_to_list(leg_targets[leg_name]))
 

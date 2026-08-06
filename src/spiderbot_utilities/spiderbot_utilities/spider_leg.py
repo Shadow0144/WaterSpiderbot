@@ -13,8 +13,6 @@ class SpiderLeg:
         self.model = model
         self.data = data
 
-        self.damping = 0.01
-
         self.servo_coxa_actuator_id = self.model.actuator(
             'servo_' + self.leg_id + '_coxa_pitch').id
         self.servo_femur_actuator_id = self.model.actuator(
@@ -29,6 +27,10 @@ class SpiderLeg:
         tibia_joint_id = self.model.joint(
             f'{self.leg_id}_femur_tibia_joint').id
         self.leg_joint_ids = [coxa_joint_id, femur_joint_id, tibia_joint_id]
+
+        self.joint_limits = {}
+        for joint_id in self.leg_joint_ids:
+            self.joint_limits[joint_id] = self.model.jnt_range[joint_id]
 
         coxa_joint_dof = self.model.jnt_dofadr[coxa_joint_id]
         femur_joint_dof = self.model.jnt_dofadr[femur_joint_id]
@@ -51,7 +53,11 @@ class SpiderLeg:
         self.claw_tip_site_id = self.model.site(f'{self.leg_id}_claw_tip').id
 
         target_mocap_body_id = self.model.body(f'{self.leg_id}_target').id
+        self.target_geom_id = self.model.body_geomadr[target_mocap_body_id]
         self.target_mocap_id = self.model.body_mocapid[target_mocap_body_id]
+
+        self.mocap_target_visible = True
+        self.set_mocap_target_visible(False)  # Disable by default
 
     def set_coxa_target(self, target_angle_rad):
         """Set the target angle for the coxa joint."""
@@ -85,6 +91,13 @@ class SpiderLeg:
         self.data.ctrl[self.servo_coxa_actuator_id] = coxa_target_qpos
         self.data.ctrl[self.servo_femur_actuator_id] = femur_target_qpos
         self.data.ctrl[self.servo_tibia_actuator_id] = tibia_target_qpos
+
+    def set_mocap_target_visible(self, visible):
+        """Toggle if the targets are visible."""
+        if self.mocap_target_visible != visible:
+            self.mocap_target_visible = visible
+            alpha = 0.75 if visible else 0.0
+            self.model.geom_rgba[self.target_geom_id, 3] = alpha
 
     def set_mocap_target(self, mocap_target_local):
         """Set the target angles for the leg joints."""
