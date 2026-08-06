@@ -107,3 +107,7 @@ class SpiderLeg:
             leg_base_pos + (leg_base_rot @ np.asarray(mocap_target_local))
         )
         self.data.mocap_pos[self.target_mocap_id] = mocap_target_world
+
+    def reset_leg(self):
+        """Reset the leg to its initial state."""
+        self.set_mocap_target_visible(False)

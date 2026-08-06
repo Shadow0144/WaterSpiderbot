@@ -13,7 +13,7 @@ from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 import spiderbot_utilities as utils
 
-from .spider_leg import KinematicSpiderLeg
+from .kinematic_spider_leg import KinematicSpiderLeg
 
 
 class SpiderbotKinematicsNode(Node):

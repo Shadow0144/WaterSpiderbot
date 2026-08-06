@@ -178,3 +178,9 @@ class KinematicSpiderLeg(SpiderLeg):
             self.q_cmd_filtered[0],
             self.q_cmd_filtered[1],
             self.q_cmd_filtered[2])
+
+    def reset_leg(self):
+        """Reset the leg to its initial state."""
+        super().reset_leg()
+        self.q_target - self.data.qpos[self.leg_qpos_adrs].copy()
+        self.q_cmd_filtered = self.q_target.copy()

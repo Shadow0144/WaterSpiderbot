@@ -10,6 +10,8 @@ from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
+from std_srvs.srv import Empty
+
 from .modules import HandcraftedAngleModule
 from .modules import HandcraftedPointModule
 from .modules import SimpleSinModule
@@ -61,6 +63,10 @@ class SpiderbotLocomotionNode(Node):
         )
         self.spiderbot_pose_subscription
 
+        self.reset_simulation_client = self.create_client(
+            Empty,
+            'reset_simulation')
+
     def parameter_changed_callback(self, params):
         """React to parameters updating."""
         for param in params:
@@ -103,3 +109,9 @@ class SpiderbotLocomotionNode(Node):
     def publish_points(self, msg):
         """Publish target points for the leg to reach for."""
         self.leg_set_targets_publisher.publish(msg)
+
+    def reset_simulation(self):
+        """Request the simulation to reset."""
+        request = Empty.Request()
+        future = self.reset_simulation_client.call_async(request)
+        rclpy.spin_until_future_complete(self, future)

@@ -16,6 +16,8 @@ from spiderbot_interfaces.srv import GetSpiderbotDescription
 import spiderbot_utilities as utils
 from spiderbot_utilities import SpiderLeg
 
+from std_srvs.srv import Empty
+
 
 def convert_vector3_to_list(vector3):
     """Convert a Vector3 object to a list."""
@@ -80,6 +82,12 @@ class SimulationNode(Node):
         )
         self.spiderbot_target_pose_subscription
 
+        self.reset_simulation_service = self.create_service(
+            Empty,
+            'reset_simulation',
+            self.reset_simulation
+        )
+
         self.create_mujoco_viewer()
 
     def request_spiderbot_description(self):
@@ -127,6 +135,16 @@ class SimulationNode(Node):
                 leg_pose.coxa_qpos,
                 leg_pose.femur_qpos,
                 leg_pose.tibia_qpos)
+
+    def reset_simulation(self, request, response):
+        """Reset simulation."""
+        mujoco.mj_resetData(self.model, self.data)
+        mujoco.mj_forward(self.model, self.data)
+        for leg_name in self.leg_names:
+            self.legs[leg_name].reset_leg()
+        if self.viewer.is_running():
+            self.viewer.sync()
+        return response
 
     def update_viewer(self):
         """Update the simulation viewer."""
