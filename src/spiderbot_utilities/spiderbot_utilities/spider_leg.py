@@ -6,10 +6,10 @@ import numpy as np
 class SpiderLeg:
     """Common class for a spider leg."""
 
-    def __init__(self, leg_id, segment_length, model, data):
+    def __init__(self, leg_id, segment_lengths, model, data):
         """Initialize a spider leg."""
         self.leg_id = leg_id
-        self.segment_length = segment_length
+        self.segment_lengths = segment_lengths
         self.model = model
         self.data = data
 

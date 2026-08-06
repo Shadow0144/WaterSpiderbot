@@ -13,9 +13,11 @@ from .locomotion_module import LocomotionModule
 class SimpleSinModule(LocomotionModule):
     """A locomotion module using a simple sin wave."""
 
-    def __init__(self, locomotion_node, phase_shift=(2.0 * math.pi / 3.0)):
+    def __init__(self, locomotion_node,
+                 spiderbot_description,
+                 phase_shift=(2.0 * math.pi / 3.0)):
         """Initialize the locomotion module."""
-        super().__init__(locomotion_node)
+        super().__init__(locomotion_node, spiderbot_description)
         self.current_targets = {}
         self.time_elapsed = 0
 

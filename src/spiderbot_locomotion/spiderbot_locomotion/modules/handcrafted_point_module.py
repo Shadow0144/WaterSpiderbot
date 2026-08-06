@@ -22,9 +22,21 @@ class HandcraftedPointModule(LocomotionModule):
         Planting = auto()
         Passing = auto()
 
-    def __init__(self, locomotion_node, phase_shift=1):
+    def __init__(self,
+                 locomotion_node,
+                 spiderbot_description,
+                 phase_shift=1):
         """Initialize the locomotion module."""
-        super().__init__(locomotion_node)
+        super().__init__(locomotion_node, spiderbot_description)
+
+        # Add up the segment lengths
+        self.leg_lengths = {}
+        for leg_name in self.leg_names:
+            leg_length = 0
+            for segment_length in self.segment_lengths_per_leg[leg_name]:
+                leg_length += segment_length
+            self.leg_lengths[leg_name] = leg_length
+
         self.phase_length_seconds = 1.5
         self.phase_time_remaining = self.phase_length_seconds
 
@@ -42,23 +54,23 @@ class HandcraftedPointModule(LocomotionModule):
             case _:  # Should be prevented by the modulus
                 raise ValueError('phase_shift should be [0, 3]')
 
-        front_l_lifting_targets = [-0.40, 1.40, -0.80]
-        front_r_lifting_targets = [0.40, 1.40, -0.80]
-        front_l_reaching_targets = [1.00, 1.40, -0.80]
-        front_r_reaching_targets = [-1.00, 1.40, -0.80]
-        front_l_planting_targets = [1.00, 0.80, -1.40]
-        front_r_planting_targets = [-1.00, 0.80, -1.40]
-        front_l_passing_targets = [-0.40, 1.20, -1.40]
-        front_r_passing_targets = [0.40, 1.20, -1.40]
+        front_l_lifting_targets = [-0.20, 0.70, -0.40]
+        front_r_lifting_targets = [0.20, 0.70, -0.40]
+        front_l_reaching_targets = [0.50, 0.70, -0.40]
+        front_r_reaching_targets = [-0.50, 0.70, -0.40]
+        front_l_planting_targets = [0.50, 0.40, -0.70]
+        front_r_planting_targets = [-0.50, 0.40, -0.70]
+        front_l_passing_targets = [-0.20, 0.60, -0.70]
+        front_r_passing_targets = [0.20, 0.60, -0.70]
 
-        back_l_lifting_targets = [-1.20, 1.60, -0.60]
-        back_r_lifting_targets = [1.20, 1.60, -0.60]
-        back_l_reaching_targets = [0.60, 1.80, -0.60]
-        back_r_reaching_targets = [-0.60, 1.80, -0.60]
-        back_l_planting_targets = [0.60, 1.20, -1.40]
-        back_r_planting_targets = [-0.60, 1.20, -1.40]
-        back_l_passing_targets = [-1.00, 1.40, -1.20]
-        back_r_passing_targets = [1.00, 1.40, -1.20]
+        back_l_lifting_targets = [-0.60, 0.80, -0.30]
+        back_r_lifting_targets = [0.60, 0.80, -0.30]
+        back_l_reaching_targets = [0.30, 0.90, -0.30]
+        back_r_reaching_targets = [-0.30, 0.90, -0.30]
+        back_l_planting_targets = [0.30, 0.60, -0.70]
+        back_r_planting_targets = [-0.30, 0.60, -0.70]
+        back_l_passing_targets = [-0.50, 0.70, -0.60]
+        back_r_passing_targets = [0.50, 0.70, -0.60]
 
         lifting_targets = {
             'l_i': front_l_lifting_targets,
@@ -213,7 +225,7 @@ class HandcraftedPointModule(LocomotionModule):
         for leg_name in self.leg_names:
             self.interpolate_leg_to_target(
                 leg_name,
-                self.segment_lengths[leg_name],
+                self.leg_lengths[leg_name],
                 self.previous_leg_targets[leg_name],
                 self.next_leg_targets[leg_name],
                 percentage)

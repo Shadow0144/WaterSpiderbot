@@ -22,9 +22,11 @@ class HandcraftedAngleModule(LocomotionModule):
         Planting = auto()
         Passing = auto()
 
-    def __init__(self, locomotion_node, phase_shift=2):
+    def __init__(self, locomotion_node,
+                 spiderbot_description,
+                 phase_shift=2):
         """Initialize the locomotion module."""
-        super().__init__(locomotion_node)
+        super().__init__(locomotion_node, spiderbot_description)
         self.phase_length_seconds = 4.5
         self.phase_time_remaining = self.phase_length_seconds
 

@@ -11,9 +11,9 @@ from spiderbot_utilities import SpiderLeg
 class KinematicSpiderLeg(SpiderLeg):
     """Resolves and keeps track of spider leg kinematics."""
 
-    def __init__(self, leg_id, segment_length, model, data):
+    def __init__(self, leg_id, segment_lengths, model, data):
         """Initialize a spider leg."""
-        super().__init__(leg_id, segment_length, model, data)
+        super().__init__(leg_id, segment_lengths, model, data)
         self.max_step = 0.05  # Max change in distance per control iteration
         self.max_dq_rad = 0.1  # Max change in angle per control iteration
         self.damping = 0.02  # Base damping factor

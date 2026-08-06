@@ -15,6 +15,7 @@ from std_srvs.srv import Empty
 from .modules import HandcraftedAngleModule
 from .modules import HandcraftedPointModule
 from .modules import SimpleSinModule
+from .modules import TNNModule
 
 
 class SpiderbotLocomotionNode(Node):
@@ -39,11 +40,7 @@ class SpiderbotLocomotionNode(Node):
             timeout_sec=1.0
         ):
             self.get_logger().info('Waiting on get_spec_xml service')
-        spiderbot_description = self.request_spiderbot_description()
-
-        self.leg_names = spiderbot_description.leg_names
-        self.segment_lengths = dict(zip(self.leg_names,
-                                        spiderbot_description.segment_lengths))
+        self.spiderbot_description = self.request_spiderbot_description()
 
         # Set the module after getting the description
         self.set_locomotion_module()
@@ -78,11 +75,21 @@ class SpiderbotLocomotionNode(Node):
     def set_locomotion_module(self):
         """Set the locomotion module."""
         if self.locomotion_module_type == 'simple_sin':
-            self.locomotion_module = SimpleSinModule(self)
+            self.locomotion_module = SimpleSinModule(
+                self,
+                self.spiderbot_description)
         elif self.locomotion_module_type == 'handcrafted_angle':
-            self.locomotion_module = HandcraftedAngleModule(self)
+            self.locomotion_module = HandcraftedAngleModule(
+                self,
+                self.spiderbot_description)
         elif self.locomotion_module_type == 'handcrafted_point':
-            self.locomotion_module = HandcraftedPointModule(self)
+            self.locomotion_module = HandcraftedPointModule(
+                self,
+                self.spiderbot_description)
+        elif self.locomotion_module_type == 'tnn':
+            self.locomotion_module = TNNModule(
+                self,
+                self.spiderbot_description)
 
     def request_spiderbot_description(self):
         """Get the spec xml from the description."""

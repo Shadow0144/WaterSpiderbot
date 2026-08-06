@@ -8,6 +8,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+    "msg/LegDescription.msg"
     "msg/LegPose.msg"
     "msg/LegTargets.msg"
     "msg/SpiderbotPose.msg"

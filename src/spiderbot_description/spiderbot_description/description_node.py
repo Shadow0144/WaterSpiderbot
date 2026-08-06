@@ -2,6 +2,8 @@
 
 from rclpy.node import Node
 
+from spiderbot_interfaces.msg import LegDescription
+
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 from .spiderbot import Spiderbot
@@ -29,7 +31,14 @@ class DescriptionNode(Node):
 
     def get_spiderbot_description_callback(self, request, response):
         """Publish the Spiderbot description."""
-        response.leg_names = self.spider.leg_names
-        response.segment_lengths = self.spider.segment_lengths
+        leg_descriptions = []
+        for i, leg_name in enumerate(self.spider.leg_names):
+            leg_description = LegDescription()
+            leg_description.leg_name = leg_name
+            leg_description.segment_lengths = (
+                self.spider.segment_lengths_per_leg[i]
+            )
+            leg_descriptions.append(leg_description)
+        response.leg_descriptions = leg_descriptions
         response.spec_xml = self.spider.spec.to_xml()
         return response

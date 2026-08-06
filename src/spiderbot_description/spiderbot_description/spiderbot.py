@@ -41,33 +41,31 @@ class Spiderbot:
     def create_legs(self, spec, use_anatomical_lengths=True):
         """Create the legs of the Spiderbot."""
         self.damping = 0.01
-        self.base_segment_length = 0.25
         self.rest_angles = {'coxa': 0.0, 'femur': 0.0, 'tibia': 0.0}
 
         self.leg_names = ['l_i', 'l_ii', 'l_iii', 'l_iv',
                           'r_i', 'r_ii', 'r_iii', 'r_iv']
 
-        self.segment_lengths = [1.0, 1.0, 1.0, 1.0]
-        # Leg ratios:
-        if use_anatomical_lengths:
-            self.segment_lengths[0] = self.base_segment_length * 1.00
-            self.segment_lengths[1] = self.base_segment_length * 0.90
-            self.segment_lengths[2] = self.base_segment_length * 0.75
-            self.segment_lengths[3] = self.base_segment_length * 1.10
-        else:
-            self.segment_lengths[0] = self.base_segment_length * 1.00
-            self.segment_lengths[1] = self.base_segment_length * 1.00
-            self.segment_lengths[2] = self.base_segment_length * 1.00
-            self.segment_lengths[3] = self.base_segment_length * 1.00
-
-        self.segment_lengths.extend(self.segment_lengths)  # Left + right
-
         # Leg segment ratios:
+        # Coxa: 0.0
         # Femur: 1.0
         # [Patella: 0.4]
         # Tibia: 1.0
         # [Metatarsus: 1.0 / 1.05]
         # [Tarsus: 0.4]
+        self.segment_lengths_per_leg = []
+        self.base_segment_lengths = [0.0, 0.25, 0.25]
+        if use_anatomical_lengths:
+            self.leg_scales = [1.00, 0.90, 0.75, 1.10]
+        else:
+            self.leg_scales = [1.00, 1.00, 1.00, 1.00]
+        for i, leg_scale in enumerate(self.leg_scales):
+            segment_lengths = []
+            for segment_length in self.base_segment_lengths:
+                segment_lengths.append(segment_length * leg_scale)
+            self.segment_lengths_per_leg.append(segment_lengths)
+        # Left + right
+        self.segment_lengths_per_leg.extend(self.segment_lengths_per_leg)
 
         base_rgb = [
             [0.7, 0.1, 0.1],
@@ -102,19 +100,19 @@ class Spiderbot:
             [0, 0, 225]
         ]
 
-        for i in range(0, 8):
+        for i, leg_name in enumerate(self.leg_names):
             self.build_leg(
                 spec,
-                self.leg_names[i],
+                leg_name,
                 base_rgb[i],
                 poses[i],
                 eulers[i],
-                self.segment_lengths[i],
+                self.segment_lengths_per_leg[i],
                 i < 4)
 
     def build_leg(self, spec, leg_id,
                   base_rgb, pos, euler,
-                  segment_length, left_side):
+                  segment_lengths, left_side):
         """Build a spider leg."""
         try:
             target = spec.worldbody.add_body(
@@ -159,11 +157,11 @@ class Spiderbot:
                 rgba=[base_rgb[0] + 0.1,
                       base_rgb[1] + 0.1,
                       base_rgb[2], 1],
-                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_length]))
+                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_lengths[1]]))
 
             tibia = femur.add_body(
                 name=f'{leg_id}_tibia',
-                pos=[0, 0, -segment_length],
+                pos=[0, 0, -segment_lengths[1]],
                 euler=[-45, 0, 0])
             tibia.childclass = 'tibia'
             tibia.add_joint(name=f'{leg_id}_femur_tibia_joint')
@@ -171,12 +169,12 @@ class Spiderbot:
                 rgba=[base_rgb[0] + 0.2,
                       base_rgb[1] + 0.2,
                       base_rgb[2], 1],
-                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_length]))
+                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_lengths[2]]))
 
             claw_length = 0.025
             claw = tibia.add_body(
                 name=f'{leg_id}_claw',
-                pos=[0, 0, -segment_length])
+                pos=[0, 0, -segment_lengths[2]])
             claw.add_site(
                 name=f'{leg_id}_claw_tip',
                 pos=[0, 0, -claw_length])

@@ -40,13 +40,15 @@ class SimulationNode(Node):
             timeout_sec=1.0
         ):
             self.get_logger().info('Waiting on get_spec_xml service')
-        spiderbot_description = self.request_spiderbot_description()
+        self.spiderbot_description = self.request_spiderbot_description()
+        self.leg_descriptions, self.leg_names, self.segment_lengths_per_leg = (
+            utils.convert_spiderbot_description_to_lists(
+                self.spiderbot_description
+                )
+        )
 
-        self.leg_names = spiderbot_description.leg_names
-        self.segment_lengths = dict(zip(self.leg_names,
-                                        spiderbot_description.segment_lengths))
         self.spec = mujoco.MjSpec.from_string(
-            spiderbot_description.spec_xml
+            self.spiderbot_description.spec_xml
         )
         self.model = self.spec.compile()
         self.data = mujoco.MjData(self.model)
@@ -55,10 +57,11 @@ class SimulationNode(Node):
         self.body_joint_qpos_adr = self.model.jnt_qposadr[body_joint_id]
         self.legs = {}
         for leg_name in self.leg_names:
-            self.legs[leg_name] = SpiderLeg(leg_name,
-                                            self.segment_lengths[leg_name],
-                                            self.model,
-                                            self.data)
+            self.legs[leg_name] = SpiderLeg(
+                leg_name,
+                self.segment_lengths_per_leg[leg_name],
+                self.model,
+                self.data)
 
         self.spiderbot_pose_publisher = self.create_publisher(
             SpiderbotPose,

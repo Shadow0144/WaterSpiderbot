@@ -85,3 +85,20 @@ def construct_target_pose_msg(timestamp, leg_names, target_qposes):
         leg_poses.append(leg_pose)
     msg.leg_poses = leg_poses
     return msg
+
+
+def convert_spiderbot_description_to_lists(spiderbot_description):
+    """Convert a SpiderbotDescription message into Python lists."""
+    leg_descriptions = (
+        spiderbot_description.leg_descriptions
+    )
+    leg_names = [
+        leg_description.leg_name
+        for leg_description in leg_descriptions
+    ]
+    segment_lengths_per_leg = {}
+    for i, leg_name in enumerate(leg_names):
+        segment_lengths_per_leg[leg_name] = (
+            leg_descriptions[i].segment_lengths
+        )
+    return (leg_descriptions, leg_names, segment_lengths_per_leg)
