@@ -4,6 +4,7 @@ import mujoco
 
 import numpy as np
 
+import spiderbot_utilities as util
 from spiderbot_utilities import SpiderLeg
 
 
@@ -29,7 +30,7 @@ class KinematicSpiderLeg(SpiderLeg):
     # solving the ik
     def move_claw_to_cartesian(self,
                                target_xyz,
-                               target_rpy=[],
+                               target_rpy=None,
                                relative=True,
                                max_ik_iterations=5):
         """Move the tip of a leg to a point in Cartesian space."""
@@ -38,6 +39,12 @@ class KinematicSpiderLeg(SpiderLeg):
         # q is the angles
         # x is the positions
 
+        has_target_orientation = target_rpy is not None
+
+        weight_pos = 1.0
+        weight_rot = 0.2
+
+        # Transform the targets into the correct space
         if relative:
             r_leg_base = (
                 self.data.site(self.leg_base_site_id).xmat.reshape(3, 3)
@@ -48,6 +55,12 @@ class KinematicSpiderLeg(SpiderLeg):
             )
         else:
             self.data.mocap_pos[self.target_mocap_id] = target_xyz
+        if has_target_orientation:
+            r_target_local = util.rpy_to_matrix(target_rpy)
+            if relative:
+                r_target_world = r_leg_base @ r_target_local
+            else:
+                r_target_world = r_target_local
 
         q_original = self.data.qpos[self.leg_qpos_adrs].copy()
         q_sol = q_original.copy()
@@ -62,49 +75,87 @@ class KinematicSpiderLeg(SpiderLeg):
             self.data.qpos[self.leg_qpos_adrs] = q_sol
             mujoco.mj_kinematics(self.model, self.data)
 
-            current_xyz = self.data.site(self.claw_tip_site_id).xpos.copy()
+            current_xyz = self.data.site(
+                self.claw_tip_site_id).xpos.copy()
+            current_rpy = self.data.site(
+                self.claw_tip_site_id).xmat.reshape(3, 3)
 
             # Get the Jacobian and then filter for the actuators we care about
             mujoco.mj_jacSite(self.model,
                               self.data,
                               jac_p, jac_r,
                               self.claw_tip_site_id)
-            j_leg = jac_p[:, self.leg_dof_adrs]
+            j_p = jac_p[:, self.leg_dof_adrs]
+            j_r = jac_r[:, self.leg_dof_adrs]
 
             if relative:  # Move into relative space
                 current_xyz = r_leg_base.T @ (current_xyz - leg_base_xyz)
-                j_leg = r_leg_base.T @ j_leg
+                j_p = r_leg_base.T @ j_p
+                j_r = r_leg_base.T @ j_r
 
             # Clamp the distance the leg attempts to travel
-            dxyz = np.asarray(target_xyz) - current_xyz
-            distance = np.linalg.norm(dxyz)
+            delta_xyz = np.asarray(target_xyz) - current_xyz
+            distance = np.linalg.norm(delta_xyz)
             if distance < 1e-4:
                 break  # We've converged
             elif distance > self.max_step:
                 # Avoid traveling too far in one step
-                dxyz = dxyz * (self.max_step / distance)
+                delta_xyz = delta_xyz * (self.max_step / distance)
+
+            if has_target_orientation:
+                if relative:
+                    r_curr_eval = r_leg_base.T @ current_rpy
+                    r_target_eval = r_target_local
+                else:
+                    r_curr_eval = current_rpy
+                    r_target_eval = r_target_world
+
+                r_err = r_target_eval @ r_curr_eval.T
+                delta_r = 0.5 * np.array([
+                    r_err[2, 1] - r_err[1, 2],
+                    r_err[0, 2] - r_err[2, 0],
+                    r_err[1, 0] - r_err[0, 1]
+                ])
+                distance_r = np.linalg.norm(delta_r)
+                if distance_r > 0.1:
+                    delta_r = delta_r * (0.1 / distance_r)
+            else:
+                delta_r = np.zeros(3)
+                weight_rot = 0.0
+
+            # Stack the vectors
+            j_full = np.vstack([weight_pos * j_p,
+                                weight_rot * j_r])
+            delta_full = np.hstack([weight_pos * delta_xyz,
+                                    weight_rot * delta_r])
 
             # Boost damping factor when determinant is too small
-            det_j = np.abs(np.linalg.det(j_leg))
+            jt_j = j_full.T @ j_full
+            det_j = np.abs(np.linalg.det(jt_j))
             lambda_damping = self.damping + (0.05 if det_j < 1e-3 else 0.0)
 
             # Damped pseudo-inverse matrix
-            j_jt = j_leg @ j_leg.T + (lambda_damping**2) * np.eye(3)
-            j_pinv = j_leg.T @ np.linalg.inv(j_jt)
-
-            # Pull joints towards middle of joint limits
-            mid_limits = np.array([
-                (self.joint_limits[joint_id][0] +
-                 (self.joint_limits[joint_id][1] / 2.0))
-                for joint_id in self.leg_joint_ids
-            ])
-            null_space_bias = 0.01 * (mid_limits - q_sol)
-            null_projection = np.eye(3) - (j_pinv @ j_leg)
+            j_inv = np.linalg.inv(jt_j + (lambda_damping**2) * np.eye(3))
+            j_pinv = j_inv @ j_full.T
 
             # Compute step and update solution
-            d_q = j_pinv @ dxyz + (null_projection @ null_space_bias)
-            d_q = np.clip(d_q, -self.max_dq_rad, self.max_dq_rad)
-            q_sol += d_q
+            if not has_target_orientation:
+                # Pull joints towards middle of joint limits
+                mid_limits = np.array([
+                    0.5 *
+                    (self.joint_limits[joint_id][0] +
+                     self.joint_limits[joint_id][1])
+                    for joint_id in self.leg_joint_ids
+                ])
+                null_space_bias = 0.01 * (mid_limits - q_sol)
+                null_projection = np.eye(3) - (j_pinv @ j_full)
+                delta_q = (
+                    j_pinv @ delta_full + (null_projection @ null_space_bias)
+                )
+            else:
+                delta_q = j_pinv @ delta_full
+            delta_q = np.clip(delta_q, -self.max_dq_rad, self.max_dq_rad)
+            q_sol += delta_q
 
             # Clamp solution to joint limits
             for i, joint_id in enumerate(self.leg_joint_ids):
