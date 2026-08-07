@@ -12,10 +12,10 @@ from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 from std_srvs.srv import Empty
 
+from .modules import DNNModule
 from .modules import HandcraftedAngleModule
 from .modules import HandcraftedPointModule
 from .modules import SimpleSinModule
-from .modules import DNNModule
 
 
 class SpiderbotLocomotionNode(Node):
@@ -32,7 +32,7 @@ class SpiderbotLocomotionNode(Node):
         )
 
         self.declare_parameter('training_mode_enabled',
-                               False)
+                               True)
         self.training_mode_enabled = (
             self.get_parameter('training_mode_enabled').value
         )

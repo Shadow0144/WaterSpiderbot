@@ -3,7 +3,6 @@
 from rclpy.node import Node
 
 from spiderbot_interfaces.msg import LegDescription
-
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 from .spiderbot import Spiderbot
