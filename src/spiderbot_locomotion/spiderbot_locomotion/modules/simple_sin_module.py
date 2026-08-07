@@ -55,13 +55,8 @@ class SimpleSinModule(LocomotionModule):
 
     def update(self, spiderbot_pose_msg):
         """Walk the spiderbot forward."""
-        if (self.last_timestamp < 0.0):
-            # Skip the first update to make sure we have an
-            # appropriate delta time
-            self.last_timestamp = spiderbot_pose_msg.timestamp
-        else:
-            delta_time = spiderbot_pose_msg.timestamp - self.last_timestamp
-            self.last_timestamp = spiderbot_pose_msg.timestamp
+        delta_time = self.get_delta_time_from_msg(spiderbot_pose_msg)
+        if (delta_time > 0.0):
             self.walk_forward(delta_time)
 
     def publish_angles(self):

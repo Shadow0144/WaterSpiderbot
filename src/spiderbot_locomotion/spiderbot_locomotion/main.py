@@ -11,7 +11,10 @@ def main(args=None):
     rclpy.init(args=args)
     locomotion_node = SpiderbotLocomotionNode()
     try:
-        rclpy.spin(locomotion_node)
+        while rclpy.ok():
+            rclpy.spin_once(locomotion_node, timeout_sec=0)
+            if locomotion_node.simulation_reset_queued:
+                locomotion_node.reset_simulation()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass  # Exit on interrupt
     finally:

@@ -1,5 +1,8 @@
 """Set up Spiderbot locomotion."""
 
+import os
+from glob import glob
+
 from setuptools import find_packages, setup
 
 package_name = 'spiderbot_locomotion'
@@ -12,6 +15,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'model_weights'),
+         glob(os.path.join('model_weights', '*')))
     ],
     install_requires=['setuptools'],
     zip_safe=True,

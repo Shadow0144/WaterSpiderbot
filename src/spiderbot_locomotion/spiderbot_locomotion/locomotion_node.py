@@ -1,5 +1,7 @@
 """Spiderbot locomotion node."""
 
+from geometry_msgs.msg import Pose2D
+
 from rcl_interfaces.msg import SetParametersResult
 
 import rclpy
@@ -69,6 +71,16 @@ class SpiderbotLocomotionNode(Node):
             Empty,
             'reset_simulation')
 
+        self.target_location_subscription = self.create_subscription(
+            Pose2D,
+            'target_location',
+            self.target_location_callback,
+            10
+        )
+        self.target_location_subscription
+
+        self.simulation_reset_queued = False
+
     def parameter_changed_callback(self, params):
         """React to parameters updating."""
         for param in params:
@@ -110,7 +122,13 @@ class SpiderbotLocomotionNode(Node):
 
     def spiderbot_pose_callback(self, msg):
         """Publish a set of leg targets whenever a new pose is received."""
-        self.locomotion_module.update(msg)
+        if self.locomotion_module is not None:
+            self.locomotion_module.update(msg)
+
+    def target_location_callback(self, msg):
+        """Set the target for the locomotion module to approach."""
+        if self.locomotion_module is not None:
+            self.locomotion_module.set_target(msg)
 
     def publish_angles(self, msg):
         """Publish target angles for the leg actuators."""
@@ -120,8 +138,15 @@ class SpiderbotLocomotionNode(Node):
         """Publish target points for the leg to reach for."""
         self.leg_set_targets_publisher.publish(msg)
 
+    def queue_simulation_reset(self):
+        """Queue a simulation reset for the next available chance."""
+        """(Solves issues with threads)"""
+        self.simulation_reset_queued = True
+
     def reset_simulation(self):
         """Request the simulation to reset."""
         request = Empty.Request()
         future = self.reset_simulation_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
+        self.simulation_reset_queued = False
+        self.locomotion_module.set_reset_complete()
