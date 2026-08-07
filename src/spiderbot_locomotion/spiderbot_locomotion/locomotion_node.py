@@ -15,7 +15,7 @@ from std_srvs.srv import Empty
 from .modules import HandcraftedAngleModule
 from .modules import HandcraftedPointModule
 from .modules import SimpleSinModule
-from .modules import TNNModule
+from .modules import DNNModule
 
 
 class SpiderbotLocomotionNode(Node):
@@ -26,7 +26,7 @@ class SpiderbotLocomotionNode(Node):
         super().__init__('locomotion_node')
 
         self.declare_parameter('locomotion_module',
-                               'handcrafted_point')
+                               'dnn')
         self.locomotion_module_type = (
             self.get_parameter('locomotion_module').value
         )
@@ -96,8 +96,8 @@ class SpiderbotLocomotionNode(Node):
             self.locomotion_module = HandcraftedPointModule(
                 self,
                 self.spiderbot_description)
-        elif self.locomotion_module_type == 'tnn':
-            self.locomotion_module = TNNModule(
+        elif self.locomotion_module_type == 'dnn':
+            self.locomotion_module = DNNModule(
                 self,
                 self.spiderbot_description)
 

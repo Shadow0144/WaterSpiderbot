@@ -1,10 +1,10 @@
-"""A locomotion module using a Technical Neural Network."""
+"""A locomotion module using a Deep Neural Network."""
 
 from .locomotion_module import LocomotionModule
 
 
-class TNNModule(LocomotionModule):
-    """A locomotion module using a Technical Neural Network."""
+class DNNModule(LocomotionModule):
+    """A locomotion module using a Deep Neural Network."""
 
     def __init__(self, locomotion_node, spiderbot_description):
         """Initialize the locomotion module."""
