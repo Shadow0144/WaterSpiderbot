@@ -31,7 +31,11 @@ class SpiderbotLocomotionNode(Node):
             self.get_parameter('locomotion_module').value
         )
 
-        self.last_timestamp = -1.0
+        self.declare_parameter('training_mode_enabled',
+                               False)
+        self.training_mode_enabled = (
+            self.get_parameter('training_mode_enabled').value
+        )
 
         self.spiderbot_description_client = self.create_client(
             GetSpiderbotDescription,
@@ -44,6 +48,7 @@ class SpiderbotLocomotionNode(Node):
 
         # Set the module after getting the description
         self.set_locomotion_module()
+
         self.add_on_set_parameters_callback(self.parameter_changed_callback)
 
         self.spiderbot_target_pose_publisher = self.create_publisher(
@@ -70,6 +75,11 @@ class SpiderbotLocomotionNode(Node):
             if param.name == 'locomotion_module':
                 self.locomotion_module_type = param.value
                 self.set_locomotion_module()
+            elif param.name == 'training_mode_enabled':
+                if self.locomotion_module is not None:
+                    self.locomotion_module.set_training_mode_enabled(
+                        param.value
+                    )
         return SetParametersResult(successful=True)
 
     def set_locomotion_module(self):
@@ -100,14 +110,7 @@ class SpiderbotLocomotionNode(Node):
 
     def spiderbot_pose_callback(self, msg):
         """Publish a set of leg targets whenever a new pose is received."""
-        if (self.last_timestamp < 0.0):
-            # Skip the first update to make sure we have an
-            # appropriate delta time
-            self.last_timestamp = msg.timestamp
-        else:
-            delta_time = msg.timestamp - self.last_timestamp
-            self.last_timestamp = msg.timestamp
-            self.locomotion_module.walk_forward(delta_time)
+        self.locomotion_module.update(msg)
 
     def publish_angles(self, msg):
         """Publish target angles for the leg actuators."""

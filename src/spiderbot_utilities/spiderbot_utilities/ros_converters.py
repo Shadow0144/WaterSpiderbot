@@ -1,6 +1,10 @@
 """Set of converter functions to translate between ROS types and Python."""
 
+from geometry_msgs.msg import Point
+from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
+
+from nav_msgs.msg import Odometry
 
 from sensor_msgs.msg import JointState
 
@@ -32,22 +36,56 @@ def create_joint_state(name, qpose):
     return joint_state
 
 
-def construct_pose_msg(timestamp, bodyqpos, leg_names, legs):
+def create_odometry(body):
+    """Construct an Odometry message."""
+    msg = Odometry()
+    msg.pose.pose.position = Point(
+        x=float(body.xpos[0]),
+        y=float(body.xpos[1]),
+        z=float(body.xpos[2])
+    )
+    # MuJoCo w,x,y,z -> ROS2 x,y,z,w
+    msg.pose.pose.orientation = Quaternion(
+        x=float(body.xquat[1]),
+        y=float(body.xquat[2]),
+        z=float(body.xquat[3]),
+        w=float(body.xquat[0])
+    )
+    msg.twist.twist.angular = Vector3(
+        x=float(body.cvel[0]),
+        y=float(body.cvel[1]),
+        z=float(body.cvel[2])
+    )
+    msg.twist.twist.linear = Vector3(
+        x=float(body.cvel[3]),
+        y=float(body.cvel[4]),
+        z=float(body.cvel[5])
+    )
+    return msg
+
+
+def construct_pose_msg(timestamp,
+                       body,
+                       leg_names,
+                       legs):
     """Construct a pose message."""
     msg = SpiderbotPose()
     msg.timestamp = timestamp
-    msg.body_joint_state = create_joint_state(
-        'cephalothorax_joint',
-        bodyqpos
+    msg.body_odometry = create_odometry(
+        body
     )
     leg_poses = []
     for leg_name in leg_names:
         qposes = legs[leg_name].get_qposes()
+        qvels = legs[leg_name].get_qvels()
         leg_pose = LegPose()
         leg_pose.leg_name = leg_name
         leg_pose.coxa_qpos = qposes[0]
+        leg_pose.coxa_qvel = qvels[0]
         leg_pose.femur_qpos = qposes[1]
+        leg_pose.femur_qvel = qvels[1]
         leg_pose.tibia_qpos = qposes[2]
+        leg_pose.tibia_qvel = qvels[2]
         leg_poses.append(leg_pose)
     msg.leg_poses = leg_poses
     return msg

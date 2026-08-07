@@ -1,3 +1,3 @@
 float64 timestamp
-sensor_msgs/JointState body_joint_state
+nav_msgs/Odometry body_odometry
 LegPose[] leg_poses

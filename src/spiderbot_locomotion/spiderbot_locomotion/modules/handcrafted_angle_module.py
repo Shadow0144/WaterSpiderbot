@@ -243,6 +243,17 @@ class HandcraftedAngleModule(LocomotionModule):
 
         self.publish_angles()
 
+    def update(self, spiderbot_pose_msg):
+        """Walk the spiderbot forward."""
+        if (self.last_timestamp < 0.0):
+            # Skip the first update to make sure we have an
+            # appropriate delta time
+            self.last_timestamp = spiderbot_pose_msg.timestamp
+        else:
+            delta_time = spiderbot_pose_msg.timestamp - self.last_timestamp
+            self.last_timestamp = spiderbot_pose_msg.timestamp
+            self.walk_forward(delta_time)
+
     def publish_angles(self):
         """Publish target angles for the leg actuators."""
         msg = utils.construct_target_pose_msg(

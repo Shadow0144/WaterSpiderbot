@@ -15,7 +15,12 @@ class LocomotionModule:
                 self.spiderbot_description
                 )
         )
+        self.last_timestamp = -1.0
 
-    def walk_forward(self, delta_time):
+    def set_training_mode_enabled(self, training_mode_enabled):
+        """Toggle if training mode is enabled."""
+        self.training_mode_enabled = training_mode_enabled
+
+    def update(self, spiderbot_pose_msg):
         """Walk the Spiderbot forward."""
         pass

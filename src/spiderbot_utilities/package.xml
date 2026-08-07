@@ -7,6 +7,7 @@
   <maintainer email="1351027+Shadow0144@users.noreply.github.com">shadow0144</maintainer>
   <license>MIT</license>
   
+  <exec_depend>nav_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
 

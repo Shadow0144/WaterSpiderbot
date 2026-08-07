@@ -53,8 +53,7 @@ class SimulationNode(Node):
         self.model = self.spec.compile()
         self.data = mujoco.MjData(self.model)
 
-        body_joint_id = self.model.joint('cephalothorax_joint').id
-        self.body_joint_qpos_adr = self.model.jnt_qposadr[body_joint_id]
+        self.body = self.data.body('cephalothorax')
         self.legs = {}
         for leg_name in self.leg_names:
             self.legs[leg_name] = SpiderLeg(
@@ -157,8 +156,7 @@ class SimulationNode(Node):
             self.last_timestamp = step_start
             spiderbot_pose_msg = utils.construct_pose_msg(
                 self.last_timestamp,
-                self.data.qpos[self.body_joint_qpos_adr:
-                               (self.body_joint_qpos_adr + 7)],
+                self.body,
                 self.leg_names,
                 self.legs
             )

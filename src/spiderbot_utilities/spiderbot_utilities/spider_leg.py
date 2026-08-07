@@ -83,6 +83,10 @@ class SpiderLeg:
         """Return the qposes of all actuators."""
         return self.data.qpos[self.leg_qpos_adrs]
 
+    def get_qvels(self):
+        """Return the qvels of all actuators."""
+        return self.data.qvel[self.leg_dof_adrs]
+
     def set_target_qposes(self,
                           coxa_target_qpos,
                           femur_target_qpos,
