@@ -8,11 +8,6 @@ from spiderbot_interfaces.srv import GetSpiderbotDescription
 from .spiderbot import Spiderbot
 
 
-def convert_vector3_to_list(vector3):
-    """Convert a Vector3 object to a list."""
-    return (vector3.x, vector3.y, vector3.z)
-
-
 class DescriptionNode(Node):
     """A description node for a Spiderbot."""
 
