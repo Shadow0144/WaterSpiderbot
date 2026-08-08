@@ -1,6 +1,15 @@
 """Perform high-level planning and training."""
 
+import math
+import random
+import time
+
+import rclpy
 from rclpy.node import Node
+
+from spiderbot_interfaces.msg import TrainingTarget
+
+from std_srvs.srv import SetBool
 
 
 class BrainNode(Node):
@@ -15,3 +24,53 @@ class BrainNode(Node):
         self.training_mode_enabled = (
             self.get_parameter('training_mode_enabled').value
         )
+
+        self.set_training_mode_enabled_client = self.create_client(
+            SetBool,
+            'set_training_mode_enabled')
+        while not self.set_training_mode_enabled_client.wait_for_service(
+            timeout_sec=1.0
+        ):
+            self.get_logger().info(
+                'Waiting on set_training_mode_enabled service'
+            )
+        _ = self.set_training_mode()
+
+        self.training_target_publisher = self.create_publisher(
+            TrainingTarget,
+            'training_target',
+            10)
+
+        while self.training_mode_enabled and rclpy.ok():
+            self.training_loop()
+
+    def set_training_mode(self):
+        """Call the service to set the training mode."""
+        request = SetBool.Request()
+        future = self.set_training_mode_enabled_client.call_async(request)
+        rclpy.spin_until_future_complete(self, future)
+        return future.result()
+
+    def training_loop(self):
+        """Set times and targets for the locomotion module to aim for."""
+        time_to_reach_goal_s = float(random.randint(5, 10))
+        distance_scaling = 0.1
+        heading_angle = random.uniform(0.0, 2.0 ** math.pi)
+        final_angle = random.uniform(0.0, 2.0 ** math.pi)
+        target = [
+            math.cos(heading_angle) * time_to_reach_goal_s * distance_scaling,
+            math.sin(heading_angle) * time_to_reach_goal_s * distance_scaling,
+            final_angle]
+
+        self.set_training_target(time_to_reach_goal_s, target)
+
+        time.sleep(time_to_reach_goal_s)
+
+    def set_training_target(self, time_to_reach_goal_s, target):
+        """Publish a new training target."""
+        msg = TrainingTarget()
+        msg.time_to_reach_goal_s = time_to_reach_goal_s
+        msg.target_x = target[0]
+        msg.target_y = target[1]
+        msg.target_theta = target[2]
+        self.training_target_publisher.publish(msg)

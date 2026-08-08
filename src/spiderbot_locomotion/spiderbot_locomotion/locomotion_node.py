@@ -1,7 +1,5 @@
 """Spiderbot locomotion node."""
 
-from geometry_msgs.msg import Pose2D
-
 from rcl_interfaces.msg import SetParametersResult
 
 import rclpy
@@ -10,9 +8,11 @@ from rclpy.node import Node
 from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
+from spiderbot_interfaces.msg import TrainingTarget
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 from std_srvs.srv import Empty
+from std_srvs.srv import SetBool
 
 from .modules import DNNModule
 from .modules import HandcraftedAngleModule
@@ -65,19 +65,24 @@ class SpiderbotLocomotionNode(Node):
             self.spiderbot_pose_callback,
             10
         )
-        self.spiderbot_pose_subscription
 
         self.reset_simulation_client = self.create_client(
             Empty,
-            'reset_simulation')
+            'reset_simulation'
+        )
 
-        self.target_location_subscription = self.create_subscription(
-            Pose2D,
-            'target_location',
-            self.target_location_callback,
+        self.training_target_subscription = self.create_subscription(
+            TrainingTarget,
+            'training_target',
+            self.training_target_callback,
             10
         )
-        self.target_location_subscription
+
+        self.set_training_mode_enabled_service = self.create_service(
+            SetBool,
+            'set_training_mode_enabled',
+            self.set_training_mode_enabled_callback
+        )
 
         self.simulation_reset_queued = False
 
@@ -138,6 +143,19 @@ class SpiderbotLocomotionNode(Node):
         """Publish target points for the leg to reach for."""
         self.leg_set_targets_publisher.publish(msg)
 
+    def training_target_callback(self, msg):
+        """Reset the simuation and has the Spiderbot move to the target."""
+        if self.locomotion_module is not None:
+            self.locomotion_module.set_training_target(msg)
+            self.queue_simulation_reset()
+
+    def set_training_mode_enabled_callback(self, request, response):
+        """Toggle if training mode is enabled."""
+        self.locomotion_module.set_training_mode_enabled(request.data)
+        response.success = True
+        response.message = 'Success'
+        return response
+
     def queue_simulation_reset(self):
         """Queue a simulation reset for the next available chance."""
         """(Solves issues with threads)"""
@@ -149,4 +167,4 @@ class SpiderbotLocomotionNode(Node):
         future = self.reset_simulation_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
         self.simulation_reset_queued = False
-        self.locomotion_module.set_reset_complete()
+        self.locomotion_module.reset()

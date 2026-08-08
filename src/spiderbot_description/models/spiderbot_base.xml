@@ -31,6 +31,11 @@
 
         <geom name="floor" type="plane" size="0 0 0.25" material="grid_floor" contype="1" conaffinity="7"/>
 
+        <body name="training_target" pos="0 0 -0.5" mocap="true">
+            <geom name="training_target_forward_geom" type="cylinder" fromto="0 0 0 0.075 0 0" size="0.015 0" rgba="1 0.25 0 0" contype="0" conaffinity="0"/>
+            <geom name="training_target_backward_geom" type="cylinder" fromto="0.075 0 0 0.30 0 0" size="0.01 0" rgba="0.1 0.4 0.85 0" contype="0" conaffinity="0"/>
+        </body>
+
         <body name="cephalothorax" pos="0 0 0.5">
             <freejoint name="cephalothorax_joint"/>
             <geom type="ellipsoid" size="0.25 0.25 0.125" rgba="0 0 0 1" mass="0.5" friction="1 0.01 0.0001" contype="2" conaffinity="1"/>

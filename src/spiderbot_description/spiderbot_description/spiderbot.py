@@ -119,7 +119,7 @@ class Spiderbot:
                 name=f'{leg_id}_target', pos=[0, 0, 0], mocap=True)
             target.add_geom(
                 type=mujoco.mjtGeom.mjGEOM_SPHERE,
-                size=[0.015, 0.0, 0.0],
+                size=[0.015],
                 rgba=[base_rgb[0] + 0.5,
                       base_rgb[1] + 0.5,
                       base_rgb[2] + 0.5,

@@ -1,5 +1,7 @@
 """Spiderbot utilities."""
 
+from .converters import matrix_to_rpy
+from .converters import rpy_to_matrix
 from .leg_space_utils import draw_leg_space_in_mujoco
 from .leg_space_utils import sample_reachable_leg_space
 from .ros_converters import construct_pose_msg
@@ -12,6 +14,8 @@ from .ros_converters import create_joint_state
 from .spider_leg import SpiderLeg
 
 __all__ = [
+    'matrix_to_rpy',
+    'rpy_to_matrix',
     'draw_leg_space_in_mujoco',
     'sample_reachable_leg_space',
     'construct_pose_msg',

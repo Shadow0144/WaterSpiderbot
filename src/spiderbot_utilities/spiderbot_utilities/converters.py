@@ -3,6 +3,15 @@
 import numpy as np
 
 
+def matrix_to_rpy(mat):
+    """Convert a matrix to a list of roll, pitch, yaw angles (in radians)."""
+    roll = np.atan2(mat[2, 1], mat[2, 2])
+    pitch = np.atan2(-mat[2, 0], np.sqrt(mat[2, 1] ** 2 + mat[2, 2] ** 2))
+    yaw = np.atan2(mat[1, 0], mat[0, 0])
+
+    return [roll, pitch, yaw]
+
+
 def rpy_to_matrix(rpy):
     """Convert a list of roll, pitch, yaw angles (in radians) to a matrix."""
     r, p, y = rpy

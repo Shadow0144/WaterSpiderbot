@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from .converters import matrix_to_rpy
+
 
 class SpiderLeg:
     """Common class for a spider leg."""
@@ -87,6 +89,24 @@ class SpiderLeg:
         """Return the qvels of all actuators."""
         return self.data.qvel[self.leg_dof_adrs]
 
+    def get_leg_base_xyz(self):
+        """Return the position of the leg base."""
+        return self.data.site_xpos[self.leg_base_site_id]
+
+    def get_leg_base_rpy(self):
+        """Return the roll, pitch, and yaw of the leg base."""
+        mat = self.data.site_xmat[self.leg_base_site_id].reshape(3, 3)
+        return matrix_to_rpy(mat)
+
+    def get_claw_xyz(self):
+        """Return the position of the claw."""
+        return self.data.site_xpos[self.claw_tip_site_id]
+
+    def get_claw_rpy(self):
+        """Return the roll, pitch, and yaw of the claw."""
+        mat = self.data.site_xmat[self.claw_tip_site_id].reshape(3, 3)
+        return matrix_to_rpy(mat)
+
     def set_target_qposes(self,
                           coxa_target_qpos,
                           femur_target_qpos,
@@ -105,8 +125,8 @@ class SpiderLeg:
 
     def set_mocap_target(self, mocap_target_local):
         """Set the target angles for the leg joints."""
-        leg_base_pos = self.data.site_xpos[self.leg_base_site_id]
-        leg_base_rot = self.data.site_xmat[self.leg_base_site_id].reshape(3, 3)
+        leg_base_pos = self.get_leg_base_xyz()
+        leg_base_rot = self.get_leg_base_rpy()
         mocap_target_world = (
             leg_base_pos + (leg_base_rot @ np.asarray(mocap_target_local))
         )

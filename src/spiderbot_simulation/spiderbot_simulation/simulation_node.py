@@ -5,12 +5,15 @@ import time
 import mujoco
 import mujoco.viewer
 
+import numpy as np
+
 import rclpy
 from rclpy.node import Node
 
 from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
+from spiderbot_interfaces.msg import TrainingTarget
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 import spiderbot_utilities as utils
@@ -57,6 +60,22 @@ class SimulationNode(Node):
                 self.model,
                 self.data)
 
+        self.training_target_visible = False
+        self.training_target_position = None
+        self.training_target_quaternion = None
+        self.training_target_z = 0.5
+        self.training_target = self.data.body('training_target')
+        training_target_body_id = self.model.body('training_target').id
+        self.training_target_mocap_id = self.model.body_mocapid[
+            training_target_body_id
+        ]
+        self.training_target_forward_geom_id = self.model.geom(
+            'training_target_forward_geom'
+        ).id
+        self.training_target_backward_geom_id = self.model.geom(
+            'training_target_backward_geom'
+        ).id
+
         self.spiderbot_pose_publisher = self.create_publisher(
             SpiderbotPose,
             'spiderbot_pose',
@@ -69,7 +88,6 @@ class SimulationNode(Node):
             self.set_leg_targets_callback,
             10
         )
-        self.set_leg_targets_subscription
 
         self.spiderbot_target_pose_subscription = self.create_subscription(
             SpiderbotTargetPose,
@@ -77,7 +95,13 @@ class SimulationNode(Node):
             self.spiderbot_target_pose_callback,
             10
         )
-        self.spiderbot_target_pose_subscription
+
+        self.training_target_subscription = self.create_subscription(
+            TrainingTarget,
+            'training_target',
+            self.training_target_callback,
+            10
+        )
 
         self.reset_simulation_service = self.create_service(
             Empty,
@@ -136,12 +160,42 @@ class SimulationNode(Node):
     def reset_simulation(self, request, response):
         """Reset simulation."""
         mujoco.mj_resetData(self.model, self.data)
+        # Move the target back to where it should be if necessary
+        if self.training_target_visible:
+            self.data.mocap_pos[self.training_target_mocap_id] = (
+                self.training_target_position
+            )
+            self.data.mocap_quat[self.training_target_mocap_id] = (
+                self.training_target_quaternion
+            )
         mujoco.mj_forward(self.model, self.data)
         for leg_name in self.leg_names:
             self.legs[leg_name].reset_leg()
         if self.viewer.is_running():
             self.viewer.sync()
         return response
+
+    def training_target_callback(self, msg):
+        """Move the target to the location and make it visible."""
+        self.training_target_visible = True
+        alpha = 0.75
+        self.training_target_position = [
+            msg.target_x,
+            msg.target_y,
+            self.training_target_z
+        ]
+        half_theta = msg.target_theta / 2.0
+        self.training_target_quaternion = [
+            np.cos(half_theta), 0.0, 0.0, np.sin(half_theta)
+        ]
+        self.model.geom_rgba[self.training_target_forward_geom_id, 3] = alpha
+        self.model.geom_rgba[self.training_target_backward_geom_id, 3] = alpha
+        self.data.mocap_pos[self.training_target_mocap_id] = (
+                    self.training_target_position
+                )
+        self.data.mocap_quat[self.training_target_mocap_id] = (
+            self.training_target_quaternion
+        )
 
     def update_viewer(self):
         """Update the simulation viewer."""

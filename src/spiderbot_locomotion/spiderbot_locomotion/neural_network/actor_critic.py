@@ -20,11 +20,13 @@ class LocomotionActorCritic(nn.Module):
         #  body_vrp, body_vrr, body_vry,
         #  foreach leg: # 8
         #   leg_q1, leg_q2, leg_q3,
-        #   leg_vq1, leg_vq2, leg_vq3
+        #   leg_vq1, leg_vq2, leg_vq3,
+        #   leg_x, leg_y, leg_z,
+        #   leg_rx, leg_ry, leg_rz
         # Outputs:
         # foreach leg: # 8
         #  leg_q1, leg_q2, leg_q3
-        self.num_inputs = 3 + 13 + (8 * 6)  # 64
+        self.num_inputs = 3 + 13 + (8 * 12)  # 112
         self.num_outputs = (8 * 3)  # 24
         self.hidden_dim = 256
 

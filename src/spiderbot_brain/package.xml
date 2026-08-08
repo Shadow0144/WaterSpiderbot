@@ -6,6 +6,9 @@
   <description>High-level planning and training functionality for a Spiderbot</description>
   <maintainer email="1351027+Shadow0144@users.noreply.github.com">shadow0144</maintainer>
   <license>MIT</license>
+  
+  <exec_depend>spiderbot_interfaces</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

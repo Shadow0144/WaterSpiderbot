@@ -59,7 +59,6 @@ class SpiderbotKinematicsNode(Node):
             self.set_leg_targets_callback,
             10
         )
-        self.set_leg_targets_subscription
 
         self.spiderbot_target_pose_publisher = self.create_publisher(
             SpiderbotTargetPose, 'spiderbot_target_pose', 10)

@@ -64,11 +64,34 @@ def create_odometry(body):
     return msg
 
 
+def construct_leg_pose_msg(leg, leg_name):
+    """Construct a LegPose message."""
+    qposes = leg.get_qposes()
+    qvels = leg.get_qvels()
+    xyz = leg.get_claw_xyz()
+    rpy = leg.get_claw_rpy()
+    leg_pose = LegPose()
+    leg_pose.leg_name = leg_name
+    leg_pose.coxa_qpos = qposes[0]
+    leg_pose.femur_qpos = qposes[1]
+    leg_pose.tibia_qpos = qposes[2]
+    leg_pose.coxa_qvel = qvels[0]
+    leg_pose.femur_qvel = qvels[1]
+    leg_pose.tibia_qvel = qvels[2]
+    leg_pose.claw_x = xyz[0]
+    leg_pose.claw_y = xyz[1]
+    leg_pose.claw_z = xyz[2]
+    leg_pose.claw_roll = rpy[0]
+    leg_pose.claw_pitch = rpy[1]
+    leg_pose.claw_yaw = rpy[2]
+    return leg_pose
+
+
 def construct_pose_msg(timestamp,
                        body,
                        leg_names,
                        legs):
-    """Construct a pose message."""
+    """Construct a SpiderbotPose message."""
     msg = SpiderbotPose()
     msg.timestamp = timestamp
     msg.body_odometry = create_odometry(
@@ -76,46 +99,36 @@ def construct_pose_msg(timestamp,
     )
     leg_poses = []
     for leg_name in leg_names:
-        qposes = legs[leg_name].get_qposes()
-        qvels = legs[leg_name].get_qvels()
-        leg_pose = LegPose()
-        leg_pose.leg_name = leg_name
-        leg_pose.coxa_qpos = qposes[0]
-        leg_pose.coxa_qvel = qvels[0]
-        leg_pose.femur_qpos = qposes[1]
-        leg_pose.femur_qvel = qvels[1]
-        leg_pose.tibia_qpos = qposes[2]
-        leg_pose.tibia_qvel = qvels[2]
-        leg_poses.append(leg_pose)
+        leg_poses.append(construct_leg_pose_msg(
+            legs[leg_name], leg_name
+        ))
     msg.leg_poses = leg_poses
     return msg
 
 
 def construct_target_pose_msg_from_legs(timestamp, leg_names, legs):
-    """Construct a pose message from legs."""
+    """Construct a SpiderbotTargetPose message from legs."""
     msg = SpiderbotTargetPose()
     msg.timestamp = timestamp
     leg_poses = []
+    leg_poses = []
     for leg_name in leg_names:
-        qposes = legs[leg_name].get_qposes()
-        leg_pose = LegPose()
-        leg_pose.leg_name = leg_name
-        leg_pose.coxa_qpos = qposes[0]
-        leg_pose.femur_qpos = qposes[1]
-        leg_pose.tibia_qpos = qposes[2]
-        leg_poses.append(leg_pose)
+        leg_poses.append(construct_leg_pose_msg(
+            legs[leg_name], leg_name
+        ))
     msg.leg_poses = leg_poses
     return msg
 
 
 def construct_target_pose_msg(timestamp, leg_names, target_qposes):
-    """Construct a target pose message from target angles."""
+    """Construct a SpiderbotTargetPose message from target angles."""
     msg = SpiderbotTargetPose()
     msg.timestamp = timestamp
     leg_poses = []
     for leg_name in leg_names:
         qposes = target_qposes[leg_name]
         leg_pose = LegPose()
+        # Only set the name and qposes
         leg_pose.leg_name = leg_name
         leg_pose.coxa_qpos = qposes[0]
         leg_pose.femur_qpos = qposes[1]

@@ -17,7 +17,7 @@ class DNNModule(LocomotionModule):
 
         self.nn = LocomotionNeuralNetwork()
 
-        self.target = [0, 10, 0]  # Temporary
+        self.target = None
 
         self.training = True
         self.num_intervals = 0
@@ -38,7 +38,6 @@ class DNNModule(LocomotionModule):
 
         if not self.training:
             angles = self.nn.forward(
-                self.target,
                 spiderbot_pose_msg
             )
         else:
@@ -46,13 +45,13 @@ class DNNModule(LocomotionModule):
                 spiderbot_pose_msg,
                 delta_time
             )
-        self.publish_angles(angles)
+        if angles is not None:
+            self.publish_angles(angles)
 
     def training_step(self, spiderbot_pose_msg, delta_time):
         """Handle a training step."""
         action_np, done = (
-            self.nn.train_step(self.target,
-                               spiderbot_pose_msg,
+            self.nn.train_step(spiderbot_pose_msg,
                                delta_time)
         )
 
@@ -62,10 +61,8 @@ class DNNModule(LocomotionModule):
             if self.num_intervals % self.save_interval == 0:
                 self.nn.save_weights()
 
-            # Reset the simulation
+            # Wait until a reset
             self.is_resetting = True
-            self.nn.reset()
-            self.locomotion_node.queue_simulation_reset()
 
         return action_np
 
@@ -83,3 +80,13 @@ class DNNModule(LocomotionModule):
                     target_angles_per_leg
                 )
         self.locomotion_node.publish_angles(msg)
+
+    def set_training_target(self, set_training_target_msg):
+        """Set the target and the estimated time to reach it."""
+        super().set_training_target(set_training_target_msg)
+        self.nn.set_target(self.time_to_reach_goal_s, self.target)
+
+    def reset(self):
+        """Reset the neural network."""
+        super().reset()
+        self.nn.reset()

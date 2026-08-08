@@ -50,27 +50,39 @@ class LocomotionNeuralNetwork():
         self.hidden_state = None
 
         self.previous_distance = None
+        self.previous_angular_distance = None
+
         self.nominal_z = 1.0  # TODO
+        self.distance_convergence = 0.05
+        self.foot_max_z = 0.1
+
         self.position_penalty = 1.0
+        self.angle_penalty = 1.0
         self.tilt_penalty = 1.0
         self.height_penalty = -0.0
-
-        self.distance_convergence = 0.05
+        self.feet_penalty = -1.0
         self.arrival_reward = 100.0
 
         self.gamma = 0.99
 
-        self.max_time_s = 10.0
-        self.time_left_s = self.max_time_s
+        self.time_to_goal_s = 0
+        self.time_left_s = self.time_to_goal_s
+        self.target = None
 
         self.latest_iter_state = None
 
     def reset(self):
         """Reset the internals if the training resets."""
-        self.time_left_s = self.max_time_s
         self.previous_distance = None
+        self.previous_angular_distance = None
         self.hidden_state = None
         self.latest_iter_state = None
+
+    def set_target(self, time_to_goal_s, target):
+        """Update the target and the time expected to reach the goal."""
+        self.time_to_goal_s = time_to_goal_s
+        self.time_left_s = self.time_to_goal_s
+        self.target = target
 
     def get_model_weights_exist(self, filename='test_weights.pt'):
         """Get if the file exists."""
@@ -121,7 +133,7 @@ class LocomotionNeuralNetwork():
         if os.path.exists(full_filename):
             os.remove(full_filename)
 
-    def construct_input_vector(self, target, spiderbot_pose):
+    def construct_input_vector(self, spiderbot_pose):
         """Construct a Pytorch tensor from the target and Spiderbot pose."""
         body_odometry = spiderbot_pose.body_odometry
         body_pose = body_odometry.pose.pose.position
@@ -129,9 +141,9 @@ class LocomotionNeuralNetwork():
         body_pose_vel = body_odometry.twist.twist.linear
         body_orientation_vel = body_odometry.twist.twist.angular
         data = [
-            target[0],  # x
-            target[1],  # y
-            target[2],  # theta
+            self.target[0],  # x
+            self.target[1],  # y
+            self.target[2],  # theta
             body_pose.x,
             body_pose.y,
             body_pose.z,
@@ -144,7 +156,7 @@ class LocomotionNeuralNetwork():
             body_pose_vel.z,
             body_orientation_vel.x,
             body_orientation_vel.y,
-            body_orientation_vel.z
+            body_orientation_vel.z,
         ]
         for leg_pose in spiderbot_pose.leg_poses:
             data.extend(
@@ -154,17 +166,26 @@ class LocomotionNeuralNetwork():
                     leg_pose.tibia_qpos,
                     leg_pose.coxa_qvel,
                     leg_pose.femur_qvel,
-                    leg_pose.tibia_qvel
+                    leg_pose.tibia_qvel,
+                    leg_pose.claw_x,
+                    leg_pose.claw_y,
+                    leg_pose.claw_z,
+                    leg_pose.claw_roll,
+                    leg_pose.claw_pitch,
+                    leg_pose.claw_yaw,
                 ]
             )
         data = torch.tensor(data, dtype=torch.float32, device=self.device)
         data = data.unsqueeze(0)
         return data
 
-    def select_action(self, target, spiderbot_pose):
+    def select_action(self, spiderbot_pose):
         """Step execution for training."""
+        if self.target is None:
+            return None  # Exit early if there is no target
+
         self.actor_critic.train()
-        state_tensor = self.construct_input_vector(target, spiderbot_pose)
+        state_tensor = self.construct_input_vector(spiderbot_pose)
 
         action_dist, value_t, hidden_state_tp1 = self.actor_critic(
             state_tensor,
@@ -187,15 +208,15 @@ class LocomotionNeuralNetwork():
             hidden_state_tp1
         )
 
-    def forward(self, target, spiderbot_pose):
+    def forward(self, spiderbot_pose):
         """Short-hand function for a forward pass."""
-        return self.select_action_deterministic(target, spiderbot_pose)
+        return self.select_action_deterministic(spiderbot_pose)
 
-    def select_action_deterministic(self, target, spiderbot_pose):
+    def select_action_deterministic(self, spiderbot_pose):
         """Step execution for deployment."""
         self.actor_critic.eval()
         with torch.no_grad():
-            state_tensor = self.construct_input_vector(target, spiderbot_pose)
+            state_tensor = self.construct_input_vector(spiderbot_pose)
             action_dist, _, hidden_state_tp1 = self.actor_critic(
                 state_tensor, self.hidden_state
             )
@@ -203,10 +224,12 @@ class LocomotionNeuralNetwork():
             return action_dist.mean.squeeze(0).cpu().numpy()
 
     def compute_step_reward(self,
-                            target,
                             spiderbot_pose,
                             delta_time):
         """Calculate per-step reward."""
+        if self.target is None:
+            return None, False  # Exit early if there is no target
+
         position = spiderbot_pose.body_odometry.pose.pose.position
         orientation = spiderbot_pose.body_odometry.pose.pose.orientation
 
@@ -216,16 +239,35 @@ class LocomotionNeuralNetwork():
         qw = orientation.w
         roll = math.atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx**2 + qy**2))
         pitch = math.asin(max(-1.0, min(1.0, 2 * (qw * qy - qz * qx))))
+        yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
+        target_theta = self.target[2]
 
-        current_distance = math.hypot(target[0] - position.x,
-                                      target[1] - position.y)
+        current_distance = math.hypot(self.target[0] - position.x,
+                                      self.target[1] - position.y)
         if self.previous_distance is None:
             self.previous_distance = current_distance
 
+        current_angular_distance = math.atan2(math.sin(yaw - target_theta),
+                                              math.cos(yaw - target_theta))
+        if self.previous_angular_distance is None:
+            self.previous_angular_distance = current_angular_distance
+
+        legs_off_ground = 0
+        for leg_pose in spiderbot_pose.leg_poses:
+            legs_off_ground += 1 if leg_pose.claw_z > self.foot_max_z else 0
+        legs_off_ground = max(0, legs_off_ground - 4)
+
         reward_progress = (
-            self.position_penalty * (self.previous_distance - current_distance)
+            self.position_penalty *
+            (self.previous_distance - current_distance)
         )
         self.previous_distance = current_distance
+
+        reward_facing = (
+                self.angle_penalty *
+                (self.previous_angular_distance - current_angular_distance)
+        )
+        self.previous_angular_distance = current_angular_distance
 
         reward_tilt = (
             -self.tilt_penalty * (roll**2 + pitch**2)
@@ -235,9 +277,17 @@ class LocomotionNeuralNetwork():
             self.height_penalty * ((position.z - self.nominal_z)**2)
         )
 
-        # TODO: Penalty for too many feet off the ground
+        reward_feet_planted = (
+            self.feet_penalty * legs_off_ground
+        )
 
-        total_reward = reward_progress + reward_tilt + reward_height
+        total_reward = (
+            reward_progress +
+            reward_facing +
+            reward_tilt +
+            reward_height +
+            reward_feet_planted
+        )
 
         done = False
         self.time_left_s -= delta_time
@@ -253,21 +303,21 @@ class LocomotionNeuralNetwork():
         return total_reward, done
 
     def train_step(self,
-                   target,
                    spiderbot_pose,
                    delta_time):
         """Perform a single step of training."""
+        if self.target is None:
+            return None, False  # Return early
+
         done = False
         if self.latest_iter_state is not None:
             # If there was a previous iter_state,
             # calculate the reward and train the actor-critic
             reward, done = self.compute_step_reward(
-                    target,
                     spiderbot_pose,
                     delta_time)
 
             next_data = self.construct_input_vector(
-                target,
                 spiderbot_pose)
 
             self.train_actor_critic_step(
@@ -278,7 +328,6 @@ class LocomotionNeuralNetwork():
 
         self.latest_iter_state = (
             self.select_action(
-                target,
                 spiderbot_pose
             )
         )
