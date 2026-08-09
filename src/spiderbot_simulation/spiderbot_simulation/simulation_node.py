@@ -122,7 +122,7 @@ class SimulationNode(Node):
         """Create the simulation viewer to test the Spiderbot."""
         self.viewer = mujoco.viewer.launch_passive(self.model,
                                                    self.data)
-        self.viewer.cam.azimuth = 270
+        self.viewer.cam.azimuth = 180
         self.viewer.cam.elevation = -20
         self.viewer.cam.distance = 2.0
         self.viewer.cam.lookat[:] = [0, 0, 0.25]
