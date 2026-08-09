@@ -44,19 +44,19 @@ class LocomotionActorCritic(nn.Module):
         self.actor_log_std = nn.Parameter(torch.zeros(self.num_outputs))
         self.critic_value = nn.Linear(self.hidden_dim, 1)
 
-    def forward(self, x, hidden_state_t=None):
+    def forward(self, state_t, hidden_state_t=None):
         """Forward pass."""
         # If no hidden state yet, initialize with zeros
         if hidden_state_t is None:
             hidden_state_t = torch.zeros(
-                x.size(0),
+                state_t.size(0),
                 self.hidden_dim,
-                device=x.device,
-                dtype=x.dtype
+                device=state_t.device,
+                dtype=state_t.dtype
             )
 
-        # Get the features of the current input (x)
-        features = self.feature_extractor(x)
+        # Get the features of the current state
+        features = self.feature_extractor(state_t)
         # Update the estimate with information from the previous state
         hidden_state_tp1 = self.gru_cell(features, hidden_state_t)
 

@@ -56,11 +56,14 @@ class LocomotionNeuralNetwork():
         self.nominal_z_range = 0.2
         self.distance_convergence = 0.05
         self.foot_max_z = 0.1
+        self.min_qvel = 0.02
+        self.max_qvel = 2.0
 
         self.position_penalty = 100.0
         self.angle_penalty = 0.01
         self.tilt_penalty = 1.0
-        self.height_penalty = 0.0
+        self.height_penalty = 0.5
+        self.angle_speed_penalty = 1.0
         self.feet_penalty = 1.0
         self.arrival_reward = 1000.0
 
@@ -260,6 +263,14 @@ class LocomotionNeuralNetwork():
         else:
             z_distance = 0.0
 
+        actuator_speeds = {}
+        for leg_pose in spiderbot_pose.leg_poses:
+            actuator_speeds[leg_pose.leg_name] = [
+                leg_pose.coxa_qvel,
+                leg_pose.femur_qvel,
+                leg_pose.tibia_qvel
+            ]
+
         current_distance = math.hypot(self.target[0] - position.x,
                                       self.target[1] - position.y)
         if self.previous_distance is None:
@@ -273,8 +284,19 @@ class LocomotionNeuralNetwork():
             self.previous_angular_distance = current_angular_distance
 
         legs_off_ground = 0
+        total_actuation_outside_of_range = 0
         for leg_pose in spiderbot_pose.leg_poses:
             legs_off_ground += 1 if leg_pose.claw_z > self.foot_max_z else 0
+            leg_actuator_speeds = actuator_speeds[leg_pose.leg_name]
+            for actuator_speed in leg_actuator_speeds:
+                if abs(actuator_speed) < self.min_qvel:
+                    total_actuation_outside_of_range += (
+                        abs(self.min_qvel) - actuator_speed
+                    )
+                elif abs(actuator_speed) > self.max_qvel:
+                    total_actuation_outside_of_range += (
+                        abs(actuator_speed) - self.max_qvel
+                    )
         legs_off_ground = max(0, legs_off_ground - 4)
 
         reward_progress = (
@@ -297,6 +319,10 @@ class LocomotionNeuralNetwork():
             -self.height_penalty * z_distance
         )
 
+        reward_angle_speed = (
+            -self.angle_speed_penalty * total_actuation_outside_of_range
+        )
+
         reward_feet_planted = (
             -self.feet_penalty * legs_off_ground
         )
@@ -305,6 +331,7 @@ class LocomotionNeuralNetwork():
             reward_progress +
             reward_facing +
             reward_tilt +
+            reward_angle_speed +
             reward_height +
             reward_feet_planted
         )
