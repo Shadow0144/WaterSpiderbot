@@ -10,14 +10,18 @@ from .brain_node import BrainNode
 def main(args=None):
     """Run the Spiderbot brain."""
     rclpy.init(args=args)
-    brain_node = BrainNode()
+    brain_node = None
     try:
+        brain_node = BrainNode()
         while rclpy.ok():
+            if brain_node.training_mode_enabled:
+                brain_node.perform_training_step()
             rclpy.spin_once(brain_node, timeout_sec=0)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass  # Exit on interrupt
     finally:
-        brain_node.destroy_node()
+        if brain_node is not None:
+            brain_node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
 

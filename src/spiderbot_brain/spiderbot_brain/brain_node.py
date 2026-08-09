@@ -46,9 +46,6 @@ class BrainNode(Node):
             'training_target',
             10)
 
-        while self.training_mode_enabled and rclpy.ok():
-            self.training_loop()
-
     def set_training_mode(self):
         """Call the service to set the training mode."""
         request = SetBool.Request()
@@ -56,7 +53,7 @@ class BrainNode(Node):
         rclpy.spin_until_future_complete(self, future)
         return future.result()
 
-    def training_loop(self):
+    def perform_training_step(self):
         """Set times and targets for the locomotion module to aim for."""
         time_to_reach_goal_s = float(random.randint(
             self.time_min_s,
