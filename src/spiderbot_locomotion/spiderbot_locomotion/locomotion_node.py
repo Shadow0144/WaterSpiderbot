@@ -30,6 +30,8 @@ class SpiderbotLocomotionNode(Node):
         """Initialize and run a Spiderbot locomotor."""
         super().__init__('locomotion_node')
 
+        self.get_logger().info('Starting spiderbot locomotion node')
+
         self.declare_parameter('locomotion_module',
                                'dnn')
         self.locomotion_module_type = (
@@ -48,8 +50,11 @@ class SpiderbotLocomotionNode(Node):
         while not self.spiderbot_description_client.wait_for_service(
             timeout_sec=1.0
         ):
-            self.get_logger().info('Waiting on get_spec_xml service')
+            self.get_logger().info(
+                'Waiting on get_spec_xml service',
+                once=True)
         self.spiderbot_description = self.request_spiderbot_description()
+        self.get_logger().info('Spiderbot description received')
 
         # Set the module after getting the description
         self.set_locomotion_module()
@@ -100,6 +105,12 @@ class SpiderbotLocomotionNode(Node):
         )
 
         self.simulation_reset_queued = False
+
+        self.get_logger().info('Spiderbot locomotion node started')
+
+    def is_running(self):
+        """Return if the node is running or if it's ready to shut down."""
+        return True
 
     def parameter_changed_callback(self, params):
         """React to parameters updating."""

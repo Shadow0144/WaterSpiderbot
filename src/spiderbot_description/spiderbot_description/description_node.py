@@ -15,6 +15,8 @@ class DescriptionNode(Node):
         """Initialize and describe a Spiderbot."""
         super().__init__('description_node')
 
+        self.get_logger().info('Starting spiderbot description node')
+
         self.spider = Spiderbot()
 
         self.get_spiderbot_description_service = self.create_service(
@@ -22,6 +24,12 @@ class DescriptionNode(Node):
             'get_spiderbot_description',
             self.get_spiderbot_description_callback
         )
+
+        self.get_logger().info('Spiderbot description node started')
+
+    def is_running(self):
+        """Return if the node is running or if it's ready to shut down."""
+        return True
 
     def get_spiderbot_description_callback(self, request, response):
         """Publish the Spiderbot description."""

@@ -19,6 +19,8 @@ class BrainNode(Node):
         """Initialize and run a brain."""
         super().__init__('brain_node')
 
+        self.get_logger().info('Starting spiderbot brain node')
+
         self.time_min_s = 10
         self.time_max_s = 20
         self.distance_scaling = 0.1
@@ -37,14 +39,18 @@ class BrainNode(Node):
             timeout_sec=1.0
         ):
             self.get_logger().info(
-                'Waiting on set_training_mode_enabled service'
+                'Waiting on set_training_mode_enabled service',
+                once=True
             )
         _ = self.set_training_mode()
+        self.get_logger().info('Training mode status set')
 
         self.training_target_publisher = self.create_publisher(
             TrainingTarget,
             'training_target',
             10)
+
+        self.get_logger().info('Spiderbot brain node started')
 
     def set_training_mode(self):
         """Call the service to set the training mode."""

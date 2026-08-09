@@ -10,18 +10,17 @@ from .simulation_node import SimulationNode
 def main(args=None):
     """Run the Spiderbot simulation."""
     rclpy.init(args=args)
-    simulation_node = SimulationNode()
+    simulation_node = None
     try:
-        while rclpy.ok():
+        simulation_node = SimulationNode()
+        while rclpy.ok() and simulation_node.is_running():
             rclpy.spin_once(simulation_node, timeout_sec=0)
-            if simulation_node.viewer.is_running():
-                simulation_node.update_viewer()
-            else:
-                break  # Viewer has closed, shut down
+            simulation_node.update_viewer()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass  # Exit on interrupt
     finally:
-        simulation_node.destroy_node()
+        if simulation_node is not None:
+            simulation_node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
 

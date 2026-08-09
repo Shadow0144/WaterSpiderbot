@@ -9,16 +9,18 @@ from .locomotion_node import SpiderbotLocomotionNode
 def main(args=None):
     """Run the Spiderbot locomotor."""
     rclpy.init(args=args)
-    locomotion_node = SpiderbotLocomotionNode()
+    locomotion_node = None
     try:
-        while rclpy.ok():
+        locomotion_node = SpiderbotLocomotionNode()
+        while rclpy.ok() and locomotion_node.is_running():
             rclpy.spin_once(locomotion_node, timeout_sec=0)
             if locomotion_node.simulation_reset_queued:
                 locomotion_node.reset_simulation()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass  # Exit on interrupt
     finally:
-        locomotion_node.destroy_node()
+        if locomotion_node is not None:
+            locomotion_node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
 

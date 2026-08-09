@@ -29,7 +29,7 @@ class SimulationNode(Node):
         """Initialize and run a simulation."""
         super().__init__('simulation_node')
 
-        self.last_timestamp = time.time()
+        self.get_logger().info('Starting spiderbot simulation node')
 
         self.spiderbot_description_client = self.create_client(
             GetSpiderbotDescription,
@@ -37,8 +37,12 @@ class SimulationNode(Node):
         while not self.spiderbot_description_client.wait_for_service(
             timeout_sec=1.0
         ):
-            self.get_logger().info('Waiting on get_spec_xml service')
+            self.get_logger().info(
+                'Waiting on get_spec_xml service',
+                once=True)
         self.spiderbot_description = self.request_spiderbot_description()
+        self.get_logger().info('Spiderbot description received')
+
         self.leg_descriptions, self.leg_names, self.segment_lengths_per_leg = (
             utils.convert_spiderbot_description_to_lists(
                 self.spiderbot_description
@@ -109,7 +113,15 @@ class SimulationNode(Node):
             self.reset_simulation
         )
 
+        self.last_timestamp = time.time()
+
         self.create_mujoco_viewer()
+
+        self.get_logger().info('Spiderbot simulation node started')
+
+    def is_running(self):
+        """Return if the node is running or if it's ready to shut down."""
+        return self.viewer is not None and self.viewer.is_running()
 
     def request_spiderbot_description(self):
         """Get the spec xml from the description."""
