@@ -65,3 +65,7 @@ class LocomotionModule:
     def reset(self):
         """After finishing a reset, reset the is_resetting flag."""
         self.is_resetting = False
+
+    def reset_learned_weights(self):
+        """Backup the current weights and start with new random weights."""
+        pass

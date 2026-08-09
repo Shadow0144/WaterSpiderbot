@@ -97,3 +97,7 @@ class DNNModule(LocomotionModule):
         )
         super().reset()
         self.nn.reset()
+
+    def reset_learned_weights(self):
+        """Backup the current weights and start with new random weights."""
+        self.nn.reset_learned_weights()

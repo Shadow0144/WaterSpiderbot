@@ -2,6 +2,7 @@
 
 import math
 import os
+from datetime import date
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -19,16 +20,16 @@ class LocomotionNeuralNetwork():
 
         def __init__(self,
                      action_np=None,
-                     state_t_tensor=None,
-                     probability_t_tensor=None,
+                     state_t=None,
+                     log_probability_t=None,
                      value_t=None,
                      hidden_state_t=None,
                      hidden_state_tp1=None
                      ):
             """Store the values."""
             self.action_np = action_np
-            self.state_t_tensor = state_t_tensor
-            self.probability_t_tensor = probability_t_tensor
+            self.state_t = state_t
+            self.log_probability_t = log_probability_t
             self.value_t = value_t
             self.hidden_state_t = hidden_state_t
             self.hidden_state_tp1 = hidden_state_tp1
@@ -40,18 +41,21 @@ class LocomotionNeuralNetwork():
             if torch.accelerator.is_available() else
             'cpu'
         )
-        self.actor_critic = LocomotionActorCritic().to(self.device)
 
+        self.actor_critic = LocomotionActorCritic().to(self.device)
+        self.optimizer = torch.optim.Adam(
+            self.actor_critic.parameters(),
+            lr=1e-4)
         self.loss_fn = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.actor_critic.parameters(),
-                                          lr=1e-4)
 
         # Recurrent hidden state
         self.hidden_state = None
 
+        # Previous reward function state variables
         self.previous_distance = None
         self.previous_angular_distance = None
 
+        # Hyperparameters for ranges
         self.nominal_z = 0.4
         self.nominal_z_range = 0.2
         self.distance_convergence = 0.05
@@ -59,6 +63,7 @@ class LocomotionNeuralNetwork():
         self.min_qvel = 0.02
         self.max_qvel = 2.0
 
+        # Hyperparameters for penalty strengths
         self.position_penalty = 100.0
         self.angle_penalty = 0.01
         self.tilt_penalty = 1.0
@@ -71,17 +76,20 @@ class LocomotionNeuralNetwork():
         self.max_tilt = 0.8
         self.min_height = 0.1
 
+        # Reward horizon scaling
         self.gamma = 0.99
 
+        # Target information
         self.time_to_goal_s = 0.0
         self.time_left_s = self.time_to_goal_s
         self.target = None
         self.training_run_reward = 0.0
 
+        # Previous state information
         self.latest_iter_state = None
 
     def reset(self):
-        """Reset the internals if the training resets."""
+        """Reset the internal state variables."""
         self.previous_distance = None
         self.previous_angular_distance = None
         self.hidden_state = None
@@ -95,7 +103,7 @@ class LocomotionNeuralNetwork():
         self.target = target
 
     def get_model_weights_exist(self, filename='test_weights.pt'):
-        """Get if the file exists."""
+        """Get if the model weight file exists."""
         filepath = self.get_model_weights_path()
         full_filename = os.path.join(filepath, filename)
         return os.path.exists(full_filename)
@@ -135,6 +143,17 @@ class LocomotionNeuralNetwork():
             self.optimizer.load_state_dict(
                 checkpoint['optimizer_state_dict']
             )
+
+    def reset_learned_weights(self):
+        """Backup the current weights and start with new random weights."""
+        time_string = date.now().strftime('%Y-%m-%d-%H-%M-%S')
+        self.save_weights(f'test_weights_backup_{time_string}.pt')
+        self.delete_saved_weights()
+        # Create a new critic and optimizer with random weights
+        self.actor_critic = LocomotionActorCritic().to(self.device)
+        self.optimizer = torch.optim.Adam(
+            self.actor_critic.parameters(),
+            lr=1e-4)
 
     def delete_saved_weights(self, filename='test_weights.pt'):
         """Delete the saved weights file."""
@@ -417,7 +436,7 @@ class LocomotionNeuralNetwork():
 
         advantage = target_value - iter_state.value_t.squeeze(0)
 
-        actor_loss = -iter_state.probability_t_tensor * advantage.detach()
+        actor_loss = -iter_state.log_probability_t * advantage.detach()
 
         critic_loss = self.loss_fn(iter_state.value_t.squeeze(0), target_value)
 

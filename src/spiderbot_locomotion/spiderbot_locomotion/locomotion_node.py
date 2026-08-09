@@ -15,6 +15,7 @@ from std_msgs.msg import Float64
 
 from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
+from std_srvs.srv import Trigger
 
 from .modules import DNNModule
 from .modules import HandcraftedAngleModule
@@ -90,6 +91,12 @@ class SpiderbotLocomotionNode(Node):
             SetBool,
             'set_training_mode_enabled',
             self.set_training_mode_enabled_callback
+        )
+
+        self.reset_learned_weights_service = self.create_service(
+            Trigger,
+            'reset_learned_weights',
+            self.reset_learned_weights_callback
         )
 
         self.simulation_reset_queued = False
@@ -174,6 +181,11 @@ class SpiderbotLocomotionNode(Node):
         self.locomotion_module.set_training_mode_enabled(request.data)
         response.success = True
         response.message = 'Success'
+        return response
+
+    def reset_learned_weights_callback(self, request, response):
+        """Backup the current weights and start with new random weights."""
+        self.locomotion_module.reset_learned_weights()
         return response
 
     def queue_simulation_reset(self):
