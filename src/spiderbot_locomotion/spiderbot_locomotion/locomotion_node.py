@@ -197,6 +197,8 @@ class SpiderbotLocomotionNode(Node):
     def reset_learned_weights_callback(self, request, response):
         """Backup the current weights and start with new random weights."""
         self.locomotion_module.reset_learned_weights()
+        response.success = True
+        response.message = 'Success'
         return response
 
     def queue_simulation_reset(self):

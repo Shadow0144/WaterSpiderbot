@@ -2,7 +2,7 @@
 
 import math
 import os
-from datetime import date
+from datetime import datetime
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -146,7 +146,7 @@ class LocomotionNeuralNetwork():
 
     def reset_learned_weights(self):
         """Backup the current weights and start with new random weights."""
-        time_string = date.now().strftime('%Y-%m-%d-%H-%M-%S')
+        time_string = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         self.save_weights(f'test_weights_backup_{time_string}.pt')
         self.delete_saved_weights()
         # Create a new critic and optimizer with random weights
