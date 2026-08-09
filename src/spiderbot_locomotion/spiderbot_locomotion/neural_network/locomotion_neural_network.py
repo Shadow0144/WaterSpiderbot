@@ -52,22 +52,28 @@ class LocomotionNeuralNetwork():
         self.previous_distance = None
         self.previous_angular_distance = None
 
-        self.nominal_z = 1.0  # TODO
+        self.nominal_z = 0.4
+        self.nominal_z_range = 0.2
         self.distance_convergence = 0.05
         self.foot_max_z = 0.1
 
-        self.position_penalty = 1.0
-        self.angle_penalty = 1.0
+        self.position_penalty = 100.0
+        self.angle_penalty = 0.01
         self.tilt_penalty = 1.0
-        self.height_penalty = -0.0
-        self.feet_penalty = -1.0
-        self.arrival_reward = 100.0
+        self.height_penalty = 0.0
+        self.feet_penalty = 1.0
+        self.arrival_reward = 1000.0
+
+        # Terminate early conditions
+        self.max_tilt = 0.8
+        self.min_height = 0.1
 
         self.gamma = 0.99
 
-        self.time_to_goal_s = 0
+        self.time_to_goal_s = 0.0
         self.time_left_s = self.time_to_goal_s
         self.target = None
+        self.training_run_reward = 0.0
 
         self.latest_iter_state = None
 
@@ -77,6 +83,7 @@ class LocomotionNeuralNetwork():
         self.previous_angular_distance = None
         self.hidden_state = None
         self.latest_iter_state = None
+        self.training_run_reward = 0
 
     def set_target(self, time_to_goal_s, target):
         """Update the target and the time expected to reach the goal."""
@@ -242,13 +249,26 @@ class LocomotionNeuralNetwork():
         yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
         target_theta = self.target[2]
 
+        tilt = (roll**2 + pitch**2)
+
+        min_z = self.nominal_z - self.nominal_z_range
+        max_z = self.nominal_z + self.nominal_z_range
+        if position.z < min_z:
+            z_distance = min_z - position.z
+        elif position.z > max_z:
+            z_distance = position.z - max_z
+        else:
+            z_distance = 0.0
+
         current_distance = math.hypot(self.target[0] - position.x,
                                       self.target[1] - position.y)
         if self.previous_distance is None:
             self.previous_distance = current_distance
 
-        current_angular_distance = math.atan2(math.sin(yaw - target_theta),
-                                              math.cos(yaw - target_theta))
+        current_angular_distance = abs(math.atan2(
+            math.sin(yaw - target_theta),
+            math.cos(yaw - target_theta)
+        ))
         if self.previous_angular_distance is None:
             self.previous_angular_distance = current_angular_distance
 
@@ -258,27 +278,27 @@ class LocomotionNeuralNetwork():
         legs_off_ground = max(0, legs_off_ground - 4)
 
         reward_progress = (
-            self.position_penalty *
-            (self.previous_distance - current_distance)
+            -self.position_penalty *
+            (current_distance - self.previous_distance)
         )
         self.previous_distance = current_distance
 
         reward_facing = (
-                self.angle_penalty *
-                (self.previous_angular_distance - current_angular_distance)
+                -self.angle_penalty *
+                (current_angular_distance - self.previous_angular_distance)
         )
         self.previous_angular_distance = current_angular_distance
 
         reward_tilt = (
-            -self.tilt_penalty * (roll**2 + pitch**2)
+            -self.tilt_penalty * tilt
         )
 
         reward_height = (
-            self.height_penalty * ((position.z - self.nominal_z)**2)
+            -self.height_penalty * z_distance
         )
 
         reward_feet_planted = (
-            self.feet_penalty * legs_off_ground
+            -self.feet_penalty * legs_off_ground
         )
 
         total_reward = (
@@ -293,12 +313,18 @@ class LocomotionNeuralNetwork():
         self.time_left_s -= delta_time
         if self.time_left_s < 0:
             done = True
-        if abs(roll) > 0.8 or abs(pitch) > 0.8 or position.z < 0.05:
+        if (
+            abs(roll) > self.max_tilt or
+            abs(pitch) > self.max_tilt or
+            position.z < self.min_height
+        ):
             total_reward -= 50.0
             done = True
         elif current_distance < self.distance_convergence:
             total_reward += self.arrival_reward
             done = True
+
+        self.training_run_reward += total_reward
 
         return total_reward, done
 
@@ -306,10 +332,12 @@ class LocomotionNeuralNetwork():
                    spiderbot_pose,
                    delta_time):
         """Perform a single step of training."""
-        if self.target is None:
-            return None, False  # Return early
-
+        reward = 0.0
         done = False
+
+        if self.target is None:
+            return None, reward, done  # Return early
+
         if self.latest_iter_state is not None:
             # If there was a previous iter_state,
             # calculate the reward and train the actor-critic
@@ -332,7 +360,7 @@ class LocomotionNeuralNetwork():
             )
         )
 
-        return self.latest_iter_state.action_np, done
+        return self.latest_iter_state.action_np, reward, done
 
     def train_actor_critic_step(self,
                                 iter_state,

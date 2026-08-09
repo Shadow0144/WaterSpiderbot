@@ -11,6 +11,8 @@ from spiderbot_interfaces.msg import SpiderbotTargetPose
 from spiderbot_interfaces.msg import TrainingTarget
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
+from std_msgs.msg import Float64
+
 from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
 
@@ -58,6 +60,12 @@ class SpiderbotLocomotionNode(Node):
 
         self.leg_set_targets_publisher = self.create_publisher(
             LegTargets, 'set_leg_targets', 10)
+
+        self.current_step_reward_publisher = self.create_publisher(
+            Float64, 'current_step_reward', 10)
+
+        self.training_run_reward_publisher = self.create_publisher(
+            Float64, 'training_run_reward', 10)
 
         self.spiderbot_pose_subscription = self.create_subscription(
             SpiderbotPose,
@@ -142,6 +150,18 @@ class SpiderbotLocomotionNode(Node):
     def publish_points(self, msg):
         """Publish target points for the leg to reach for."""
         self.leg_set_targets_publisher.publish(msg)
+
+    def publish_current_step_reward(self, reward):
+        """Publish the reward for the current step."""
+        msg = Float64()
+        msg.data = reward
+        self.current_step_reward_publisher.publish(msg)
+
+    def publish_training_run_reward(self, reward):
+        """Publish the reward for the full training run."""
+        msg = Float64()
+        msg.data = reward
+        self.training_run_reward_publisher.publish(msg)
 
     def training_target_callback(self, msg):
         """Reset the simuation and has the Spiderbot move to the target."""

@@ -19,6 +19,11 @@ class BrainNode(Node):
         """Initialize and run a brain."""
         super().__init__('brain_node')
 
+        self.time_min_s = 10
+        self.time_max_s = 20
+        self.distance_scaling = 0.1
+        self.final_angle_scaling = 0.01
+
         self.declare_parameter('training_mode_enabled',
                                True)
         self.training_mode_enabled = (
@@ -53,13 +58,18 @@ class BrainNode(Node):
 
     def training_loop(self):
         """Set times and targets for the locomotion module to aim for."""
-        time_to_reach_goal_s = float(random.randint(5, 10))
-        distance_scaling = 0.1
+        time_to_reach_goal_s = float(random.randint(
+            self.time_min_s,
+            self.time_max_s
+        ))
         heading_angle = random.uniform(0.0, 2.0 ** math.pi)
-        final_angle = random.uniform(0.0, 2.0 ** math.pi)
+        final_angle = math.pi + heading_angle + (
+            self.final_angle_scaling * random.uniform(0.0, 2.0 ** math.pi)
+        )
+        distance_scaling = time_to_reach_goal_s * self.distance_scaling
         target = [
-            math.cos(heading_angle) * time_to_reach_goal_s * distance_scaling,
-            math.sin(heading_angle) * time_to_reach_goal_s * distance_scaling,
+            math.cos(heading_angle) * distance_scaling,
+            math.sin(heading_angle) * distance_scaling,
             final_angle]
 
         self.set_training_target(time_to_reach_goal_s, target)

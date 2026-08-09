@@ -50,9 +50,12 @@ class DNNModule(LocomotionModule):
 
     def training_step(self, spiderbot_pose_msg, delta_time):
         """Handle a training step."""
-        action_np, done = (
+        action_np, reward, done = (
             self.nn.train_step(spiderbot_pose_msg,
                                delta_time)
+        )
+        self.locomotion_node.publish_current_step_reward(
+            reward
         )
 
         if done:
@@ -88,5 +91,9 @@ class DNNModule(LocomotionModule):
 
     def reset(self):
         """Reset the neural network."""
+        self.locomotion_node.publish_training_run_reward(
+            self.nn.training_run_reward /
+            self.nn.time_to_goal_s
+        )
         super().reset()
         self.nn.reset()
