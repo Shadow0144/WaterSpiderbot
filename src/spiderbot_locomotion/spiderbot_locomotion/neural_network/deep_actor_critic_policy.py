@@ -106,16 +106,46 @@ class DeepActorCriticPolicy():
         self.reward_calculator.set_time_to_goal(time_to_goal_s)
         self.target = target
 
-    def get_training_run_reward(self):
-        """Return the total reward of the training run."""
+    def get_episode_reward(self):
+        """Return the total reward of the episode."""
         return (
             0.0
             if self.reward_calculator.time_to_goal_s == 0.0 else
-            self.reward_calculator.training_run_reward /
+            self.reward_calculator.episode_reward /
             self.reward_calculator.time_to_goal_s
         )
 
-    def select_action(self, spiderbot_pose):
+    def select_action(self, spiderbot_pose, deterministic=False):
+        """Select the next action."""
+        if deterministic:
+            next_action = self.select_action_deterministic(spiderbot_pose)
+        else:
+            state_iteration = self.select_action_stochastic(spiderbot_pose)
+            if state_iteration is not None:
+                next_action = state_iteration.action_np
+            else:
+                next_action = None
+        return next_action
+
+    def select_action_deterministic(self, spiderbot_pose):
+        """Step execution for deployment."""
+        if self.target is None:
+            return None  # Exit early if there is no target
+
+        self.actor_critic.eval()
+        with torch.no_grad():
+            state_tensor = construct_input_vector(
+                self.target,
+                spiderbot_pose,
+                self.device
+            )
+            action_dist, _, hidden_state_tp1 = self.actor_critic(
+                state_tensor, self.hidden_state
+            )
+            self.hidden_state = hidden_state_tp1
+            return action_dist.mean.squeeze(0).cpu().numpy()
+
+    def select_action_stochastic(self, spiderbot_pose):
         """Step execution for training."""
         if self.target is None:
             return None  # Exit early if there is no target
@@ -148,25 +178,6 @@ class DeepActorCriticPolicy():
             hidden_state_t,
             hidden_state_tp1
         )
-
-    def forward(self, spiderbot_pose):
-        """Short-hand function for a forward pass."""
-        return self.select_action_deterministic(spiderbot_pose)
-
-    def select_action_deterministic(self, spiderbot_pose):
-        """Step execution for deployment."""
-        self.actor_critic.eval()
-        with torch.no_grad():
-            state_tensor = construct_input_vector(
-                self.target,
-                spiderbot_pose,
-                self.device
-            )
-            action_dist, _, hidden_state_tp1 = self.actor_critic(
-                state_tensor, self.hidden_state
-            )
-            self.hidden_state = hidden_state_tp1
-            return action_dist.mean.squeeze(0).cpu().numpy()
 
     def train_step(self,
                    spiderbot_pose,
@@ -203,7 +214,7 @@ class DeepActorCriticPolicy():
             )
 
         self.latest_iter_state = (
-            self.select_action(
+            self.select_action_stochastic(
                 spiderbot_pose
             )
         )

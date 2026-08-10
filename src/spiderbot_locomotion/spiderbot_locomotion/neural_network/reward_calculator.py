@@ -37,7 +37,7 @@ class RewardCalculator():
         self.time_to_goal_s = 0.0
         self.time_left_s = self.time_to_goal_s
 
-        self.training_run_reward = 0.0
+        self.episode_reward = 0.0
 
     def set_time_to_goal(self, time_to_goal_s):
         """Set the time estimated to reach the goal."""
@@ -48,7 +48,7 @@ class RewardCalculator():
         """Reset the internal state variables."""
         self.previous_distance = None
         self.previous_angular_distance = None
-        self.training_run_reward = 0.0
+        self.episode_reward = 0.0
         self.time_to_goal_s = 0.0
         self.time_left_s = self.time_to_goal_s
 
@@ -186,6 +186,6 @@ class RewardCalculator():
             total_reward += self.arrival_reward
             done = True
 
-        self.training_run_reward += total_reward
+        self.episode_reward += total_reward
 
         return total_reward, done

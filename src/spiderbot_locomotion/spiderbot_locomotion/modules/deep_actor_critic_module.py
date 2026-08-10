@@ -37,19 +37,19 @@ class DeepActorCriticModule(LocomotionModule):
             return
 
         if not self.training:
-            angles = self.policy.forward(
+            angles = self.policy.select_action(
                 spiderbot_pose_msg
             )
         else:
-            angles = self.training_step(
+            angles = self.train_step(
                 spiderbot_pose_msg,
                 delta_time
             )
         if angles is not None:
             self.publish_angles(angles)
 
-    def training_step(self, spiderbot_pose_msg, delta_time):
-        """Handle a training step."""
+    def train_step(self, spiderbot_pose_msg, delta_time):
+        """Perform a single training step."""
         action_np, reward, done = (
             self.policy.train_step(spiderbot_pose_msg,
                                    delta_time)
@@ -91,8 +91,8 @@ class DeepActorCriticModule(LocomotionModule):
 
     def reset(self):
         """Reset the neural network."""
-        self.locomotion_node.publish_training_run_reward(
-            self.policy.get_training_run_reward()
+        self.locomotion_node.publish_episode_reward(
+            self.policy.get_episode_reward()
         )
         super().reset()
         self.policy.reset()

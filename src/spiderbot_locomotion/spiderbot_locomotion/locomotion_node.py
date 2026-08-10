@@ -70,8 +70,8 @@ class SpiderbotLocomotionNode(Node):
         self.current_step_reward_publisher = self.create_publisher(
             Float64, 'current_step_reward', 10)
 
-        self.training_run_reward_publisher = self.create_publisher(
-            Float64, 'training_run_reward', 10)
+        self.episode_reward_publisher = self.create_publisher(
+            Float64, 'episode_reward', 10)
 
         self.spiderbot_pose_subscription = self.create_subscription(
             SpiderbotPose,
@@ -179,11 +179,11 @@ class SpiderbotLocomotionNode(Node):
         msg.data = reward
         self.current_step_reward_publisher.publish(msg)
 
-    def publish_training_run_reward(self, reward):
-        """Publish the reward for the full training run."""
+    def publish_episode_reward(self, reward):
+        """Publish the reward for the full training episode."""
         msg = Float64()
         msg.data = reward
-        self.training_run_reward_publisher.publish(msg)
+        self.episode_reward_publisher.publish(msg)
 
     def training_target_callback(self, msg):
         """Reset the simuation and has the Spiderbot move to the target."""
