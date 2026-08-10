@@ -60,7 +60,7 @@ class DeepActorCriticPolicy():
         self.nominal_z_range = 0.2
         self.distance_convergence = 0.05
         self.foot_off_ground_z = 0.05
-        # self.foot_max_z_above_body = 0.1
+        self.foot_max_z_above_body = 0.1
         self.min_qvel = 0.02
         self.max_qvel = 2.0
 
@@ -323,11 +323,11 @@ class DeepActorCriticPolicy():
                 1 if leg_pose.claw_z > self.foot_off_ground_z else 0
             )
 
-            # legs_above_body += (
-            #     1 if leg_pose.claw_z > (
-            #         position.z + self.foot_max_z_above_body
-            #     ) else 0
-            # )
+            legs_above_body += (
+                1 if leg_pose.claw_z > (
+                    position.z + self.foot_max_z_above_body
+                ) else 0
+            )
         too_many_legs_off_ground = max(0, legs_off_ground - 4)
 
         reward_progress = (
@@ -358,9 +358,9 @@ class DeepActorCriticPolicy():
             -self.feet_planted_penalty * too_many_legs_off_ground
         )
 
-        # reward_feet_too_high = (
-        #     -self.feet_too_high_penalty * legs_above_body
-        # )
+        reward_feet_too_high = (
+            -self.feet_too_high_penalty * legs_above_body
+        )
 
         total_reward = (
             reward_progress +
@@ -368,8 +368,8 @@ class DeepActorCriticPolicy():
             reward_tilt +
             reward_height +
             reward_angle_speed +
-            reward_feet_planted  # +
-            # reward_feet_too_high
+            reward_feet_planted +
+            reward_feet_too_high
         )
 
         done = False
