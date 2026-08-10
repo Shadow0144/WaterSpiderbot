@@ -1,4 +1,4 @@
-"""Locomotion neural network."""
+"""Locomotion policy based on an Actor-Critic Deep Neural Network."""
 
 import math
 import os
@@ -9,11 +9,11 @@ from ament_index_python.packages import get_package_share_directory
 import torch
 from torch import nn
 
-from .actor_critic import LocomotionActorCritic
+from .deep_actor_critic import DeepActorCritic
 
 
-class LocomotionNeuralNetwork():
-    """Manages and executes a neural network for locomotion."""
+class DeepActorCriticPolicy():
+    """Provides a distribution of actions for the current state."""
 
     class IterationState:
         """Store training state information from a step."""
@@ -42,7 +42,7 @@ class LocomotionNeuralNetwork():
             'cpu'
         )
 
-        self.actor_critic = LocomotionActorCritic().to(self.device)
+        self.actor_critic = DeepActorCritic().to(self.device)
         self.optimizer = torch.optim.Adam(
             self.actor_critic.parameters(),
             lr=1e-4)
@@ -59,7 +59,8 @@ class LocomotionNeuralNetwork():
         self.nominal_z = 0.4
         self.nominal_z_range = 0.2
         self.distance_convergence = 0.05
-        self.foot_max_z = 0.1
+        self.foot_off_ground_z = 0.05
+        # self.foot_max_z_above_body = 0.1
         self.min_qvel = 0.02
         self.max_qvel = 2.0
 
@@ -69,7 +70,8 @@ class LocomotionNeuralNetwork():
         self.tilt_penalty = 1.0
         self.height_penalty = 0.5
         self.angle_speed_penalty = 1.0
-        self.feet_penalty = 1.0
+        self.feet_planted_penalty = 1.0
+        self.feet_too_high_penalty = 1.0
         self.arrival_reward = 1000.0
 
         # Terminate early conditions
@@ -150,7 +152,7 @@ class LocomotionNeuralNetwork():
         self.save_weights(f'test_weights_backup_{time_string}.pt')
         self.delete_saved_weights()
         # Create a new critic and optimizer with random weights
-        self.actor_critic = LocomotionActorCritic().to(self.device)
+        self.actor_critic = DeepActorCritic().to(self.device)
         self.optimizer = torch.optim.Adam(
             self.actor_critic.parameters(),
             lr=1e-4)
@@ -304,8 +306,8 @@ class LocomotionNeuralNetwork():
 
         legs_off_ground = 0
         total_actuation_outside_of_range = 0
+        legs_above_body = 0
         for leg_pose in spiderbot_pose.leg_poses:
-            legs_off_ground += 1 if leg_pose.claw_z > self.foot_max_z else 0
             leg_actuator_speeds = actuator_speeds[leg_pose.leg_name]
             for actuator_speed in leg_actuator_speeds:
                 if abs(actuator_speed) < self.min_qvel:
@@ -316,7 +318,17 @@ class LocomotionNeuralNetwork():
                     total_actuation_outside_of_range += (
                         abs(actuator_speed) - self.max_qvel
                     )
-        legs_off_ground = max(0, legs_off_ground - 4)
+
+            legs_off_ground += (
+                1 if leg_pose.claw_z > self.foot_off_ground_z else 0
+            )
+
+            # legs_above_body += (
+            #     1 if leg_pose.claw_z > (
+            #         position.z + self.foot_max_z_above_body
+            #     ) else 0
+            # )
+        too_many_legs_off_ground = max(0, legs_off_ground - 4)
 
         reward_progress = (
             -self.position_penalty *
@@ -343,16 +355,21 @@ class LocomotionNeuralNetwork():
         )
 
         reward_feet_planted = (
-            -self.feet_penalty * legs_off_ground
+            -self.feet_planted_penalty * too_many_legs_off_ground
         )
+
+        # reward_feet_too_high = (
+        #     -self.feet_too_high_penalty * legs_above_body
+        # )
 
         total_reward = (
             reward_progress +
             reward_facing +
             reward_tilt +
-            reward_angle_speed +
             reward_height +
-            reward_feet_planted
+            reward_angle_speed +
+            reward_feet_planted  # +
+            # reward_feet_too_high
         )
 
         done = False

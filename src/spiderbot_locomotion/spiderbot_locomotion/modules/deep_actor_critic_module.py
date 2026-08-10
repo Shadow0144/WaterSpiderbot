@@ -5,25 +5,25 @@ import time
 import spiderbot_utilities as utils
 
 from .locomotion_module import LocomotionModule
-from ..neural_network.locomotion_neural_network import LocomotionNeuralNetwork
+from ..neural_network.deep_actor_critic_policy import DeepActorCriticPolicy
 
 
-class DNNModule(LocomotionModule):
-    """A locomotion module using a Deep Neural Network."""
+class DeepActorCriticModule(LocomotionModule):
+    """A locomotion module using a Deep Neural Network Actor-Critic policy."""
 
     def __init__(self, locomotion_node, spiderbot_description):
         """Initialize the locomotion module."""
         super().__init__(locomotion_node, spiderbot_description)
 
-        self.nn = LocomotionNeuralNetwork()
+        self.policy = DeepActorCriticPolicy()
 
         self.target = None
 
         self.training = True
         self.num_intervals = 0
         self.save_interval = 10
-        if self.nn.get_model_weights_exist():
-            self.nn.load_weights()
+        if self.policy.get_model_weights_exist():
+            self.policy.load_weights()
 
     def update(self, spiderbot_pose_msg):
         """Walk the spiderbot towards its target."""
@@ -37,7 +37,7 @@ class DNNModule(LocomotionModule):
             return
 
         if not self.training:
-            angles = self.nn.forward(
+            angles = self.policy.forward(
                 spiderbot_pose_msg
             )
         else:
@@ -51,8 +51,8 @@ class DNNModule(LocomotionModule):
     def training_step(self, spiderbot_pose_msg, delta_time):
         """Handle a training step."""
         action_np, reward, done = (
-            self.nn.train_step(spiderbot_pose_msg,
-                               delta_time)
+            self.policy.train_step(spiderbot_pose_msg,
+                                   delta_time)
         )
         self.locomotion_node.publish_current_step_reward(
             reward
@@ -62,7 +62,7 @@ class DNNModule(LocomotionModule):
             # Save the weights periodically
             self.num_intervals += 1
             if self.num_intervals % self.save_interval == 0:
-                self.nn.save_weights()
+                self.policy.save_weights()
 
             # Wait until a reset
             self.is_resetting = True
@@ -87,17 +87,17 @@ class DNNModule(LocomotionModule):
     def set_training_target(self, set_training_target_msg):
         """Set the target and the estimated time to reach it."""
         super().set_training_target(set_training_target_msg)
-        self.nn.set_target(self.time_to_reach_goal_s, self.target)
+        self.policy.set_target(self.time_to_reach_goal_s, self.target)
 
     def reset(self):
         """Reset the neural network."""
         self.locomotion_node.publish_training_run_reward(
-            self.nn.training_run_reward /
-            self.nn.time_to_goal_s
+            self.policy.training_run_reward /
+            self.policy.time_to_goal_s
         )
         super().reset()
-        self.nn.reset()
+        self.policy.reset()
 
     def reset_learned_weights(self):
         """Backup the current weights and start with new random weights."""
-        self.nn.reset_learned_weights()
+        self.policy.reset_learned_weights()

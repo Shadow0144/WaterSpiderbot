@@ -17,7 +17,7 @@ from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
 from std_srvs.srv import Trigger
 
-from .modules import DNNModule
+from .modules import DeepActorCriticModule
 from .modules import HandcraftedAngleModule
 from .modules import HandcraftedPointModule
 from .modules import SimpleSinModule
@@ -33,7 +33,7 @@ class SpiderbotLocomotionNode(Node):
         self.get_logger().info('Starting spiderbot locomotion node')
 
         self.declare_parameter('locomotion_module',
-                               'dnn')
+                               'deep_actor_critic')
         self.locomotion_module_type = (
             self.get_parameter('locomotion_module').value
         )
@@ -130,19 +130,23 @@ class SpiderbotLocomotionNode(Node):
         if self.locomotion_module_type == 'simple_sin':
             self.locomotion_module = SimpleSinModule(
                 self,
-                self.spiderbot_description)
+                self.spiderbot_description
+            )
         elif self.locomotion_module_type == 'handcrafted_angle':
             self.locomotion_module = HandcraftedAngleModule(
                 self,
-                self.spiderbot_description)
+                self.spiderbot_description
+            )
         elif self.locomotion_module_type == 'handcrafted_point':
             self.locomotion_module = HandcraftedPointModule(
                 self,
-                self.spiderbot_description)
-        elif self.locomotion_module_type == 'dnn':
-            self.locomotion_module = DNNModule(
+                self.spiderbot_description
+            )
+        elif self.locomotion_module_type == 'deep_actor_critic':
+            self.locomotion_module = DeepActorCriticModule(
                 self,
-                self.spiderbot_description)
+                self.spiderbot_description
+            )
 
     def request_spiderbot_description(self):
         """Get the spec xml from the description."""

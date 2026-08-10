@@ -1,7 +1,7 @@
 """Spiderbot neural network components."""
 
-from .locomotion_neural_network import LocomotionNeuralNetwork
+from .deep_actor_critic_policy import DeepActorCriticPolicy
 
 __all__ = [
-    'LocomotionNeuralNetwork',
+    'DeepActorCriticPolicy',
 ]

@@ -1,15 +1,15 @@
-"""Locomotion actor-critic."""
+"""Locomotion Actor-Critic using a Deep Neural Network."""
 
 import torch
 from torch import nn
 from torch.distributions import Normal
 
 
-class LocomotionActorCritic(nn.Module):
-    """Locomotion actor-critic."""
+class DeepActorCritic(nn.Module):
+    """Locomotion Actor-Critic using a Deep Neural Network."""
 
     def __init__(self):
-        """Initialize the locomotion actor-critic."""
+        """Initialize the Actor-Critic."""
         super().__init__()
 
         # Inputs:
@@ -28,21 +28,29 @@ class LocomotionActorCritic(nn.Module):
         #  leg_q1, leg_q2, leg_q3
         self.num_inputs = 3 + 13 + (8 * 12)  # 112
         self.num_outputs = (8 * 3)  # 24
-        self.hidden_dim = 256
+        self.feature_hidden_dim = 512
+        self.recurrent_hidden_dim = 256
+        self.critic_num_outputs = 1
 
         self.feature_extractor = nn.Sequential(
-            nn.Linear(self.num_inputs, 512),
+            nn.Linear(self.num_inputs,
+                      self.feature_hidden_dim),
             nn.Sigmoid(),
-            nn.Linear(512, 512),
+            nn.Linear(self.feature_hidden_dim,
+                      self.feature_hidden_dim),
             nn.Sigmoid()
         )
 
         # Recurrent layer
-        self.gru_cell = nn.GRUCell(512, self.hidden_dim)
+        self.gru_cell = nn.GRUCell(self.feature_hidden_dim,
+                                   self.recurrent_hidden_dim)
 
-        self.actor_mean = nn.Linear(self.hidden_dim, self.num_outputs)
+        self.actor_mean = nn.Linear(self.recurrent_hidden_dim,
+                                    self.num_outputs)
         self.actor_log_std = nn.Parameter(torch.zeros(self.num_outputs))
-        self.critic_value = nn.Linear(self.hidden_dim, 1)
+
+        self.critic_value = nn.Linear(self.recurrent_hidden_dim,
+                                      self.critic_num_outputs)
 
     def forward(self, state_t, hidden_state_t=None):
         """Forward pass."""
@@ -50,7 +58,7 @@ class LocomotionActorCritic(nn.Module):
         if hidden_state_t is None:
             hidden_state_t = torch.zeros(
                 state_t.size(0),
-                self.hidden_dim,
+                self.recurrent_hidden_dim,
                 device=state_t.device,
                 dtype=state_t.dtype
             )
