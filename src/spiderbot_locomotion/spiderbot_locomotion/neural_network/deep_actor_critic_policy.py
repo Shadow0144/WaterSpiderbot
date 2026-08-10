@@ -1,15 +1,12 @@
 """Locomotion policy based on an Actor-Critic Deep Neural Network."""
 
-import math
-import os
-from datetime import datetime
-
-from ament_index_python.packages import get_package_share_directory
-
 import torch
 from torch import nn
 
+from .checkpoint_file_manager import CheckpointFileManager
 from .deep_actor_critic import DeepActorCritic
+from .reward_calculator import RewardCalculator
+from .utility import construct_input_vector
 
 
 class DeepActorCriticPolicy():
@@ -48,167 +45,75 @@ class DeepActorCriticPolicy():
             lr=1e-4)
         self.loss_fn = nn.MSELoss()
 
+        self.checkpoint_file_manager = CheckpointFileManager()
+
         # Recurrent hidden state
         self.hidden_state = None
 
-        # Previous reward function state variables
-        self.previous_distance = None
-        self.previous_angular_distance = None
-
-        # Hyperparameters for ranges
-        self.nominal_z = 0.4
-        self.nominal_z_range = 0.2
-        self.distance_convergence = 0.05
-        self.foot_off_ground_z = 0.05
-        self.foot_max_z_above_body = 0.1
-        self.min_qvel = 0.02
-        self.max_qvel = 2.0
-
-        # Hyperparameters for penalty strengths
-        self.position_penalty = 100.0
-        self.angle_penalty = 0.01
-        self.tilt_penalty = 1.0
-        self.height_penalty = 0.5
-        self.angle_speed_penalty = 1.0
-        self.feet_planted_penalty = 1.0
-        self.feet_too_high_penalty = 1.0
-        self.arrival_reward = 1000.0
-
-        # Terminate early conditions
-        self.max_tilt = 0.8
-        self.min_height = 0.1
+        self.reward_calculator = RewardCalculator()
 
         # Reward horizon scaling
         self.gamma = 0.99
 
         # Target information
-        self.time_to_goal_s = 0.0
-        self.time_left_s = self.time_to_goal_s
         self.target = None
-        self.training_run_reward = 0.0
 
         # Previous state information
         self.latest_iter_state = None
 
     def reset(self):
         """Reset the internal state variables."""
-        self.previous_distance = None
-        self.previous_angular_distance = None
         self.hidden_state = None
         self.latest_iter_state = None
-        self.training_run_reward = 0
-
-    def set_target(self, time_to_goal_s, target):
-        """Update the target and the time expected to reach the goal."""
-        self.time_to_goal_s = time_to_goal_s
-        self.time_left_s = self.time_to_goal_s
-        self.target = target
+        self.reward_calculator.reset()
 
     def get_model_weights_exist(self, filename='test_weights.pt'):
         """Get if the model weight file exists."""
-        filepath = self.get_model_weights_path()
-        full_filename = os.path.join(filepath, filename)
-        return os.path.exists(full_filename)
-
-    def get_model_weights_path(self):
-        """Get the path to the model weights file from the share directory."""
-        share_dir = get_package_share_directory('spiderbot_locomotion')
-        model_path = os.path.join(share_dir, 'model_weights')
-        return model_path
+        return self.checkpoint_file_manager.get_model_weights_exist(
+            filename
+        )
 
     def save_weights(self, filename='test_weights.pt'):
         """Save the learned weights to a file."""
-        filepath = self.get_model_weights_path()
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        full_filename = os.path.join(filepath, filename)
-        checkpoint = {
-            'actor_critic_state_dict': self.actor_critic.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-        }
-        torch.save(checkpoint, full_filename)
+        self.checkpoint_file_manager.save_weights(
+            self.actor_critic,
+            self.optimizer,
+            filename
+        )
 
     def load_weights(self, filename='test_weights.pt'):
         """Load the learned weights from a file."""
-        filepath = self.get_model_weights_path()
-        full_filename = os.path.join(filepath, filename)
-        if not os.path.exists(full_filename):
-            raise FileNotFoundError('No model weights file found at '
-                                    f'{full_filename}')
-
-        checkpoint = torch.load(full_filename, map_location=self.device)
-
-        if 'actor_critic_state_dict' in checkpoint:
-            self.actor_critic.load_state_dict(
-                checkpoint['actor_critic_state_dict']
-            )
-        if 'optimizer_state_dict' in checkpoint:
-            self.optimizer.load_state_dict(
-                checkpoint['optimizer_state_dict']
-            )
+        self.checkpoint_file_manager.load_weights(
+            self.actor_critic,
+            self.optimizer,
+            self.device,
+            filename
+        )
 
     def reset_learned_weights(self):
         """Backup the current weights and start with new random weights."""
-        time_string = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        self.save_weights(f'test_weights_backup_{time_string}.pt')
-        self.delete_saved_weights()
-        # Create a new critic and optimizer with random weights
-        self.actor_critic = DeepActorCritic().to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.actor_critic.parameters(),
-            lr=1e-4)
+        (
+            self.actor_critic,
+            self.optimizer
+        ) = self.checkpoint_file_manager.reset_learned_weights()
 
     def delete_saved_weights(self, filename='test_weights.pt'):
         """Delete the saved weights file."""
-        filepath = self.get_model_weights_path()
-        full_filename = os.path.join(filepath, filename)
-        if os.path.exists(full_filename):
-            os.remove(full_filename)
+        self.checkpoint_file_manager.delete_saved_weights(filename)
 
-    def construct_input_vector(self, spiderbot_pose):
-        """Construct a Pytorch tensor from the target and Spiderbot pose."""
-        body_odometry = spiderbot_pose.body_odometry
-        body_pose = body_odometry.pose.pose.position
-        body_orientation = body_odometry.pose.pose.orientation
-        body_pose_vel = body_odometry.twist.twist.linear
-        body_orientation_vel = body_odometry.twist.twist.angular
-        data = [
-            self.target[0],  # x
-            self.target[1],  # y
-            self.target[2],  # theta
-            body_pose.x,
-            body_pose.y,
-            body_pose.z,
-            body_orientation.x,
-            body_orientation.y,
-            body_orientation.z,
-            body_orientation.w,
-            body_pose_vel.x,
-            body_pose_vel.y,
-            body_pose_vel.z,
-            body_orientation_vel.x,
-            body_orientation_vel.y,
-            body_orientation_vel.z,
-        ]
-        for leg_pose in spiderbot_pose.leg_poses:
-            data.extend(
-                [
-                    leg_pose.coxa_qpos,
-                    leg_pose.femur_qpos,
-                    leg_pose.tibia_qpos,
-                    leg_pose.coxa_qvel,
-                    leg_pose.femur_qvel,
-                    leg_pose.tibia_qvel,
-                    leg_pose.claw_x,
-                    leg_pose.claw_y,
-                    leg_pose.claw_z,
-                    leg_pose.claw_roll,
-                    leg_pose.claw_pitch,
-                    leg_pose.claw_yaw,
-                ]
-            )
-        data = torch.tensor(data, dtype=torch.float32, device=self.device)
-        data = data.unsqueeze(0)
-        return data
+    def set_target(self, time_to_goal_s, target):
+        """Update the target and the time expected to reach the goal."""
+        self.reward_calculator.set_time_to_goal(time_to_goal_s)
+        self.target = target
+
+    def get_training_run_reward(self):
+        """Return the total reward of the training run."""
+        return (
+            0.0
+            if self.reward_calculator.time_to_goal_s == 0.0 else
+            self.reward_calculator.training_run_reward /
+            self.reward_calculator.time_to_goal_s
+        )
 
     def select_action(self, spiderbot_pose):
         """Step execution for training."""
@@ -216,11 +121,16 @@ class DeepActorCriticPolicy():
             return None  # Exit early if there is no target
 
         self.actor_critic.train()
-        state_tensor = self.construct_input_vector(spiderbot_pose)
+        state_tensor = construct_input_vector(
+            self.target,
+            spiderbot_pose,
+            self.device
+        )
 
         action_dist, value_t, hidden_state_tp1 = self.actor_critic(
             state_tensor,
-            self.hidden_state)
+            self.hidden_state
+        )
 
         action = action_dist.sample()
         log_probability = action_dist.log_prob(action).sum(dim=-1)
@@ -247,149 +157,16 @@ class DeepActorCriticPolicy():
         """Step execution for deployment."""
         self.actor_critic.eval()
         with torch.no_grad():
-            state_tensor = self.construct_input_vector(spiderbot_pose)
+            state_tensor = construct_input_vector(
+                self.target,
+                spiderbot_pose,
+                self.device
+            )
             action_dist, _, hidden_state_tp1 = self.actor_critic(
                 state_tensor, self.hidden_state
             )
             self.hidden_state = hidden_state_tp1
             return action_dist.mean.squeeze(0).cpu().numpy()
-
-    def compute_step_reward(self,
-                            spiderbot_pose,
-                            delta_time):
-        """Calculate per-step reward."""
-        if self.target is None:
-            return None, False  # Exit early if there is no target
-
-        position = spiderbot_pose.body_odometry.pose.pose.position
-        orientation = spiderbot_pose.body_odometry.pose.pose.orientation
-
-        qx = orientation.x
-        qy = orientation.y
-        qz = orientation.z
-        qw = orientation.w
-        roll = math.atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx**2 + qy**2))
-        pitch = math.asin(max(-1.0, min(1.0, 2 * (qw * qy - qz * qx))))
-        yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
-        target_theta = self.target[2]
-
-        tilt = (roll**2 + pitch**2)
-
-        min_z = self.nominal_z - self.nominal_z_range
-        max_z = self.nominal_z + self.nominal_z_range
-        if position.z < min_z:
-            z_distance = min_z - position.z
-        elif position.z > max_z:
-            z_distance = position.z - max_z
-        else:
-            z_distance = 0.0
-
-        actuator_speeds = {}
-        for leg_pose in spiderbot_pose.leg_poses:
-            actuator_speeds[leg_pose.leg_name] = [
-                leg_pose.coxa_qvel,
-                leg_pose.femur_qvel,
-                leg_pose.tibia_qvel
-            ]
-
-        current_distance = math.hypot(self.target[0] - position.x,
-                                      self.target[1] - position.y)
-        if self.previous_distance is None:
-            self.previous_distance = current_distance
-
-        current_angular_distance = abs(math.atan2(
-            math.sin(yaw - target_theta),
-            math.cos(yaw - target_theta)
-        ))
-        if self.previous_angular_distance is None:
-            self.previous_angular_distance = current_angular_distance
-
-        legs_off_ground = 0
-        total_actuation_outside_of_range = 0
-        legs_above_body = 0
-        for leg_pose in spiderbot_pose.leg_poses:
-            leg_actuator_speeds = actuator_speeds[leg_pose.leg_name]
-            for actuator_speed in leg_actuator_speeds:
-                if abs(actuator_speed) < self.min_qvel:
-                    total_actuation_outside_of_range += (
-                        abs(self.min_qvel) - actuator_speed
-                    )
-                elif abs(actuator_speed) > self.max_qvel:
-                    total_actuation_outside_of_range += (
-                        abs(actuator_speed) - self.max_qvel
-                    )
-
-            legs_off_ground += (
-                1 if leg_pose.claw_z > self.foot_off_ground_z else 0
-            )
-
-            legs_above_body += (
-                1 if leg_pose.claw_z > (
-                    position.z + self.foot_max_z_above_body
-                ) else 0
-            )
-        too_many_legs_off_ground = max(0, legs_off_ground - 4)
-
-        reward_progress = (
-            -self.position_penalty *
-            (current_distance - self.previous_distance)
-        )
-        self.previous_distance = current_distance
-
-        reward_facing = (
-                -self.angle_penalty *
-                (current_angular_distance - self.previous_angular_distance)
-        )
-        self.previous_angular_distance = current_angular_distance
-
-        reward_tilt = (
-            -self.tilt_penalty * tilt
-        )
-
-        reward_height = (
-            -self.height_penalty * z_distance
-        )
-
-        reward_angle_speed = (
-            -self.angle_speed_penalty * total_actuation_outside_of_range
-        )
-
-        reward_feet_planted = (
-            -self.feet_planted_penalty * too_many_legs_off_ground
-        )
-
-        reward_feet_too_high = (
-            -self.feet_too_high_penalty * legs_above_body
-        )
-
-        total_reward = (
-            reward_progress +
-            reward_facing +
-            reward_tilt +
-            reward_height +
-            reward_angle_speed +
-            reward_feet_planted +
-            reward_feet_too_high
-        )
-
-        done = False
-        self.time_left_s -= delta_time
-        if self.time_left_s < 0:
-            done = True
-        if (
-            abs(roll) > self.max_tilt or
-            abs(pitch) > self.max_tilt or
-            position.z < self.min_height
-        ):
-            total_reward -= 50.0
-            done = True
-        elif current_distance < self.distance_convergence:
-            total_reward += self.arrival_reward
-            done = True
-
-        self.training_run_reward += total_reward
-
-        return total_reward, done
 
     def train_step(self,
                    spiderbot_pose,
@@ -404,18 +181,26 @@ class DeepActorCriticPolicy():
         if self.latest_iter_state is not None:
             # If there was a previous iter_state,
             # calculate the reward and train the actor-critic
-            reward, done = self.compute_step_reward(
+            reward, done = (
+                self.reward_calculator.compute_step_reward(
+                    self.target,
                     spiderbot_pose,
-                    delta_time)
+                    delta_time
+                )
+            )
 
-            next_data = self.construct_input_vector(
-                spiderbot_pose)
+            next_data = construct_input_vector(
+                self.target,
+                spiderbot_pose,
+                self.device
+            )
 
             self.train_actor_critic_step(
                 self.latest_iter_state,
                 next_data,
                 reward,
-                done)
+                done
+            )
 
         self.latest_iter_state = (
             self.select_action(

@@ -92,8 +92,7 @@ class DeepActorCriticModule(LocomotionModule):
     def reset(self):
         """Reset the neural network."""
         self.locomotion_node.publish_training_run_reward(
-            self.policy.training_run_reward /
-            self.policy.time_to_goal_s
+            self.policy.get_training_run_reward()
         )
         super().reset()
         self.policy.reset()
