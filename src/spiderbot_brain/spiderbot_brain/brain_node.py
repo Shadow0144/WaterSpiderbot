@@ -61,7 +61,7 @@ class BrainNode(Node):
 
     def perform_training_step(self):
         """Set times and targets for the locomotion module to aim for."""
-        time_to_reach_goal_s = float(random.randint(
+        time_to_reach_target_s = float(random.randint(
             self.time_min_s,
             self.time_max_s
         ))
@@ -69,21 +69,22 @@ class BrainNode(Node):
         final_angle = math.pi + heading_angle + (
             self.final_angle_scaling * random.uniform(0.0, 2.0 ** math.pi)
         )
-        distance_scaling = time_to_reach_goal_s * self.distance_scaling
+        distance_scaling = time_to_reach_target_s * self.distance_scaling
         target = [
             math.cos(heading_angle) * distance_scaling,
             math.sin(heading_angle) * distance_scaling,
             final_angle]
 
-        self.set_training_target(time_to_reach_goal_s, target)
+        self.set_training_target(time_to_reach_target_s, target)
 
-        time.sleep(time_to_reach_goal_s)
+        time.sleep(time_to_reach_target_s)
 
-    def set_training_target(self, time_to_reach_goal_s, target):
+    def set_training_target(self, time_to_reach_target_s, target):
         """Publish a new training target."""
         msg = TrainingTarget()
-        msg.time_to_reach_goal_s = time_to_reach_goal_s
+        msg.time_to_reach_target_s = time_to_reach_target_s
         msg.target_x = target[0]
         msg.target_y = target[1]
         msg.target_theta = target[2]
         self.training_target_publisher.publish(msg)
+        self.get_logger().info(f'Setting training target: {target}')

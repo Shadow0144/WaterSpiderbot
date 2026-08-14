@@ -34,23 +34,22 @@ class RewardCalculator():
         # Terminate early conditions
         self.max_tilt = 0.8
         self.min_height = 0.1
-        self.time_to_goal_s = 0.0
-        self.time_left_s = self.time_to_goal_s
+        self.time_to_reach_target_s = 0.0
+        self.time_left_s = self.time_to_reach_target_s
 
         self.episode_reward = 0.0
 
-    def set_time_to_goal(self, time_to_goal_s):
-        """Set the time estimated to reach the goal."""
-        self.time_to_goal_s = time_to_goal_s
-        self.time_left_s = self.time_to_goal_s
+    def set_time_to_reach_target(self, time_to_reach_target_s):
+        """Set the time estimated to reach the target."""
+        self.time_to_reach_target_s = time_to_reach_target_s
+        self.time_left_s = self.time_to_reach_target_s
 
-    def reset(self):
-        """Reset the internal state variables."""
+    def start_new_training_episode(self):
+        """Reset the internal state variables for the episode."""
         self.previous_distance = None
         self.previous_angular_distance = None
         self.episode_reward = 0.0
-        self.time_to_goal_s = 0.0
-        self.time_left_s = self.time_to_goal_s
+        self.time_left_s = self.time_to_reach_target_s
 
     def compute_step_reward(self,
                             target,

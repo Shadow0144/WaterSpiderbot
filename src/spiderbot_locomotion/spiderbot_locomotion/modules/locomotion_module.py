@@ -16,7 +16,7 @@ class LocomotionModule:
                 )
         )
         self.last_timestamp = -1.0
-        self.time_to_reach_goal_s = 0
+        self.time_to_reach_target_s = 0
         self.target_x = 0
         self.target_y = 0
         self.target_theta = 0
@@ -38,8 +38,8 @@ class LocomotionModule:
 
     def set_training_target(self, set_training_target_msg):
         """Set a target (x, y + rotation) for the Spiderbot to move towards."""
-        self.time_to_reach_goal_s = (
-            set_training_target_msg.time_to_reach_goal_s
+        self.time_to_reach_target_s = (
+            set_training_target_msg.time_to_reach_target_s
         )
         self.target_x = set_training_target_msg.target_x
         self.target_y = set_training_target_msg.target_y

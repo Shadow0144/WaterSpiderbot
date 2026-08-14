@@ -6,6 +6,7 @@ import spiderbot_utilities as utils
 
 from .locomotion_module import LocomotionModule
 from ..neural_network.deep_actor_critic_policy import DeepActorCriticPolicy
+from ..neural_network.population_trainer import PopulationTrainer
 
 
 class DeepActorCriticModule(LocomotionModule):
@@ -15,14 +16,22 @@ class DeepActorCriticModule(LocomotionModule):
         """Initialize the locomotion module."""
         super().__init__(locomotion_node, spiderbot_description)
 
-        self.policy = DeepActorCriticPolicy()
-
         self.target = None
 
         self.training = True
-        self.num_intervals = 0
-        self.save_interval = 10
-        if self.policy.get_model_weights_exist():
+        self.population_training = self.training and True
+        self.num_episodes = 0
+        self.episode_save_interval = 10
+
+        if self.population_training:
+            self.population_trainer = PopulationTrainer(
+                self.locomotion_node.get_logger()
+            )
+            self.population_trainer.load_population_checkpoint()
+        else:
+            self.policy = DeepActorCriticPolicy(
+                self.locomotion_node.get_logger()
+            )
             self.policy.load_weights()
 
     def update(self, spiderbot_pose_msg):
@@ -50,20 +59,26 @@ class DeepActorCriticModule(LocomotionModule):
 
     def train_step(self, spiderbot_pose_msg, delta_time):
         """Perform a single training step."""
-        action_np, reward, done = (
-            self.policy.train_step(spiderbot_pose_msg,
-                                   delta_time)
-        )
+        if self.population_training:
+            action_np, reward, done = (
+                self.population_trainer.train_step(
+                    spiderbot_pose_msg,
+                    delta_time
+                )
+            )
+        else:
+            action_np, reward, done = (
+                self.policy.train_step(
+                    spiderbot_pose_msg,
+                    delta_time
+                )
+            )
         self.locomotion_node.publish_current_step_reward(
             reward
         )
 
         if done:
-            # Save the weights periodically
-            self.num_intervals += 1
-            if self.num_intervals % self.save_interval == 0:
-                self.policy.save_weights()
-
+            self.locomotion_node.get_logger().info('Training episode done')
             # Wait until a reset
             self.is_resetting = True
 
@@ -87,16 +102,43 @@ class DeepActorCriticModule(LocomotionModule):
     def set_training_target(self, set_training_target_msg):
         """Set the target and the estimated time to reach it."""
         super().set_training_target(set_training_target_msg)
-        self.policy.set_target(self.time_to_reach_goal_s, self.target)
 
     def reset(self):
         """Reset the neural network."""
-        self.locomotion_node.publish_episode_reward(
-            self.policy.get_episode_reward()
-        )
+        if self.population_training:
+            episode_reward = self.population_trainer.get_episode_reward()
+            self.population_trainer.start_new_training_episode()
+        else:
+            episode_reward = self.policy.get_episode_reward()
+            self.policy.start_new_training_episode()
+
+        # Save the weights periodically
+        self.num_episodes += 1
+        if self.num_episodes % self.episode_save_interval == 1:
+            if self.population_training:
+                self.population_trainer.save_population_checkpoint()
+            else:
+                self.policy.save_weights()
+
+        if self.population_training:
+            self.population_trainer.set_target(
+                self.time_to_reach_target_s,
+                self.target
+            )
+        else:
+            self.policy.set_target(
+                self.time_to_reach_target_s,
+                self.target
+            )
+
         super().reset()
-        self.policy.reset()
+        self.locomotion_node.publish_episode_reward(
+            episode_reward
+        )
 
     def reset_learned_weights(self):
-        """Backup the current weights and start with new random weights."""
-        self.policy.reset_learned_weights()
+        """Back up the current weights and start with new random weights."""
+        if self.population_training:
+            self.population_trainer.reset_checkpoints()
+        else:
+            self.policy.reset_learned_weights()

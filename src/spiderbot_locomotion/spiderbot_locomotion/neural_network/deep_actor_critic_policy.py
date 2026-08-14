@@ -31,8 +31,10 @@ class DeepActorCriticPolicy():
             self.hidden_state_t = hidden_state_t
             self.hidden_state_tp1 = hidden_state_tp1
 
-    def __init__(self):
+    def __init__(self, logger):
         """Initialize the locomotion neural network."""
+        self.logger = logger
+
         self.device = (
             torch.accelerator.current_accelerator().type
             if torch.accelerator.is_available() else
@@ -61,34 +63,52 @@ class DeepActorCriticPolicy():
         # Previous state information
         self.latest_iter_state = None
 
-    def reset(self):
-        """Reset the internal state variables."""
+    def start_new_training_episode(self):
+        """Reset the internal state variables for the episode."""
         self.hidden_state = None
         self.latest_iter_state = None
-        self.reward_calculator.reset()
+        self.reward_calculator.start_new_training_episode()
 
-    def get_model_weights_exist(self, filename='test_weights.pt'):
+    def get_model_weights_exists(self, filename='test_weights.pt'):
         """Get if the model weight file exists."""
-        return self.checkpoint_file_manager.get_model_weights_exist(
+        return self.checkpoint_file_manager.get_model_weights_exists(
             filename
         )
 
     def save_weights(self, filename='test_weights.pt'):
         """Save the learned weights to a file."""
-        self.checkpoint_file_manager.save_weights(
-            self.actor_critic,
-            self.optimizer,
-            filename
-        )
+        self.logger.info(f'Saving weights: {filename}')
+        try:
+            self.checkpoint_file_manager.save_weights(
+                filename,
+                self.actor_critic,
+                self.optimizer
+            )
+            self.logger.info(f'Saved weights: {filename}')
+        except RuntimeError:
+            self.logger.warn('Failed to save weights')
 
     def load_weights(self, filename='test_weights.pt'):
         """Load the learned weights from a file."""
-        self.checkpoint_file_manager.load_weights(
-            self.actor_critic,
-            self.optimizer,
-            self.device,
-            filename
-        )
+        try:
+            self.logger.info(f'Loading weights: {filename}')
+            if self.get_model_weights_exists(filename):
+                self.checkpoint_file_manager.load_weights(
+                    filename,
+                    self.actor_critic,
+                    self.optimizer,
+                    self.device
+                )
+                self.logger.info(f'Loaded weights: {filename}')
+                self.start_new_training_episode()
+        except RuntimeError:
+            self.logger.warn('Failed to load weights')
+
+    def delete_saved_weights(self, filename):
+        """Delete the saved weights file."""
+        if self.checkpoint_file_manager.get_model_weights_exists(filename):
+            self.checkpoint_file_manager.delete_saved_weights(filename)
+            self.logger.info(f'Deleted weights: {filename}')
 
     def reset_learned_weights(self):
         """Backup the current weights and start with new random weights."""
@@ -96,23 +116,20 @@ class DeepActorCriticPolicy():
             self.actor_critic,
             self.optimizer
         ) = self.checkpoint_file_manager.reset_learned_weights()
+        self.start_new_training_episode()
 
-    def delete_saved_weights(self, filename='test_weights.pt'):
-        """Delete the saved weights file."""
-        self.checkpoint_file_manager.delete_saved_weights(filename)
-
-    def set_target(self, time_to_goal_s, target):
-        """Update the target and the time expected to reach the goal."""
-        self.reward_calculator.set_time_to_goal(time_to_goal_s)
+    def set_target(self, time_to_reach_target_s, target):
+        """Update the target and the time expected to reach the target."""
+        self.reward_calculator.set_time_to_reach_target(time_to_reach_target_s)
         self.target = target
 
     def get_episode_reward(self):
         """Return the total reward of the episode."""
         return (
             0.0
-            if self.reward_calculator.time_to_goal_s == 0.0 else
+            if self.reward_calculator.time_to_reach_target_s == 0.0 else
             self.reward_calculator.episode_reward /
-            self.reward_calculator.time_to_goal_s
+            self.reward_calculator.time_to_reach_target_s
         )
 
     def select_action(self, spiderbot_pose, deterministic=False):
