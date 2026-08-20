@@ -1,12 +1,13 @@
 """A locomotion module using target points with alternating leg groups."""
 
+import time
 from enum import Enum, auto
+
+import mujoco
 
 import numpy as np
 
-from spiderbot_interfaces.msg import LegTargets
-
-import spiderbot_utilities as util
+import spiderbot_utilities as utils
 
 from .locomotion_module import LocomotionModule
 
@@ -127,7 +128,8 @@ class HandcraftedPointModule(LocomotionModule):
 
         self.previous_leg_targets = {}
         self.next_leg_targets = {}
-        self.current_targets = {}
+        self.current_target_points = {}
+        self.current_target_angles = {}
 
         self.group_1 = ['l_i', 'l_iii', 'r_ii', 'r_iv']
         self.group_2 = ['l_ii', 'l_iv', 'r_i', 'r_iii']
@@ -138,7 +140,7 @@ class HandcraftedPointModule(LocomotionModule):
         for leg_name in self.group_1:
             self.previous_leg_targets[leg_name] = targets_group_1[leg_name]
             self.next_leg_targets[leg_name] = targets_group_1[leg_name]
-            self.current_targets[leg_name] = targets_group_1[leg_name]
+            self.current_target_points[leg_name] = targets_group_1[leg_name]
 
         # Group 2 (lii, liv, ri, riii)
         targets_group_2 = self.targets[
@@ -146,7 +148,7 @@ class HandcraftedPointModule(LocomotionModule):
         for leg_name in self.group_2:
             self.previous_leg_targets[leg_name] = targets_group_2[leg_name]
             self.next_leg_targets[leg_name] = targets_group_2[leg_name]
-            self.current_targets[leg_name] = targets_group_2[leg_name]
+            self.current_target_points[leg_name] = targets_group_2[leg_name]
 
     def print_primary_cycle(self):
         """Print the current primary phase."""
@@ -180,12 +182,15 @@ class HandcraftedPointModule(LocomotionModule):
                                   percentage):
         """Interpolates the targets based on how far into the phase it is."""
         target_pos = np.asarray(previous_leg_targets) + (
-            (np.asarray(next_leg_targets) -
-             np.asarray(previous_leg_targets))
-            * percentage)
+                (
+                    np.asarray(next_leg_targets) -
+                    np.asarray(previous_leg_targets)
+                )
+                * percentage
+            )
         # Scale to the leg
         scaled_target_pos = np.multiply(target_pos, leg_length)
-        self.current_targets[leg_name] = scaled_target_pos
+        self.current_target_points[leg_name] = scaled_target_pos
 
     def walk_forward(self, delta_time):
         """Walk the Spiderbot forward."""
@@ -230,23 +235,39 @@ class HandcraftedPointModule(LocomotionModule):
                 self.next_leg_targets[leg_name],
                 percentage)
 
-        self.publish_points()
+        self.convert_points_to_angles()
+
+        self.publish_targets_and_angles()
+
+    def convert_points_to_angles(self):
+        """Convert the target points to target angles."""
+        for leg_name in self.leg_names:
+            current_target_point = (
+                self.current_target_points[leg_name]
+            )
+            self.legs[leg_name].move_claw_to_cartesian(
+                current_target_point
+            )
+        mujoco.mj_step(self.model, self.data)
 
     def update(self, spiderbot_pose_msg):
         """Walk the spiderbot forward."""
         delta_time = self.get_delta_time_from_msg(spiderbot_pose_msg)
-        if (delta_time > 0.0):
+        if delta_time > 0.0:
             self.walk_forward(delta_time)
 
-    def publish_points(self):
-        """Publish target points for the leg to reach for."""
-        msg = LegTargets()
-        leg_targets = []
-        for leg_name in self.leg_names:
-            current_target = (
-                self.current_targets[leg_name]
-            )
-            leg_target = util.convert_list_to_vector3(current_target)
-            leg_targets.append(leg_target)
-        msg.leg_targets = leg_targets
-        self.locomotion_node.publish_points(msg)
+    def publish_targets_and_angles(self):
+        """Publish target angles for the leg actuators."""
+        timestamp = time.time()
+        points_msg = utils.construct_leg_targets_msg(
+            timestamp,
+            self.leg_names,
+            self.current_target_points
+        )
+        self.locomotion_node.publish_points(points_msg)
+        angles_msg = utils.construct_target_pose_msg_from_legs(
+                    timestamp,
+                    self.leg_names,
+                    self.legs
+                )
+        self.locomotion_node.publish_angles(angles_msg)

@@ -1,1 +1,0 @@
-"""Spiderbot kinematics."""

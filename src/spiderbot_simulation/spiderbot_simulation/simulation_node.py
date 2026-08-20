@@ -17,7 +17,6 @@ from spiderbot_interfaces.msg import TrainingTarget
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 import spiderbot_utilities as utils
-from spiderbot_utilities import SpiderLeg
 
 from std_srvs.srv import Empty
 
@@ -43,26 +42,18 @@ class SimulationNode(Node):
         self.spiderbot_description = self.request_spiderbot_description()
         self.get_logger().info('Spiderbot description received')
 
-        self.leg_descriptions, self.leg_names, self.segment_lengths_per_leg = (
-            utils.convert_spiderbot_description_to_lists(
-                self.spiderbot_description
-                )
+        (
+            self.leg_descriptions,
+            self.leg_names,
+            self.segment_lengths_per_leg,
+            self.spec,
+            self.model,
+            self.data,
+            self.body,
+            self.legs
+        ) = utils.convert_spiderbot_description_to_variables(
+            self.spiderbot_description
         )
-
-        self.spec = mujoco.MjSpec.from_string(
-            self.spiderbot_description.spec_xml
-        )
-        self.model = self.spec.compile()
-        self.data = mujoco.MjData(self.model)
-
-        self.body = self.data.body('cephalothorax')
-        self.legs = {}
-        for leg_name in self.leg_names:
-            self.legs[leg_name] = SpiderLeg(
-                leg_name,
-                self.segment_lengths_per_leg[leg_name],
-                self.model,
-                self.data)
 
         self.training_target_visible = False
         self.training_target_position = None

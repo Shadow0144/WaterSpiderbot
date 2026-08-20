@@ -1,7 +1,6 @@
 <launch>
     <node pkg="spiderbot_brain" exec="brain_node"/>
     <node pkg="spiderbot_description" exec="description_node"/>
-    <node pkg="spiderbot_kinematics" exec="kinematics_node"/>
     <node pkg="spiderbot_locomotion" exec="locomotion_node"/>
     <node pkg="spiderbot_simulation" exec="simulation_node"/>
 </launch>

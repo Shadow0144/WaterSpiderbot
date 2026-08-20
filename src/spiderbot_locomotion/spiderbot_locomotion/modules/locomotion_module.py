@@ -10,10 +10,17 @@ class LocomotionModule:
         """Initialize the module."""
         self.locomotion_node = locomotion_node
         self.spiderbot_description = spiderbot_description
-        self.leg_descriptions, self.leg_names, self.segment_lengths_per_leg = (
-            utils.convert_spiderbot_description_to_lists(
-                self.spiderbot_description
-                )
+        (
+            self.leg_descriptions,
+            self.leg_names,
+            self.segment_lengths_per_leg,
+            self.spec,
+            self.model,
+            self.data,
+            self.body,
+            self.legs
+        ) = utils.convert_spiderbot_description_to_variables(
+            self.spiderbot_description
         )
         self.last_timestamp = -1.0
         self.time_to_reach_target_s = 0

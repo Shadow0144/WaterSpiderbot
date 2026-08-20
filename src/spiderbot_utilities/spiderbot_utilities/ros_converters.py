@@ -4,13 +4,18 @@ from geometry_msgs.msg import Point
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
 
+import mujoco
+
 from nav_msgs.msg import Odometry
 
 from sensor_msgs.msg import JointState
 
 from spiderbot_interfaces.msg import LegPose
+from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
+
+from .spider_leg import SpiderLeg
 
 
 def convert_list_to_vector3(to_convert):
@@ -138,6 +143,21 @@ def construct_target_pose_msg(timestamp, leg_names, target_qposes):
     return msg
 
 
+def construct_leg_targets_msg(timestamp, leg_names, target_points):
+    """Construct a LegTargets message."""
+    msg = LegTargets()
+    msg.timestamp = timestamp
+    leg_targets = []
+    for leg_name in leg_names:
+        current_target = (
+            target_points[leg_name]
+        )
+        leg_target = convert_list_to_vector3(current_target)
+        leg_targets.append(leg_target)
+    msg.leg_targets = leg_targets
+    return msg
+
+
 def convert_spiderbot_description_to_lists(spiderbot_description):
     """Convert a SpiderbotDescription message into Python lists."""
     leg_descriptions = (
@@ -153,3 +173,39 @@ def convert_spiderbot_description_to_lists(spiderbot_description):
             leg_descriptions[i].segment_lengths
         )
     return (leg_descriptions, leg_names, segment_lengths_per_leg)
+
+
+def convert_spiderbot_description_to_variables(spiderbot_description):
+    """Convert a Spiderbot Description to various variables."""
+    leg_descriptions, leg_names, segment_lengths_per_leg = (
+        convert_spiderbot_description_to_lists(
+            spiderbot_description
+        )
+    )
+
+    spec = mujoco.MjSpec.from_string(
+        spiderbot_description.spec_xml
+    )
+    model = spec.compile()
+    data = mujoco.MjData(model)
+
+    body = data.body('cephalothorax')
+    legs = {}
+    for leg_name in leg_names:
+        legs[leg_name] = SpiderLeg(
+            leg_name,
+            segment_lengths_per_leg[leg_name],
+            model,
+            data
+        )
+
+    return (
+        leg_descriptions,
+        leg_names,
+        segment_lengths_per_leg,
+        spec,
+        model,
+        data,
+        body,
+        legs
+    )

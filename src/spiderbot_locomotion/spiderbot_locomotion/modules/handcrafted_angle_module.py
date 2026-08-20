@@ -246,7 +246,7 @@ class HandcraftedAngleModule(LocomotionModule):
     def update(self, spiderbot_pose_msg):
         """Walk the spiderbot forward."""
         delta_time = self.get_delta_time_from_msg(spiderbot_pose_msg)
-        if (delta_time > 0.0):
+        if delta_time > 0.0:
             self.walk_forward(delta_time)
 
     def publish_angles(self):
