@@ -3,8 +3,8 @@
 <package format="3">
   <name>spiderbot_description</name>
   <version>0.0.0</version>
-  <maintainer email="1351027+Shadow0144@users.noreply.github.com">Shadow0144</maintainer>
   <description>Provides a description of a Spiderbot</description>
+  <maintainer email="1351027+Shadow0144@users.noreply.github.com">Shadow0144</maintainer>
   <license>MIT</license>
 
   <exec_depend>spiderbot_utilities</exec_depend>
