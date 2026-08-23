@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.executors import ExternalShutdownException
 
-from .locomotion_node import SpiderbotLocomotionNode
+from .locomotion_node import LocomotionNode
 
 
 def main(args=None):
@@ -11,7 +11,7 @@ def main(args=None):
     rclpy.init(args=args)
     locomotion_node = None
     try:
-        locomotion_node = SpiderbotLocomotionNode()
+        locomotion_node = LocomotionNode()
         while rclpy.ok() and locomotion_node.is_running():
             rclpy.spin_once(locomotion_node, timeout_sec=0)
             if locomotion_node.simulation_reset_queued:

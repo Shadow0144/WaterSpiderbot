@@ -23,7 +23,7 @@ from .modules import HandcraftedPointModule
 from .modules import SimpleSinModule
 
 
-class SpiderbotLocomotionNode(Node):
+class LocomotionNode(Node):
     """Spiderbot locomotion."""
 
     def __init__(self):
