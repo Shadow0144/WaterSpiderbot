@@ -4,9 +4,9 @@ import time
 
 import spiderbot_utilities as utils
 
-from .locomotion_module import LocomotionModule
-from ..neural_network.deep_actor_critic_policy import DeepActorCriticPolicy
-from ..neural_network.population_trainer import PopulationTrainer
+from .neural_network.deep_actor_critic_policy import DeepActorCriticPolicy
+from .neural_network.population_trainer import PopulationTrainer
+from ..locomotion_module import LocomotionModule
 
 
 class DeepActorCriticModule(LocomotionModule):

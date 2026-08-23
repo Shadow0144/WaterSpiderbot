@@ -7,7 +7,7 @@ import numpy as np
 
 import spiderbot_utilities as utils
 
-from .locomotion_module import LocomotionModule
+from ..locomotion_module import LocomotionModule
 
 
 class SimpleSinModule(LocomotionModule):

@@ -9,10 +9,10 @@ import numpy as np
 
 import spiderbot_utilities as utils
 
-from .locomotion_module import LocomotionModule
+from ..locomotion_module import LocomotionModule
 
 
-class HandcraftedPointModule(LocomotionModule):
+class HandcraftedPointsModule(LocomotionModule):
     """A locomotion module using target points with alternating leg groups."""
 
     class LegCyclePhase(Enum):
