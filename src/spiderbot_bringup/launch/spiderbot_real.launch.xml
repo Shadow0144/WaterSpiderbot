@@ -1,6 +1,8 @@
 <launch>
     <node pkg="spiderbot_brain" exec="brain_node"/>
+    <node pkg="spiderbot_cartography" exec="cartography_node"/>
     <node pkg="spiderbot_description" exec="description_node"/>
+    <node pkg="spiderbot_hardware" exec="hardware_node"/>
     <node pkg="spiderbot_locomotion" exec="locomotion_node"/>
-    <node pkg="spiderbot_simulation" exec="simulation_node"/>
+    <node pkg="spiderbot_planning" exec="planning_node"/>
 </launch>
