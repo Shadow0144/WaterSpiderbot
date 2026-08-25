@@ -38,7 +38,7 @@ class DeepActorCritic(nn.Module):
             nn.Sigmoid(),
             nn.Linear(self.feature_hidden_dim,
                       self.feature_hidden_dim),
-            nn.Sigmoid()
+            nn.ReLU()
         )
 
         # Recurrent layer

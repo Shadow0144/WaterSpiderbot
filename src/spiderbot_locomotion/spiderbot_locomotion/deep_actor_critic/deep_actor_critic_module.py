@@ -73,7 +73,7 @@ class DeepActorCriticModule(LocomotionModule):
                     delta_time
                 )
             )
-        self.locomotion_node.publish_current_step_reward(
+        self.locomotion_node.publish_step_reward(
             reward
         )
 
@@ -107,6 +107,7 @@ class DeepActorCriticModule(LocomotionModule):
         """Reset the neural network."""
         if self.population_training:
             episode_reward = self.population_trainer.get_episode_reward()
+            epoch_reward = self.population_trainer.get_epoch_reward()
             self.population_trainer.start_new_training_episode()
         else:
             episode_reward = self.policy.get_episode_reward()
@@ -131,10 +132,15 @@ class DeepActorCriticModule(LocomotionModule):
                 self.target
             )
 
-        super().reset()
         self.locomotion_node.publish_episode_reward(
             episode_reward
         )
+        if (self.population_training and epoch_reward):
+            self.locomotion_node.publish_epoch_reward(
+                epoch_reward
+            )
+
+        super().reset()
 
     def reset_learned_weights(self):
         """Back up the current weights and start with new random weights."""

@@ -21,11 +21,14 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
             self.spiderbot_description
         )
 
-        self.current_step_reward_publisher = self.create_publisher(
-            Float64, 'current_step_reward', 10)
+        self.step_reward_publisher = self.create_publisher(
+            Float64, 'step_reward', 10)
 
         self.episode_reward_publisher = self.create_publisher(
             Float64, 'episode_reward', 10)
+
+        self.epoch_reward_publisher = self.create_publisher(
+            Float64, 'epoch_reward', 10)
 
         self.reset_learned_weights_service = self.create_service(
             Trigger,
@@ -33,17 +36,23 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
             self.reset_learned_weights_callback
         )
 
-    def publish_current_step_reward(self, reward):
-        """Publish the reward for the current step."""
+    def publish_step_reward(self, reward):
+        """Publish the reward for the last step."""
         msg = Float64()
         msg.data = reward
-        self.current_step_reward_publisher.publish(msg)
+        self.step_reward_publisher.publish(msg)
 
     def publish_episode_reward(self, reward):
         """Publish the reward for the full training episode."""
         msg = Float64()
         msg.data = reward
         self.episode_reward_publisher.publish(msg)
+
+    def publish_epoch_reward(self, reward):
+        """Publish the total reward for the full training epoch."""
+        msg = Float64()
+        msg.data = reward
+        self.epoch_reward_publisher.publish(msg)
 
     def reset_learned_weights_callback(self, request, response):
         """Backup the current weights and start with new random weights."""

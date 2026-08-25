@@ -3,7 +3,6 @@
 import time
 
 import mujoco
-import mujoco.viewer
 
 import numpy as np
 
@@ -18,7 +17,11 @@ from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 import spiderbot_utilities as utils
 
+from std_msgs.msg import Float64
+
 from std_srvs.srv import Empty
+
+from .simulation_viewer import SimulationViewer
 
 
 class SimulationNode(Node):
@@ -39,7 +42,7 @@ class SimulationNode(Node):
             self.get_logger().info(
                 'Waiting on get_spec_xml service',
                 once=True)
-        self.spiderbot_description = self.request_spiderbot_description()
+        self.spiderbot_description = self._request_spiderbot_description()
         self.get_logger().info('Spiderbot description received')
 
         (
@@ -71,6 +74,10 @@ class SimulationNode(Node):
             'training_target_backward_geom'
         ).id
 
+        target_publish_rate_ps = 60.0
+        self.publish_interval = 1.0 / target_publish_rate_ps
+        self.last_timestamp = time.time()
+
         self.spiderbot_pose_publisher = self.create_publisher(
             SpiderbotPose,
             'spiderbot_pose',
@@ -98,6 +105,27 @@ class SimulationNode(Node):
             10
         )
 
+        self.step_reward_subscription = self.create_subscription(
+            Float64,
+            'step_reward',
+            self.step_reward_callback,
+            10
+        )
+
+        self.episode_reward_subscription = self.create_subscription(
+            Float64,
+            'episode_reward',
+            self.episode_reward_callback,
+            10
+        )
+
+        self.epoch_reward_subscription = self.create_subscription(
+            Float64,
+            'epoch_reward',
+            self.epoch_reward_callback,
+            10
+        )
+
         self.reset_simulation_service = self.create_service(
             Empty,
             'reset_simulation',
@@ -106,34 +134,25 @@ class SimulationNode(Node):
 
         self.last_timestamp = time.time()
 
-        self._create_mujoco_viewer()
+        self.viewer = SimulationViewer(self.model, self.data)
 
         self.get_logger().info('Spiderbot simulation node started')
 
+    def destroy_node(self):
+        """Destroy the window and finish destroying the node."""
+        self.viewer.destroy()
+        return super().destroy_node()
+
     def is_running(self):
         """Return if the node is running or if it's ready to shut down."""
-        return self.viewer is not None and self.viewer.is_running()
+        return self.viewer.is_running()
 
-    def request_spiderbot_description(self):
+    def _request_spiderbot_description(self):
         """Get the spec xml from the description."""
         request = GetSpiderbotDescription.Request()
         future = self.spiderbot_description_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
         return future.result()
-
-    def _create_mujoco_viewer(self):
-        """Create the simulation viewer to test the Spiderbot."""
-        self.viewer = mujoco.viewer.launch_passive(self.model,
-                                                   self.data)
-        self.viewer.cam.azimuth = 180
-        self.viewer.cam.elevation = -20
-        self.viewer.cam.distance = 2.0
-        self.viewer.cam.lookat[:] = [0, 0, 0.25]
-
-        self.viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CAMERA] = True
-        self.viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
-
-        self.viewer.opt.frame = mujoco.mjtFrame.mjFRAME_SITE
 
     def set_leg_targets_callback(self, msg):
         """Move the mocaps to the targets."""
@@ -160,6 +179,18 @@ class SimulationNode(Node):
                 leg_pose.femur_qpos,
                 leg_pose.tibia_qpos)
 
+    def step_reward_callback(self, msg):
+        """Enable displaying the step reward and update the reward value."""
+        self.viewer.update_step_reward(msg.data)
+
+    def episode_reward_callback(self, msg):
+        """Enable displaying the episode reward and update the reward value."""
+        self.viewer.update_episode_reward(msg.data)
+
+    def epoch_reward_callback(self, msg):
+        """Enable displaying the epoch reward and update the reward value."""
+        self.viewer.update_epoch_reward(msg.data)
+
     def reset_simulation_callback(self, request, response):
         """Reset simulation."""
         mujoco.mj_resetData(self.model, self.data)
@@ -174,8 +205,6 @@ class SimulationNode(Node):
         mujoco.mj_forward(self.model, self.data)
         for leg_name in self.leg_names:
             self.legs[leg_name].reset_leg()
-        if self.viewer.is_running():
-            self.viewer.sync()
         return response
 
     def training_target_callback(self, msg):
@@ -200,26 +229,38 @@ class SimulationNode(Node):
             self.training_target_quaternion
         )
 
-    def update_viewer(self):
-        """Update the simulation viewer."""
-        if self.viewer.is_running():
-            step_start = time.time()
+    def _publish_pose(self, current_timestamp):
+        """Publish the current pose."""
+        spiderbot_pose_msg = utils.construct_pose_msg(
+            self.last_timestamp,
+            self.body,
+            self.leg_names,
+            self.legs
+        )
+        self.spiderbot_pose_publisher.publish(spiderbot_pose_msg)
 
-            self.last_timestamp = step_start
-            spiderbot_pose_msg = utils.construct_pose_msg(
-                self.last_timestamp,
-                self.body,
-                self.leg_names,
-                self.legs
-            )
-            self.spiderbot_pose_publisher.publish(spiderbot_pose_msg)
+    def update(self):
+        """Step the physics, publish the pose, and update the render."""
+        if not self.viewer.is_running():
+            return
 
-            mujoco.mj_step(self.model, self.data)
+        current_timestamp = time.time()
 
-            self.viewer.sync()
+        # Step the physics
+        mujoco.mj_step(self.model, self.data)
 
-            time_until_next_step = (
-                self.model.opt.timestep - (time.time() - step_start)
-            )
-            if time_until_next_step > 0:
-                time.sleep(time_until_next_step)
+        # Publish the current pose if enough time has elapsed
+        if current_timestamp - self.last_timestamp >= self.publish_interval:
+            self.last_timestamp = current_timestamp
+            self._publish_pose(current_timestamp)
+
+        # Update the renderer
+        self.viewer.update(current_timestamp)
+
+        # Sleep until it is time for the next simulation step
+        time_elapsed = time.time() - current_timestamp
+        time_until_next_step = (
+            self.model.opt.timestep - time_elapsed
+        )
+        if time_until_next_step > 0.0:
+            time.sleep(time_until_next_step)

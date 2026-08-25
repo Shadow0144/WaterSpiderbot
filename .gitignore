@@ -222,6 +222,9 @@ build/
 install/
 log/
 
+# MuJoCo
+MUJOCO_LOG.TXT
+
 # CMake
 CMakeCache.txt
 CMakeFiles/

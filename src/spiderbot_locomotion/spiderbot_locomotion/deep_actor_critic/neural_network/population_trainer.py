@@ -162,6 +162,13 @@ class PopulationTrainer():
         """Get the episode reward from the policy and return it."""
         return self.policy.get_episode_reward()
 
+    def get_epoch_reward(self):
+        """Get the epoch reward from the candidate and return it."""
+        if self.candidate_records:
+            return self.candidate_records[-1].epoch_reward
+        else:
+            return None
+
     def _add_episode_reward_to_current_epoch(self):
         """Add the episode reward to the current epoch reward."""
         if self.candidate_records:

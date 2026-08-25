@@ -15,7 +15,7 @@ def main(args=None):
         simulation_node = SimulationNode()
         while rclpy.ok() and simulation_node.is_running():
             rclpy.spin_once(simulation_node, timeout_sec=0)
-            simulation_node.update_viewer()
+            simulation_node.update()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass  # Exit on interrupt
     finally:
