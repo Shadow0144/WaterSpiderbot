@@ -124,7 +124,7 @@ class LocomotionNode(Node):
         """Reset the simuation and has the Spiderbot move to the target."""
         if self.locomotion_module is not None:
             self.locomotion_module.set_training_target(msg)
-            self.queue_simulation_reset()
+            self._queue_simulation_reset()
 
     def set_training_mode_enabled_callback(self, request, response):
         """Toggle if training mode is enabled."""
@@ -133,7 +133,7 @@ class LocomotionNode(Node):
         response.message = 'Success'
         return response
 
-    def queue_simulation_reset(self):
+    def _queue_simulation_reset(self):
         """Queue a simulation reset for the next available chance."""
         """(Solves issues with threads)"""
         self.simulation_reset_queued = True

@@ -150,7 +150,7 @@ class HandcraftedPointsModule(LocomotionModule):
             self.next_leg_targets[leg_name] = targets_group_2[leg_name]
             self.current_target_points[leg_name] = targets_group_2[leg_name]
 
-    def print_primary_cycle(self):
+    def _print_primary_phase(self):
         """Print the current primary phase."""
         match self.current_phase_group_1:
             case self.LegCyclePhase.Lifting:
@@ -162,7 +162,19 @@ class HandcraftedPointsModule(LocomotionModule):
             case self.LegCyclePhase.Passing:
                 print('Passing')
 
-    def get_next_phase(self, state):
+    def _print_secondary_phase(self):
+        """Print the current secondary phase."""
+        match self.current_phase_group_2:
+            case self.LegCyclePhase.Lifting:
+                print('Lifting')
+            case self.LegCyclePhase.Reaching:
+                print('Passing')
+            case self.LegCyclePhase.Planting:
+                print('Planting')
+            case self.LegCyclePhase.Passing:
+                print('Passing')
+
+    def _get_next_phase(self, state):
         """Get the next phase based on the current one."""
         match state:
             case self.LegCyclePhase.Lifting:
@@ -174,12 +186,12 @@ class HandcraftedPointsModule(LocomotionModule):
             case self.LegCyclePhase.Passing:
                 return self.LegCyclePhase.Lifting
 
-    def interpolate_leg_to_target(self,
-                                  leg_name,
-                                  leg_length,
-                                  previous_leg_targets,
-                                  next_leg_targets,
-                                  percentage):
+    def _interpolate_leg_to_target(self,
+                                   leg_name,
+                                   leg_length,
+                                   previous_leg_targets,
+                                   next_leg_targets,
+                                   percentage):
         """Interpolates the targets based on how far into the phase it is."""
         target_pos = np.asarray(previous_leg_targets) + (
                 (
@@ -192,15 +204,15 @@ class HandcraftedPointsModule(LocomotionModule):
         scaled_target_pos = np.multiply(target_pos, leg_length)
         self.current_target_points[leg_name] = scaled_target_pos
 
-    def walk_forward(self, delta_time):
+    def _walk_forward(self, delta_time):
         """Walk the Spiderbot forward."""
         self.phase_time_remaining -= delta_time
         if self.phase_time_remaining < 0.0:
             self.phase_time_remaining = self.phase_length_seconds
 
-            self.current_phase_group_1 = self.get_next_phase(
+            self.current_phase_group_1 = self._get_next_phase(
                 self.current_phase_group_1)
-            self.current_phase_group_2 = self.get_next_phase(
+            self.current_phase_group_2 = self._get_next_phase(
                 self.current_phase_group_2)
 
             for leg_name in self.leg_names:
@@ -228,18 +240,18 @@ class HandcraftedPointsModule(LocomotionModule):
                           self.phase_length_seconds))
         )
         for leg_name in self.leg_names:
-            self.interpolate_leg_to_target(
+            self._interpolate_leg_to_target(
                 leg_name,
                 self.leg_lengths[leg_name],
                 self.previous_leg_targets[leg_name],
                 self.next_leg_targets[leg_name],
                 percentage)
 
-        self.convert_points_to_angles()
+        self._convert_points_to_angles()
 
         self.publish_targets_and_angles()
 
-    def convert_points_to_angles(self):
+    def _convert_points_to_angles(self):
         """Convert the target points to target angles."""
         for leg_name in self.leg_names:
             current_target_point = (
@@ -254,7 +266,7 @@ class HandcraftedPointsModule(LocomotionModule):
         """Walk the spiderbot forward."""
         delta_time = self.get_delta_time_from_msg(spiderbot_pose_msg)
         if delta_time > 0.0:
-            self.walk_forward(delta_time)
+            self._walk_forward(delta_time)
 
     def publish_targets_and_angles(self):
         """Publish target angles for the leg actuators."""

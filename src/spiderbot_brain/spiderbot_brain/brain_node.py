@@ -32,17 +32,17 @@ class BrainNode(Node):
             self.get_parameter('training_mode_enabled').value
         )
 
-        self.set_training_mode_enabled_client = self.create_client(
+        self._set_training_mode_enabled_client = self.create_client(
             SetBool,
-            'set_training_mode_enabled')
-        while not self.set_training_mode_enabled_client.wait_for_service(
+            '_set_training_mode_enabled')
+        while not self._set_training_mode_enabled_client.wait_for_service(
             timeout_sec=1.0
         ):
             self.get_logger().info(
-                'Waiting on set_training_mode_enabled service',
+                'Waiting on _set_training_mode_enabled service',
                 once=True
             )
-        _ = self.set_training_mode()
+        _ = self._set_training_mode()
         self.get_logger().info('Training mode status set')
 
         self.training_target_publisher = self.create_publisher(
@@ -52,12 +52,22 @@ class BrainNode(Node):
 
         self.get_logger().info('Spiderbot brain node started')
 
-    def set_training_mode(self):
+    def _set_training_mode(self):
         """Call the service to set the training mode."""
         request = SetBool.Request()
-        future = self.set_training_mode_enabled_client.call_async(request)
+        future = self._set_training_mode_enabled_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
         return future.result()
+
+    def _set_training_target(self, time_to_reach_target_s, target):
+        """Publish a new training target."""
+        msg = TrainingTarget()
+        msg.time_to_reach_target_s = time_to_reach_target_s
+        msg.target_x = target[0]
+        msg.target_y = target[1]
+        msg.target_theta = target[2]
+        self.training_target_publisher.publish(msg)
+        self.get_logger().info(f'Setting training target: {target}')
 
     def perform_training_step(self):
         """Set times and targets for the locomotion module to aim for."""
@@ -75,16 +85,6 @@ class BrainNode(Node):
             math.sin(heading_angle) * distance_scaling,
             final_angle]
 
-        self.set_training_target(time_to_reach_target_s, target)
+        self._set_training_target(time_to_reach_target_s, target)
 
         time.sleep(time_to_reach_target_s)
-
-    def set_training_target(self, time_to_reach_target_s, target):
-        """Publish a new training target."""
-        msg = TrainingTarget()
-        msg.time_to_reach_target_s = time_to_reach_target_s
-        msg.target_x = target[0]
-        msg.target_y = target[1]
-        msg.target_theta = target[2]
-        self.training_target_publisher.publish(msg)
-        self.get_logger().info(f'Setting training target: {target}')

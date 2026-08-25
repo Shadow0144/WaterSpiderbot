@@ -101,12 +101,12 @@ class SimulationNode(Node):
         self.reset_simulation_service = self.create_service(
             Empty,
             'reset_simulation',
-            self.reset_simulation
+            self.reset_simulation_callback
         )
 
         self.last_timestamp = time.time()
 
-        self.create_mujoco_viewer()
+        self._create_mujoco_viewer()
 
         self.get_logger().info('Spiderbot simulation node started')
 
@@ -121,7 +121,7 @@ class SimulationNode(Node):
         rclpy.spin_until_future_complete(self, future)
         return future.result()
 
-    def create_mujoco_viewer(self):
+    def _create_mujoco_viewer(self):
         """Create the simulation viewer to test the Spiderbot."""
         self.viewer = mujoco.viewer.launch_passive(self.model,
                                                    self.data)
@@ -160,7 +160,7 @@ class SimulationNode(Node):
                 leg_pose.femur_qpos,
                 leg_pose.tibia_qpos)
 
-    def reset_simulation(self, request, response):
+    def reset_simulation_callback(self, request, response):
         """Reset simulation."""
         mujoco.mj_resetData(self.model, self.data)
         # Move the target back to where it should be if necessary

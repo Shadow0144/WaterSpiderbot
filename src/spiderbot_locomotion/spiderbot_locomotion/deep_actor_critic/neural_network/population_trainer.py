@@ -47,7 +47,7 @@ class PopulationTrainer():
     def save_current_candidate_weights(self):
         """Save the current candidate weights."""
         try:
-            current_candidate_filename = self.get_current_candidate_filename()
+            current_candidate_filename = self._get_current_candidate_filename()
             if current_candidate_filename is not None:
                 self.checkpoint_file_manager.save_weights(
                     current_candidate_filename,
@@ -98,7 +98,7 @@ class PopulationTrainer():
                                                  raw_candidate[1])
                 self.candidate_records.append(candidate)
             if not self.candidate_records:
-                self.generate_next_candidate()
+                self._generate_next_candidate()
 
             # The current episode will be incremented immediately so subtract 1
             self.current_episode = current_episode - 1
@@ -134,7 +134,7 @@ class PopulationTrainer():
             # TODO: Delete the candidate files too
             self.logger.info(f'Deleted population: {filename}')
 
-    def get_current_candidate_filename(self):
+    def _get_current_candidate_filename(self):
         """Return the current candidate's filename."""
         if self.candidate_records:
             return self.candidate_records[-1].filename
@@ -162,7 +162,7 @@ class PopulationTrainer():
         """Get the episode reward from the policy and return it."""
         return self.policy.get_episode_reward()
 
-    def add_episode_reward_to_current_epoch(self):
+    def _add_episode_reward_to_current_epoch(self):
         """Add the episode reward to the current epoch reward."""
         if self.candidate_records:
             self.candidate_records[-1].epoch_reward += (
@@ -171,35 +171,35 @@ class PopulationTrainer():
 
     def start_new_training_episode(self):
         """Start another training episode or move to the next candidate."""
-        self.add_episode_reward_to_current_epoch()
+        self._add_episode_reward_to_current_epoch()
         if (
             not self.candidate_records or
             self.current_episode >= self.episodes_per_epoch
         ):
-            self.generate_next_candidate()
+            self._generate_next_candidate()
         self.policy.start_new_training_episode()
         self.current_episode += 1
         self.logger.info(f'Current training episode: {self.current_episode}')
 
-    def create_candidate_filename(self):
+    def _create_candidate_filename(self):
         """Create a candidate filename from the system clock."""
         candidate_filename = (
             f"candidate_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.pt"
         )
         return candidate_filename
 
-    def generate_next_candidate(self):
+    def _generate_next_candidate(self):
         """Create a new candidate or a new population."""
         self.save_current_candidate_weights()
 
         # Check if we have enough candidates to advance the population
         self.current_episode = 0
         if len(self.candidate_records) >= self.population_size:
-            self.generate_next_generation()
+            self._generate_next_generation()
 
         self.candidate_records.append(
             self.CandidateRecord(
-                self.create_candidate_filename(), 0.0
+                self._create_candidate_filename(), 0.0
             )
         )
         self.logger.info(
@@ -210,7 +210,7 @@ class PopulationTrainer():
         if self.current_parent_filename is not None:
             self.policy.load_weights(self.current_parent_filename)
 
-    def generate_next_generation(self):
+    def _generate_next_generation(self):
         """Select the best member of the population and reseed using that."""
         # Find the candidate with the highest epoch reward to be the
         # parent of the next generation

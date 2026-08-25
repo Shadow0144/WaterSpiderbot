@@ -26,7 +26,7 @@ class SimpleSinModule(LocomotionModule):
         self.group_1 = ['l_i', 'l_iii', 'r_ii', 'r_iv']
         self.group_2 = ['l_ii', 'l_iv', 'r_i', 'r_iii']
 
-    def walk_forward(self, delta_time):
+    def _walk_forward(self, delta_time):
         """Walk the Spiderbot forward."""
         self.time_elapsed += delta_time
         cos_phase = np.cos(self.time_elapsed)
@@ -57,7 +57,7 @@ class SimpleSinModule(LocomotionModule):
         """Walk the spiderbot forward."""
         delta_time = self.get_delta_time_from_msg(spiderbot_pose_msg)
         if delta_time > 0.0:
-            self.walk_forward(delta_time)
+            self._walk_forward(delta_time)
 
     def publish_angles(self):
         """Publish target angles for the leg actuators."""

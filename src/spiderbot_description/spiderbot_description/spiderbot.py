@@ -13,16 +13,16 @@ class Spiderbot:
     def __init__(self):
         """Initialize a Spiderbot."""
         self.visualized = False
-        self.path_to_xml = self.get_spider_model_path()
-        self.load_model()
+        self.path_to_xml = self._get_spider_model_path()
+        self._load_model()
 
-    def get_spider_model_path(self):
+    def _get_spider_model_path(self):
         """Get the path to the model file from the share directory."""
         share_dir = get_package_share_directory('spiderbot_description')
         model_path = os.path.join(share_dir, 'models', 'spiderbot_base.xml')
         return model_path
 
-    def load_model(self):
+    def _load_model(self):
         """
         Load and finish the model and data.
 
@@ -33,12 +33,12 @@ class Spiderbot:
 
         # Cephalothorax connects to coxa [then trochanter] then femur
         # [then patella] then tibia [then metatarsus] [then tarsus] then claws
-        self.create_legs(self.spec)
+        self._create_legs(self.spec)
 
         self.model = self.spec.compile()
         self.data = mujoco.MjData(self.model)
 
-    def create_legs(self, spec, use_anatomical_lengths=True):
+    def _create_legs(self, spec, use_anatomical_lengths=True):
         """Create the legs of the Spiderbot."""
         self.damping = 0.01
         self.rest_angles = {'coxa': 0.0, 'femur': 0.0, 'tibia': 0.0}
@@ -101,7 +101,7 @@ class Spiderbot:
         ]
 
         for i, leg_name in enumerate(self.leg_names):
-            self.build_leg(
+            self._build_leg(
                 spec,
                 leg_name,
                 base_rgb[i],
@@ -110,9 +110,9 @@ class Spiderbot:
                 self.segment_lengths_per_leg[i],
                 i < 4)
 
-    def build_leg(self, spec, leg_id,
-                  base_rgb, pos, euler,
-                  segment_lengths, left_side):
+    def _build_leg(self, spec, leg_id,
+                   base_rgb, pos, euler,
+                   segment_lengths, left_side):
         """Build a spider leg."""
         try:
             target = spec.worldbody.add_body(

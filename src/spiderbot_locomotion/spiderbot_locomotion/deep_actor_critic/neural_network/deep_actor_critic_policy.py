@@ -135,16 +135,16 @@ class DeepActorCriticPolicy():
     def select_action(self, spiderbot_pose, deterministic=False):
         """Select the next action."""
         if deterministic:
-            next_action = self.select_action_deterministic(spiderbot_pose)
+            next_action = self._select_action_deterministic(spiderbot_pose)
         else:
-            state_iteration = self.select_action_stochastic(spiderbot_pose)
+            state_iteration = self._select_action_stochastic(spiderbot_pose)
             if state_iteration is not None:
                 next_action = state_iteration.action_np
             else:
                 next_action = None
         return next_action
 
-    def select_action_deterministic(self, spiderbot_pose):
+    def _select_action_deterministic(self, spiderbot_pose):
         """Step execution for deployment."""
         if self.target is None:
             return None  # Exit early if there is no target
@@ -162,7 +162,7 @@ class DeepActorCriticPolicy():
             self.hidden_state = hidden_state_tp1
             return action_dist.mean.squeeze(0).cpu().numpy()
 
-    def select_action_stochastic(self, spiderbot_pose):
+    def _select_action_stochastic(self, spiderbot_pose):
         """Step execution for training."""
         if self.target is None:
             return None  # Exit early if there is no target
@@ -223,7 +223,7 @@ class DeepActorCriticPolicy():
                 self.device
             )
 
-            self.train_actor_critic_step(
+            self._train_actor_critic_step(
                 self.latest_iter_state,
                 next_data,
                 reward,
@@ -231,18 +231,18 @@ class DeepActorCriticPolicy():
             )
 
         self.latest_iter_state = (
-            self.select_action_stochastic(
+            self._select_action_stochastic(
                 spiderbot_pose
             )
         )
 
         return self.latest_iter_state.action_np, reward, done
 
-    def train_actor_critic_step(self,
-                                iter_state,
-                                state_tp1_tensor,
-                                reward,
-                                done):
+    def _train_actor_critic_step(self,
+                                 iter_state,
+                                 state_tp1_tensor,
+                                 reward,
+                                 done):
         """Perform a single-step Actor-Critic update."""
         self.actor_critic.train()
 
