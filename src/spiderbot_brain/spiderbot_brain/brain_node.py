@@ -34,12 +34,12 @@ class BrainNode(Node):
 
         self._set_training_mode_enabled_client = self.create_client(
             SetBool,
-            '_set_training_mode_enabled')
+            'set_training_mode_enabled')
         while not self._set_training_mode_enabled_client.wait_for_service(
             timeout_sec=1.0
         ):
             self.get_logger().info(
-                'Waiting on _set_training_mode_enabled service',
+                'Waiting on set_training_mode_enabled service',
                 once=True
             )
         _ = self._set_training_mode()
