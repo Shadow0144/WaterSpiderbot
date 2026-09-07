@@ -1,36 +1,18 @@
-"""Locomotion policy based on an Soft Actor-Critics Deep Neural Network."""
+"""Locomotion policy based on a Soft Actor-Critics Deep Neural Network."""
 
 import torch
 from torch import nn
 
 from .checkpoint_file_manager import CheckpointFileManager
-from .deep_soft_actor import DeepSoftActor
-from .deep_soft_critics import DeepSoftCritics
+from .deep_actor import DeepActor
+from .deep_critic import DeepCritic
 from .reward_calculator import RewardCalculator
+from .step_transition import StepTransition
 from .utility import construct_input_vector
 
 
 class DeepSoftActorCriticsPolicy():
     """Provides a distribution of actions for the current state."""
-
-    class IterationState:
-        """Store training state information from a step."""
-
-        def __init__(self,
-                     action_tensor=None,
-                     action_np=None,
-                     state_t=None,
-                     log_probability_t=None,
-                     hidden_state_t=None,
-                     hidden_state_tp1=None
-                     ):
-            """Store the values."""
-            self.action_tensor = action_tensor
-            self.action_np = action_np
-            self.state_t = state_t
-            self.log_probability_t = log_probability_t
-            self.hidden_state_t = hidden_state_t
-            self.hidden_state_tp1 = hidden_state_tp1
 
     def __init__(self, logger):
         """Initialize the locomotion neural network."""
@@ -67,13 +49,18 @@ class DeepSoftActorCriticsPolicy():
         self.num_critic_hiddens = 256
         self.num_critic_outputs = 1
 
-        self.actor = DeepSoftActor(
+        self.actor = DeepActor(
             self.num_actor_inputs,
             self.num_actor_feature_hiddens,
             self.num_actor_recurrent_hiddens,
             self.num_actor_outputs
         ).to(self.device)
-        self.critics = DeepSoftCritics(
+        self.critic1 = DeepCritic(
+            self.num_critic_inputs,
+            self.num_critic_hiddens,
+            self.num_critic_outputs
+        ).to(self.device)
+        self.critic2 = DeepCritic(
             self.num_critic_inputs,
             self.num_critic_hiddens,
             self.num_critic_outputs
@@ -81,15 +68,22 @@ class DeepSoftActorCriticsPolicy():
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(),
             lr=1e-4)
-        self.critics_optimizer = torch.optim.Adam(
-            self.critics.parameters(),
+        self.critic1_optimizer = torch.optim.Adam(
+            self.critic1.parameters(),
+            lr=1e-4)
+        self.critic2_optimizer = torch.optim.Adam(
+            self.critic2.parameters(),
             lr=1e-4)
         self.loss_fn = nn.MSELoss()
 
         self.checkpoint_file_manager = CheckpointFileManager()
 
-        # Recurrent hidden state
-        self.hidden_state = None
+        # Recurrent hidden state (initialize with zeros)
+        self.hidden_state_t = torch.zeros(
+            1,
+            self.num_actor_recurrent_hiddens,
+            device=self.device
+        )
 
         self.reward_calculator = RewardCalculator()
 
@@ -103,12 +97,16 @@ class DeepSoftActorCriticsPolicy():
         self.target = None
 
         # Previous state information
-        self.latest_iter_state = None
+        self.transition_t = None
 
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
-        self.hidden_state = None
-        self.latest_iter_state = None
+        self.hidden_state_t = torch.zeros(
+            1,
+            self.num_actor_recurrent_hiddens,
+            device=self.device
+        )
+        self.transition_t = None
         self.reward_calculator.start_new_training_episode()
 
     def get_model_weights_exists(self, filename='test_weights.pt'):
@@ -124,13 +122,15 @@ class DeepSoftActorCriticsPolicy():
             self.checkpoint_file_manager.save_soft_actor_critics_weights(
                 filename,
                 self.actor,
-                self.critics,
+                self.critic1,
+                self.critic2,
                 self.actor_optimizer,
-                self.critics_optimizer
+                self.critic1_optimizer,
+                self.critic2_optimizer
             )
             self.logger.info(f'Saved weights: {filename}')
         except RuntimeError:
-            self.logger.warn('Failed to save weights')
+            self.logger.warning('Failed to save weights')
 
     def load_weights(self, filename='test_weights.pt'):
         """Load the learned weights from a file."""
@@ -140,15 +140,17 @@ class DeepSoftActorCriticsPolicy():
                 self.checkpoint_file_manager.load_soft_actor_critics_weights(
                     filename,
                     self.actor,
-                    self.critics,
+                    self.critic1,
+                    self.critic2,
                     self.actor_optimizer,
-                    self.critics_optimizer,
+                    self.critic1_optimizer,
+                    self.critic2_optimizer,
                     self.device
                 )
                 self.logger.info(f'Loaded weights: {filename}')
                 self.start_new_training_episode()
         except RuntimeError:
-            self.logger.warn('Failed to load weights')
+            self.logger.warning('Failed to load weights')
 
     def delete_saved_weights(self, filename):
         """Delete the saved weights file."""
@@ -159,13 +161,18 @@ class DeepSoftActorCriticsPolicy():
     def reset_learned_weights(self):
         """Backup the current weights and start with new random weights."""
         self.checkpoint_file_manager.reset_learned_soft_actor_critics_weights()
-        self.actor = DeepSoftActor(
+        self.actor = DeepActor(
             self.num_actor_inputs,
             self.num_actor_feature_hiddens,
             self.num_actor_recurrent_hiddens,
             self.num_actor_outputs
             ).to(self.device)
-        self.critics = DeepSoftCritics(
+        self.critic1 = DeepCritic(
+            self.num_critic_inputs,
+            self.num_critic_hiddens,
+            self.num_critic_outputs
+            ).to(self.device)
+        self.critic2 = DeepCritic(
             self.num_critic_inputs,
             self.num_critic_hiddens,
             self.num_critic_outputs
@@ -173,8 +180,11 @@ class DeepSoftActorCriticsPolicy():
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(),
             lr=1e-4)
-        self.critics_optimizer = torch.optim.Adam(
-            self.critics.parameters(),
+        self.critic1_optimizer = torch.optim.Adam(
+            self.critic1.parameters(),
+            lr=1e-4)
+        self.critic2_optimizer = torch.optim.Adam(
+            self.critic2.parameters(),
             lr=1e-4)
         self.start_new_training_episode()
 
@@ -184,7 +194,7 @@ class DeepSoftActorCriticsPolicy():
         self.target = target
 
     def get_episode_reward(self):
-        """Return the total reward of the episode."""
+        """Return the average reward rate per second for the episode."""
         return (
             0.0
             if self.reward_calculator.time_to_reach_target_s == 0.0 else
@@ -194,87 +204,86 @@ class DeepSoftActorCriticsPolicy():
 
     def select_action(self, spiderbot_pose, deterministic=False):
         """Select the next action."""
-        if deterministic:
-            next_action = self._select_action_deterministic(spiderbot_pose)
-        else:
-            state_iteration = self._select_action_stochastic(spiderbot_pose)
-            if state_iteration is not None:
-                next_action = state_iteration.action_np
-            else:
-                next_action = None
-        return next_action
-
-    def _select_action_deterministic(self, spiderbot_pose):
-        """Step execution for deployment."""
         if self.target is None:
             return None  # Exit early if there is no target
 
-        self.actor.eval()
-        with torch.no_grad():
-            state_tensor = construct_input_vector(
+        state_t = construct_input_vector(
                 self.target,
                 spiderbot_pose,
                 self.device
-            )
-            action_dist, hidden_state_tp1 = self.actor(
-                state_tensor, self.hidden_state
-            )
-            self.hidden_state = hidden_state_tp1
-            return action_dist.mean.squeeze(0).cpu().numpy()
+        )
 
-    def _select_action_stochastic(self, spiderbot_pose):
+        if deterministic:
+            action_t = self._select_action_deterministic(state_t)
+        else:
+            action_t = self._select_action_stochastic(state_t)
+        return action_t
+
+    def _select_action_deterministic(self, state_t):
+        """Step execution for deployment."""
+        self.actor.eval()
+        with torch.no_grad():
+            action_distribution_t, hidden_state_tp1 = self.actor(
+                state_t, self.hidden_state_t
+            )
+            self.hidden_state_t = hidden_state_tp1
+            action_t_np = action_distribution_t.mean.squeeze(0).cpu().numpy()
+            return action_t_np
+
+    def _select_action_stochastic(self, state_t):
         """Step execution for training."""
-        if self.target is None:
-            return None  # Exit early if there is no target
-
         self.actor.train()
-        self.critics.train()
-        state_tensor = construct_input_vector(
-            self.target,
-            spiderbot_pose,
-            self.device
+        self.critic1.train()
+        self.critic2.train()
+
+        action_distribution_t, hidden_state_tp1 = self.actor(
+            state_t, self.hidden_state_t
         )
 
-        action_dist, hidden_state_tp1 = self.actor(
-            state_tensor,
-            self.hidden_state
-        )
+        action_t = action_distribution_t.sample()
+        action_t_np = action_t.squeeze(0).detach().cpu().numpy()
 
-        action_tensor = action_dist.sample()
-        log_probability = action_dist.log_prob(action_tensor).sum(dim=-1)
+        log_probability_t = action_distribution_t.log_prob(
+            action_t
+        ).sum(dim=-1)
 
-        action_np = action_tensor.squeeze(0).detach().cpu().numpy()
-
-        action_tensor_t = action_tensor.detach()
-        state_tensor_t = state_tensor.detach()
-
-        hidden_state_t = self.hidden_state
+        hidden_state_t = self.hidden_state_t
         hidden_state_tp1 = hidden_state_tp1.detach()
-        self.hidden_state = hidden_state_tp1
+        self.hidden_state_t = hidden_state_tp1
 
-        return self.IterationState(
-            action_tensor_t,
-            action_np,
-            state_tensor_t,
-            log_probability,
+        transition_t = StepTransition(
+            state_t,
+            action_t,
+            log_probability_t,
             hidden_state_t,
             hidden_state_tp1
+        )
+
+        return (
+            action_t_np,
+            transition_t
         )
 
     def train_step(self,
                    spiderbot_pose,
                    delta_time):
         """Perform a single step of training."""
-        reward = 0.0
-        done = False
+        reward_t = 0.0
+        training_done = False
 
         if self.target is None:
-            return None, reward, done  # Return early
+            return None, reward_t, training_done  # Return early
 
-        if self.latest_iter_state is not None:
-            # If there was a previous iter_state,
+        state_t = construct_input_vector(
+                self.target,
+                spiderbot_pose,
+                self.device
+        )
+
+        if self.transition_t is not None:
+            # If there was a previous state,
             # calculate the reward and train the actor-critic
-            reward, done = (
+            reward_t, training_done = (
                 self.reward_calculator.compute_step_reward(
                     self.target,
                     spiderbot_pose,
@@ -282,90 +291,114 @@ class DeepSoftActorCriticsPolicy():
                 )
             )
 
-            next_data = construct_input_vector(
-                self.target,
-                spiderbot_pose,
-                self.device
-            )
-
             self._train_actor_critic_step(
-                self.latest_iter_state,
-                next_data,
-                reward,
-                done
+                self.transition_t,
+                state_t,
+                reward_t,
+                training_done
             )
 
-        self.latest_iter_state = (
+        action_t, self.transition_t = (
             self._select_action_stochastic(
-                spiderbot_pose
+                state_t
             )
         )
 
-        return self.latest_iter_state.action_np, reward, done
+        return action_t, reward_t, training_done
 
     def _train_actor_critic_step(self,
-                                 iter_state,
-                                 state_tp1_tensor,
-                                 reward,
-                                 done):
-        """Perform a single-step Actor-Critic update."""
+                                 transition_t,
+                                 state_tp1,
+                                 reward_t,
+                                 training_done):
+        """Perform a single-step Soft Actor-Critic update."""
         self.actor.train()
-        self.critics.train()
+        self.critic1.train()
+        self.critic2.train()
 
-        reward_tensor = torch.tensor([reward],
+        reward_tensor = torch.tensor([reward_t],
                                      dtype=torch.float32,
                                      device=self.device)
-        done_mask = torch.tensor([0.0 if done else 1.0],
-                                 dtype=torch.float32,
-                                 device=self.device)
+
+        # Compute Bellman Target (t+1)
 
         with torch.no_grad():
-            hidden_state_for_next = (
-                None if done else iter_state.hidden_state_tp1
-            )
-            next_action_dist, _ = self.actor(state_tp1_tensor,
-                                             hidden_state_for_next)
-            next_action = next_action_dist.sample()
-            next_log_prob = next_action_dist.log_prob(next_action).sum(
-                dim=-1, keepdim=True
-            )
-            target_q1, target_q2 = (
-                self.critics(iter_state.hidden_state_tp1, next_action)
-            )
-            target_q_min = (
-                torch.min(target_q1, target_q2) - (self.alpha * next_log_prob)
-            )
-            y = reward_tensor + (done_mask * self.gamma * target_q_min)
+            if training_done:
+                target_value = reward_tensor
+            else:
+                action_distribution_tp1, _ = (
+                    self.actor(
+                        state_tp1,
+                        transition_t.hidden_state_tp1
+                    )
+                )
+                action_tp1 = action_distribution_tp1.sample()
+                log_probability_tp1 = action_distribution_tp1.log_prob(
+                    action_tp1
+                ).sum(dim=-1)
+                critic1_value_tp1 = (
+                    self.critic1(transition_t.hidden_state_tp1, action_tp1)
+                ).view(-1)
+                critic2_value_tp1 = (
+                    self.critic2(transition_t.hidden_state_tp1, action_tp1)
+                ).view(-1)
+                critic_value_tp1_min = (
+                    torch.min(critic1_value_tp1, critic2_value_tp1) - (
+                        self.alpha * log_probability_tp1
+                    )
+                )
+                target_value = (
+                    reward_tensor + self.gamma * critic_value_tp1_min
+                )
 
-        q1_prediction, q2_prediction = self.critics(
-            iter_state.hidden_state_tp1, iter_state.action_tensor
+        # Update Critics
+
+        critic1_value_t = self.critic1(
+            transition_t.hidden_state_t, transition_t.action_t
+        ).view(-1)
+        critic2_value_t = self.critic2(
+            transition_t.hidden_state_t, transition_t.action_t
+        ).view(-1)
+
+        critic1_loss = self.loss_fn(critic1_value_t, target_value)
+        critic2_loss = self.loss_fn(critic2_value_t, target_value)
+
+        self.critic1_optimizer.zero_grad()
+        critic1_loss.backward()
+        nn.utils.clip_grad_norm_(self.critic1.parameters(), max_norm=1.0)
+        self.critic1_optimizer.step()
+
+        self.critic2_optimizer.zero_grad()
+        critic2_loss.backward()
+        nn.utils.clip_grad_norm_(self.critic2.parameters(), max_norm=1.0)
+        self.critic2_optimizer.step()
+
+        # Update Actor
+
+        pi_action_distribution_t, _ = (
+            self.actor(transition_t.state_t, transition_t.hidden_state_t)
+        )
+        pi_action_t = pi_action_distribution_t.rsample()
+        pi_log_probability_t = (
+            pi_action_distribution_t.log_prob(
+                pi_action_t
+            ).sum(dim=-1)
         )
 
-        critics_loss = (
-            self.loss_fn(q1_prediction, y) + self.loss_fn(q2_prediction, y)
-        )
+        pi_critic1_value_t = self.critic1(
+            transition_t.hidden_state_t, pi_action_t
+        ).view(-1)
+        pi_critic2_value_t = self.critic2(
+            transition_t.hidden_state_t, pi_action_t
+        ).view(-1)
+        critic_value_t_min = torch.min(pi_critic1_value_t, pi_critic2_value_t)
 
-        self.critics_optimizer.zero_grad()
-        critics_loss.backward()
-        nn.utils.clip_grad_norm_(self.critics.parameters(), max_norm=1.0)
-        self.critics_optimizer.step()
-
-        pi_action_dist, _ = (
-            self.actor(iter_state.state_t, iter_state.hidden_state_t)
-        )
-        pi_action = pi_action_dist.rsample()
-        pi_log_prob = (
-            pi_action_dist.log_prob(pi_action).sum(dim=-1, keepdim=True)
-        )
-
-        q1_pi, q2_pi = self.critics(iter_state.hidden_state_tp1, pi_action)
-        min_q_pi = torch.min(q1_pi, q2_pi)
-
-        actor_loss = (self.alpha * pi_log_prob - min_q_pi).mean()
-
+        actor_loss = (
+            self.alpha * pi_log_probability_t - critic_value_t_min
+        ).mean()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_optimizer.step()
 
-        return actor_loss.item() + critics_loss.item()
+        return actor_loss.item() + critic1_loss.item() + critic2_loss.item()

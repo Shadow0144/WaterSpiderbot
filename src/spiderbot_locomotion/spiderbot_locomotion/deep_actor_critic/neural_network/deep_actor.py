@@ -1,12 +1,12 @@
-"""Locomotion Soft Actor using a Deep Neural Network."""
+"""Locomotion Actor using a Deep Neural Network."""
 
 import torch
 from torch import nn
 from torch.distributions import Normal
 
 
-class DeepSoftActor(nn.Module):
-    """Locomotion Soft Actor using a Deep Neural Network."""
+class DeepActor(nn.Module):
+    """Locomotion Actor using a Deep Neural Network."""
 
     def __init__(
             self,
@@ -14,7 +14,7 @@ class DeepSoftActor(nn.Module):
             num_feature_hiddens,
             num_recurrent_hiddens,
             num_outputs):
-        """Initialize the Soft Actor."""
+        """Initialize the Actor."""
         super().__init__()
 
         self.num_inputs = num_inputs
@@ -41,7 +41,7 @@ class DeepSoftActor(nn.Module):
 
     def forward(self, state_t, hidden_state_t=None):
         """Forward pass."""
-        # If no hidden state yet, initialize with zeros
+        # If there is no hidden state yet, initialize the layer with zeros
         if hidden_state_t is None:
             hidden_state_t = torch.zeros(
                 state_t.size(0),
@@ -51,14 +51,14 @@ class DeepSoftActor(nn.Module):
             )
 
         # Get the features of the current state
-        features = self.feature_extractor(state_t)
+        features_t = self.feature_extractor(state_t)
         # Update the estimate with information from the previous state
-        hidden_state_tp1 = self.gru_cell(features, hidden_state_t)
+        hidden_state_tp1 = self.gru_cell(features_t, hidden_state_t)
 
         # Get a distribution of possible actions (actuator angles) to take
-        mean = self.actor_mean(hidden_state_tp1)
-        log_std = torch.clamp(self.actor_log_std, min=-20, max=2)
-        std = torch.exp(log_std)
-        action_dist = Normal(mean, std)
+        mean_t = self.actor_mean(hidden_state_tp1)
+        log_std_t = torch.clamp(self.actor_log_std, min=-20, max=2)
+        std_t = torch.exp(log_std_t)
+        action_distribution_t = Normal(mean_t, std_t)
 
-        return action_dist, hidden_state_tp1
+        return action_distribution_t, hidden_state_tp1

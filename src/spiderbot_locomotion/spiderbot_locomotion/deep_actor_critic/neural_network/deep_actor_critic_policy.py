@@ -4,32 +4,15 @@ import torch
 from torch import nn
 
 from .checkpoint_file_manager import CheckpointFileManager
-from .deep_actor_critic import DeepActorCritic
+from .deep_actor import DeepActor
+from .deep_critic import DeepCritic
 from .reward_calculator import RewardCalculator
+from .step_transition import StepTransition
 from .utility import construct_input_vector
 
 
 class DeepActorCriticPolicy():
-    """Provides a distribution of actions for the current state."""
-
-    class IterationState:
-        """Store training state information from a step."""
-
-        def __init__(self,
-                     action_np=None,
-                     state_t=None,
-                     log_probability_t=None,
-                     value_t=None,
-                     hidden_state_t=None,
-                     hidden_state_tp1=None
-                     ):
-            """Store the values."""
-            self.action_np = action_np
-            self.state_t = state_t
-            self.log_probability_t = log_probability_t
-            self.value_t = value_t
-            self.hidden_state_t = hidden_state_t
-            self.hidden_state_tp1 = hidden_state_tp1
+    """Provides an action based on the current state."""
 
     def __init__(self, logger):
         """Initialize the locomotion neural network."""
@@ -41,16 +24,58 @@ class DeepActorCriticPolicy():
             'cpu'
         )
 
-        self.actor_critic = DeepActorCritic().to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.actor_critic.parameters(),
+        # Inputs:
+        #  target_x, target_y, target_theta,
+        #  body_x, body_y, body_z,
+        #  body_rx, body_ry, body_rz, body_rw,
+        #  body_vx, body_vy, body_vz
+        #  body_vrp, body_vrr, body_vry,
+        #  foreach leg: # 8
+        #   leg_q1, leg_q2, leg_q3,
+        #   leg_vq1, leg_vq2, leg_vq3,
+        #   leg_x, leg_y, leg_z,
+        #   leg_rx, leg_ry, leg_rz
+        # Outputs:
+        # foreach leg: # 8
+        #  leg_q1, leg_q2, leg_q3
+        self.num_actor_inputs = 3 + 13 + (8 * 12)  # 112
+        self.num_actor_feature_hiddens = 512
+        self.num_actor_recurrent_hiddens = 256
+        self.num_actor_outputs = (8 * 3)  # 24
+
+        self.num_critic_inputs = (
+            self.num_actor_recurrent_hiddens + self.num_actor_outputs
+        )
+        self.num_critic_hiddens = 256
+        self.num_critic_outputs = 1
+
+        self.actor = DeepActor(
+            self.num_actor_inputs,
+            self.num_actor_feature_hiddens,
+            self.num_actor_recurrent_hiddens,
+            self.num_actor_outputs
+        ).to(self.device)
+        self.critic = DeepCritic(
+            self.num_critic_inputs,
+            self.num_critic_hiddens,
+            self.num_critic_outputs
+        ).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(),
             lr=1e-4)
-        self.loss_fn = nn.MSELoss()
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic.parameters(),
+            lr=1e-4)
+        self.loss_function = nn.MSELoss()
 
         self.checkpoint_file_manager = CheckpointFileManager()
 
-        # Recurrent hidden state
-        self.hidden_state = None
+        # Recurrent hidden state (initialize with zeros)
+        self.hidden_state_t = torch.zeros(
+            1,
+            self.num_actor_recurrent_hiddens,
+            device=self.device
+        )
 
         self.reward_calculator = RewardCalculator()
 
@@ -61,12 +86,16 @@ class DeepActorCriticPolicy():
         self.target = None
 
         # Previous state information
-        self.latest_iter_state = None
+        self.transition_t = None
 
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
-        self.hidden_state = None
-        self.latest_iter_state = None
+        self.hidden_state_t = torch.zeros(
+                    1,
+                    self.num_actor_recurrent_hiddens,
+                    device=self.device
+        )
+        self.transition_t = None
         self.reward_calculator.start_new_training_episode()
 
     def get_model_weights_exists(self, filename='test_weights.pt'):
@@ -81,12 +110,14 @@ class DeepActorCriticPolicy():
         try:
             self.checkpoint_file_manager.save_actor_critic_weights(
                 filename,
-                self.actor_critic,
-                self.optimizer
+                self.actor,
+                self.critic,
+                self.actor_optimizer,
+                self.critic_optimizer
             )
             self.logger.info(f'Saved weights: {filename}')
         except RuntimeError:
-            self.logger.warn('Failed to save weights')
+            self.logger.warning('Failed to save weights')
 
     def load_weights(self, filename='test_weights.pt'):
         """Load the learned weights from a file."""
@@ -95,14 +126,16 @@ class DeepActorCriticPolicy():
             if self.get_model_weights_exists(filename):
                 self.checkpoint_file_manager.load_actor_critic_weights(
                     filename,
-                    self.actor_critic,
-                    self.optimizer,
+                    self.actor,
+                    self.critic,
+                    self.actor_optimizer,
+                    self.critic_optimizer,
                     self.device
                 )
                 self.logger.info(f'Loaded weights: {filename}')
                 self.start_new_training_episode()
         except RuntimeError:
-            self.logger.warn('Failed to load weights')
+            self.logger.warning('Failed to load weights')
 
     def delete_saved_weights(self, filename):
         """Delete the saved weights file."""
@@ -114,11 +147,23 @@ class DeepActorCriticPolicy():
         """Backup the current weights and start with new random weights."""
         self.checkpoint_file_manager.reset_learned_actor_critic_weights()
         # Create a new actor-critic and optimizer with random weights
-        self.actor_critic = DeepActorCritic().to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.actor_critic.parameters(),
-            lr=1e-4
-        )
+        self.actor = DeepActor(
+            self.num_actor_inputs,
+            self.num_actor_feature_hiddens,
+            self.num_actor_recurrent_hiddens,
+            self.num_actor_outputs
+        ).to(self.device)
+        self.critic = DeepCritic(
+            self.num_critic_inputs,
+            self.num_critic_hiddens,
+            self.num_critic_outputs
+        ).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(),
+            lr=1e-4)
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic.parameters(),
+            lr=1e-4)
         self.start_new_training_episode()
 
     def set_target(self, time_to_reach_target_s, target):
@@ -127,7 +172,7 @@ class DeepActorCriticPolicy():
         self.target = target
 
     def get_episode_reward(self):
-        """Return the total reward of the episode."""
+        """Return the average reward rate per second for the episode."""
         return (
             0.0
             if self.reward_calculator.time_to_reach_target_s == 0.0 else
@@ -137,82 +182,85 @@ class DeepActorCriticPolicy():
 
     def select_action(self, spiderbot_pose, deterministic=False):
         """Select the next action."""
-        if deterministic:
-            next_action = self._select_action_deterministic(spiderbot_pose)
-        else:
-            state_iteration = self._select_action_stochastic(spiderbot_pose)
-            if state_iteration is not None:
-                next_action = state_iteration.action_np
-            else:
-                next_action = None
-        return next_action
-
-    def _select_action_deterministic(self, spiderbot_pose):
-        """Step execution for deployment."""
         if self.target is None:
             return None  # Exit early if there is no target
 
-        self.actor_critic.eval()
-        with torch.no_grad():
-            state_tensor = construct_input_vector(
+        state_t = construct_input_vector(
                 self.target,
                 spiderbot_pose,
                 self.device
-            )
-            action_dist, _, hidden_state_tp1 = self.actor_critic(
-                state_tensor, self.hidden_state
-            )
-            self.hidden_state = hidden_state_tp1
-            return action_dist.mean.squeeze(0).cpu().numpy()
+        )
 
-    def _select_action_stochastic(self, spiderbot_pose):
+        if deterministic:
+            action_t = self._select_action_deterministic(state_t)
+        else:
+            action_t, _ = self._select_action_stochastic(state_t)
+
+        return action_t
+
+    def _select_action_deterministic(self, state_t):
+        """Step execution for deployment."""
+        self.actor.eval()
+        with torch.no_grad():
+            action_distribution_t, hidden_state_tp1 = self.actor(
+                state_t, self.hidden_state_t
+            )
+            self.hidden_state_t = hidden_state_tp1
+            action_t_np = action_distribution_t.mean.squeeze(0).cpu().numpy()
+            return action_t_np
+
+    def _select_action_stochastic(self, state_t):
         """Step execution for training."""
-        if self.target is None:
-            return None  # Exit early if there is no target
+        self.actor.train()
 
-        self.actor_critic.train()
-        state_tensor = construct_input_vector(
-            self.target,
-            spiderbot_pose,
-            self.device
+        action_distribution_t, hidden_state_tp1 = self.actor(
+            state_t, self.hidden_state_t
         )
 
-        action_dist, value_t, hidden_state_tp1 = self.actor_critic(
-            state_tensor,
-            self.hidden_state
-        )
+        action_t = action_distribution_t.sample()
+        action_t_np = action_t.squeeze(0).detach().cpu().numpy()
 
-        action = action_dist.sample()
-        log_probability = action_dist.log_prob(action).sum(dim=-1)
+        log_probability_t = action_distribution_t.log_prob(
+            action_t
+        ).sum(dim=-1)
 
-        action_np = action.squeeze(0).detach().cpu().numpy()
+        hidden_state_t = self.hidden_state_t
+        hidden_state_tp1 = hidden_state_tp1.detach()
+        self.hidden_state_t = hidden_state_tp1
 
-        hidden_state_t = self.hidden_state
-        self.hidden_state = hidden_state_tp1.detach()
-
-        return self.IterationState(
-            action_np,
-            state_tensor,
-            log_probability,
-            value_t,
+        transition_t = StepTransition(
+            state_t,
+            action_t,
+            log_probability_t,
             hidden_state_t,
             hidden_state_tp1
+        )
+
+        return (
+            action_t_np,
+            transition_t
         )
 
     def train_step(self,
                    spiderbot_pose,
                    delta_time):
         """Perform a single step of training."""
-        reward = 0.0
-        done = False
+        reward_t = 0.0
+        training_done = False
 
         if self.target is None:
-            return None, reward, done  # Return early
+            return None, reward_t, training_done  # Return early
 
-        if self.latest_iter_state is not None:
-            # If there was a previous iter_state,
+        state_t = construct_input_vector(
+                self.target,
+                spiderbot_pose,
+                self.device
+        )
+
+        if self.transition_t is not None:
+            # If there was a previous transition_t,
             # calculate the reward and train the actor-critic
-            reward, done = (
+            reward_t, training_done = (
                 self.reward_calculator.compute_step_reward(
                     self.target,
                     spiderbot_pose,
@@ -220,65 +268,74 @@ class DeepActorCriticPolicy():
                 )
             )
 
-            next_data = construct_input_vector(
-                self.target,
-                spiderbot_pose,
-                self.device
-            )
-
+            # From the perspective of the training step, state_t is state_tp1
             self._train_actor_critic_step(
-                self.latest_iter_state,
-                next_data,
-                reward,
-                done
+                transition_t=self.transition_t,
+                state_tp1=state_t,
+                reward_t=reward_t,
+                training_done=training_done
             )
 
-        self.latest_iter_state = (
+        action_t, self.transition_t = (
             self._select_action_stochastic(
-                spiderbot_pose
+                state_t
             )
         )
 
-        return self.latest_iter_state.action_np, reward, done
+        return action_t, reward_t, training_done
 
     def _train_actor_critic_step(self,
-                                 iter_state,
-                                 state_tp1_tensor,
-                                 reward,
-                                 done):
+                                 transition_t,
+                                 state_tp1,
+                                 reward_t,
+                                 training_done):
         """Perform a single-step Actor-Critic update."""
-        self.actor_critic.train()
+        self.actor.train()
+        self.critic.train()
 
-        reward_tensor = torch.tensor([reward],
+        reward_tensor = torch.tensor([reward_t],
                                      dtype=torch.float32,
                                      device=self.device)
-        done_mask = torch.tensor([0.0 if done else 1.0],
-                                 dtype=torch.float32,
-                                 device=self.device)
 
         with torch.no_grad():
-            hidden_state_for_next = (
-                None if done else iter_state.hidden_state_tp1
-            )
-            _, value_tp1, _ = self.actor_critic(state_tp1_tensor,
-                                                hidden_state_for_next)
+            if training_done:
+                target_value = reward_tensor
+            else:
+                action_distribution_tp1, _ = (
+                    self.actor(
+                        state_tp1,
+                        transition_t.hidden_state_tp1
+                    )
+                )
+                action_tp1 = action_distribution_tp1.sample()
 
-        target_value = (
-            reward_tensor + (self.gamma * value_tp1.squeeze(0) * done_mask)
-        )
+                critic_value_tp1 = self.critic(
+                    transition_t.hidden_state_tp1,
+                    action_tp1
+                ).view(-1)
 
-        advantage = target_value - iter_state.value_t.squeeze(0)
+                target_value = (
+                    reward_tensor + (
+                        self.gamma * critic_value_tp1
+                    )
+                )
 
-        actor_loss = -iter_state.log_probability_t * advantage.detach()
+        critic_value_t = self.critic(
+            transition_t.hidden_state_t,
+            transition_t.action_t
+        ).view(-1)
+        advantage_t = target_value - critic_value_t
 
-        critic_loss = self.loss_fn(iter_state.value_t.squeeze(0), target_value)
+        critic_loss = self.loss_function(critic_value_t, target_value)
+        self.critic_optimizer.zero_grad()
+        critic_loss.backward()
+        nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
+        self.critic_optimizer.step()
 
-        total_loss = actor_loss + (0.5 * critic_loss)
+        actor_loss = -transition_t.log_probability_t * advantage_t.detach()
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
+        self.actor_optimizer.step()
 
-        self.optimizer.zero_grad()
-        total_loss.backward()
-
-        nn.utils.clip_grad_norm_(self.actor_critic.parameters(), max_norm=1.0)
-        self.optimizer.step()
-
-        return total_loss.item()
+        return actor_loss.item() + critic_loss.item()
