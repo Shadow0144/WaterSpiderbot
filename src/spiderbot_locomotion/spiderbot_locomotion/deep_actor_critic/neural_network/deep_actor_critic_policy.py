@@ -91,9 +91,9 @@ class DeepActorCriticPolicy():
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
         self.hidden_state_t = torch.zeros(
-                    1,
-                    self.num_actor_recurrent_hiddens,
-                    device=self.device
+            1,
+            self.num_actor_recurrent_hiddens,
+            device=self.device
         )
         self.transition_t = None
         self.reward_calculator.start_new_training_episode()
@@ -258,7 +258,7 @@ class DeepActorCriticPolicy():
         )
 
         if self.transition_t is not None:
-            # If there was a previous transition_t,
+            # If there was a previous state,
             # calculate the reward and train the actor-critic
             reward_t, training_done = (
                 self.reward_calculator.compute_step_reward(

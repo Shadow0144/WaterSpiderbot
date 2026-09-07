@@ -12,7 +12,7 @@ from .utility import construct_input_vector
 
 
 class DeepSoftActorCriticsPolicy():
-    """Provides a distribution of actions for the current state."""
+    """Provides an action based on the current state."""
 
     def __init__(self, logger):
         """Initialize the locomotion neural network."""
@@ -166,17 +166,17 @@ class DeepSoftActorCriticsPolicy():
             self.num_actor_feature_hiddens,
             self.num_actor_recurrent_hiddens,
             self.num_actor_outputs
-            ).to(self.device)
+        ).to(self.device)
         self.critic1 = DeepCritic(
             self.num_critic_inputs,
             self.num_critic_hiddens,
             self.num_critic_outputs
-            ).to(self.device)
+        ).to(self.device)
         self.critic2 = DeepCritic(
             self.num_critic_inputs,
             self.num_critic_hiddens,
             self.num_critic_outputs
-            ).to(self.device)
+        ).to(self.device)
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(),
             lr=1e-4)
@@ -216,7 +216,7 @@ class DeepSoftActorCriticsPolicy():
         if deterministic:
             action_t = self._select_action_deterministic(state_t)
         else:
-            action_t = self._select_action_stochastic(state_t)
+            action_t, _ = self._select_action_stochastic(state_t)
         return action_t
 
     def _select_action_deterministic(self, state_t):
@@ -291,11 +291,12 @@ class DeepSoftActorCriticsPolicy():
                 )
             )
 
+            # From the perspective of the training step, state_t is state_tp1
             self._train_actor_critic_step(
-                self.transition_t,
-                state_t,
-                reward_t,
-                training_done
+                transition_t=self.transition_t,
+                state_tp1=state_t,
+                reward_t=reward_t,
+                training_done=training_done
             )
 
         action_t, self.transition_t = (
