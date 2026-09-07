@@ -4,6 +4,7 @@ from datetime import datetime
 
 from .checkpoint_file_manager import CheckpointFileManager
 from .deep_actor_critic_policy import DeepActorCriticPolicy
+from .deep_soft_actor_critics_policy import DeepSoftActorCriticsPolicy
 
 
 class PopulationTrainer():
@@ -20,13 +21,17 @@ class PopulationTrainer():
     def __init__(self,
                  logger,
                  episodes_per_epoch=10,
-                 population_size=10):
+                 population_size=10,
+                 use_soft_actor_critics_policy=True):
         """Initialize the class."""
         self.logger = logger
         self.episodes_per_epoch = episodes_per_epoch
         self.population_size = population_size
 
-        self.policy = DeepActorCriticPolicy(self.logger)
+        if use_soft_actor_critics_policy:
+            self.policy = DeepSoftActorCriticsPolicy(self.logger)
+        else:
+            self.policy = DeepActorCriticPolicy(self.logger)
 
         self.checkpoint_file_manager = CheckpointFileManager()
 
@@ -49,11 +54,7 @@ class PopulationTrainer():
         try:
             current_candidate_filename = self._get_current_candidate_filename()
             if current_candidate_filename is not None:
-                self.checkpoint_file_manager.save_weights(
-                    current_candidate_filename,
-                    self.policy.actor_critic,
-                    self.policy.optimizer
-                )
+                self.policy.save_weights()
                 self.logger.info(
                     f'Saved weights: {current_candidate_filename}'
                 )

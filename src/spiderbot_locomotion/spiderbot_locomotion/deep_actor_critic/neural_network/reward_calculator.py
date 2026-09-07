@@ -9,10 +9,13 @@ class RewardCalculator():
     def __init__(self):
         """Initialize the reward calculator."""
         # Previous reward function state variables
+        self.previous_x = None
+        self.previous_y = None
         self.previous_distance = None
         self.previous_angular_distance = None
 
         # Hyperparameters for ranges
+        self.target_speed = 1.0
         self.nominal_z = 0.4
         self.nominal_z_range = 0.2
         self.distance_convergence = 0.05
@@ -22,13 +25,15 @@ class RewardCalculator():
         self.max_qvel = 2.0
 
         # Hyperparameters for penalty strengths
-        self.position_penalty = 100.0
-        self.angle_penalty = 0.01
-        self.tilt_penalty = 1.0
-        self.height_penalty = 0.5
-        self.angle_speed_penalty = 1.0
-        self.feet_planted_penalty = 1.0
-        self.feet_too_high_penalty = 1.0
+        self.stationary_penalty = -100.0
+        self.position_penalty = -100.0
+        self.angle_penalty = -0.01
+        self.tilt_penalty = -1.0
+        self.height_penalty = -0.5
+        self.angle_speed_penalty = -10.0
+        self.feet_raised_penalty = -1.0
+        self.feet_too_high_penalty = -1.0
+        self.terminated_early_penalty = -3000.0
         self.arrival_reward = 1000.0
 
         # Terminate early conditions
@@ -46,6 +51,8 @@ class RewardCalculator():
 
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
+        self.previous_x = None
+        self.previous_y = None
         self.previous_distance = None
         self.previous_angular_distance = None
         self.episode_reward = 0.0
@@ -102,6 +109,20 @@ class RewardCalculator():
         if self.previous_angular_distance is None:
             self.previous_angular_distance = current_angular_distance
 
+        if self.previous_x is None:
+            self.previous_x = position.x
+        if self.previous_y is None:
+            self.previous_y = position.y
+        distance_traveled = math.hypot(self.previous_x - position.x,
+                                       self.previous_y - position.y)
+        if delta_time >= 0.0:
+            speed = distance_traveled / delta_time
+        else:
+            speed = 0.0
+        target_speed_difference = (
+            min(0.0, max(self.target_speed - speed, self.target_speed))
+        )
+
         legs_off_ground = 0
         total_actuation_outside_of_range = 0
         legs_above_body = 0
@@ -129,40 +150,48 @@ class RewardCalculator():
         too_many_legs_off_ground = max(0, legs_off_ground - 4)
 
         reward_progress = (
-            -self.position_penalty *
+            self.position_penalty *
             (current_distance - self.previous_distance)
         )
         self.previous_distance = current_distance
 
         reward_facing = (
-                -self.angle_penalty *
+                self.angle_penalty *
                 (current_angular_distance - self.previous_angular_distance)
         )
         self.previous_angular_distance = current_angular_distance
 
+        reward_movement = (
+                self.stationary_penalty *
+                target_speed_difference
+        )
+        self.previous_x = position.x
+        self.previous_y = position.y
+
         reward_tilt = (
-            -self.tilt_penalty * tilt
+            self.tilt_penalty * tilt
         )
 
         reward_height = (
-            -self.height_penalty * z_distance
+            self.height_penalty * z_distance
         )
 
         reward_angle_speed = (
-            -self.angle_speed_penalty * total_actuation_outside_of_range
+            self.angle_speed_penalty * total_actuation_outside_of_range
         )
 
         reward_feet_planted = (
-            -self.feet_planted_penalty * too_many_legs_off_ground
+            self.feet_raised_penalty * too_many_legs_off_ground
         )
 
         reward_feet_too_high = (
-            -self.feet_too_high_penalty * legs_above_body
+            self.feet_too_high_penalty * legs_above_body
         )
 
         total_reward = (
             reward_progress +
             reward_facing +
+            reward_movement +
             reward_tilt +
             reward_height +
             reward_angle_speed +
@@ -179,7 +208,7 @@ class RewardCalculator():
             abs(pitch) > self.max_tilt or
             position.z < self.min_height
         ):
-            total_reward -= 50.0
+            total_reward += self.terminated_early_penalty
             done = True
         elif current_distance < self.distance_convergence:
             total_reward += self.arrival_reward

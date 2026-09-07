@@ -5,6 +5,9 @@ import time
 import spiderbot_utilities as utils
 
 from .neural_network.deep_actor_critic_policy import DeepActorCriticPolicy
+from .neural_network.deep_soft_actor_critics_policy import (
+    DeepSoftActorCriticsPolicy
+)
 from .neural_network.population_trainer import PopulationTrainer
 from ..locomotion_module import LocomotionModule
 
@@ -12,26 +15,38 @@ from ..locomotion_module import LocomotionModule
 class DeepActorCriticModule(LocomotionModule):
     """A locomotion module using a Deep Neural Network Actor-Critic policy."""
 
-    def __init__(self, locomotion_node, spiderbot_description):
+    def __init__(
+            self,
+            locomotion_node,
+            spiderbot_description,
+            training_mode_enabled=True,
+            use_population_training=True,
+            use_soft_actor_critics_policy=True):
         """Initialize the locomotion module."""
         super().__init__(locomotion_node, spiderbot_description)
 
-        self.target = None
+        self.training = training_mode_enabled
+        self.population_training = self.training and use_population_training
 
-        self.training = True
-        self.population_training = self.training and True
+        self.target = None
         self.num_episodes = 0
         self.episode_save_interval = 10
 
         if self.population_training:
             self.population_trainer = PopulationTrainer(
-                self.locomotion_node.get_logger()
+                self.locomotion_node.get_logger(),
+                use_soft_actor_critics_policy=use_soft_actor_critics_policy
             )
             self.population_trainer.load_population_checkpoint()
         else:
-            self.policy = DeepActorCriticPolicy(
-                self.locomotion_node.get_logger()
-            )
+            if use_soft_actor_critics_policy:
+                self.policy = DeepSoftActorCriticsPolicy(
+                    self.locomotion_node.get_logger()
+                )
+            else:
+                self.policy = DeepActorCriticPolicy(
+                    self.locomotion_node.get_logger()
+                )
             self.policy.load_weights()
 
     def update(self, spiderbot_pose_msg):

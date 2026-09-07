@@ -7,8 +7,6 @@ from ament_index_python.packages import get_package_share_directory
 
 import torch
 
-from .deep_actor_critic import DeepActorCritic
-
 
 class CheckpointFileManager():
     """Class for managing neural network learning checkpoint files."""
@@ -29,10 +27,10 @@ class CheckpointFileManager():
         full_filename = os.path.join(filepath, filename)
         return os.path.exists(full_filename)
 
-    def save_weights(self,
-                     filename,
-                     actor_critic,
-                     optimizer):
+    def save_actor_critic_weights(self,
+                                  filename,
+                                  actor_critic,
+                                  optimizer):
         """Save the learned weights to a file."""
         filepath = self.get_model_weights_path()
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -45,11 +43,31 @@ class CheckpointFileManager():
         }
         torch.save(checkpoint, full_filename)
 
-    def load_weights(self,
-                     filename,
-                     actor_critic,
-                     optimizer,
-                     device):
+    def save_soft_actor_critics_weights(self,
+                                        filename,
+                                        actor,
+                                        critics,
+                                        actor_optimizer,
+                                        critics_optimizer):
+        """Save the learned weights to a file."""
+        filepath = self.get_model_weights_path()
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        if not filename.endswith('.pt'):
+            filename = filename + '.pt'
+        full_filename = os.path.join(filepath, filename)
+        checkpoint = {
+            'actor_state_dict': actor.state_dict(),
+            'critics_state_dict': critics.state_dict(),
+            'actor_optimizer_state_dict': actor_optimizer.state_dict(),
+            'critics_optimizer_state_dict': critics_optimizer.state_dict(),
+        }
+        torch.save(checkpoint, full_filename)
+
+    def load_actor_critic_weights(self,
+                                  filename,
+                                  actor_critic,
+                                  optimizer,
+                                  device):
         """Load the learned weights from a file."""
         filepath = self.get_model_weights_path()
         full_filename = os.path.join(filepath, filename)
@@ -68,18 +86,52 @@ class CheckpointFileManager():
                 checkpoint['optimizer_state_dict']
             )
 
-    def reset_learned_weights(self):
+    def load_soft_actor_critics_weights(self,
+                                        filename,
+                                        actor,
+                                        critics,
+                                        actor_optimizer,
+                                        critics_optimizer,
+                                        device):
+        """Load the learned weights from a file."""
+        filepath = self.get_model_weights_path()
+        full_filename = os.path.join(filepath, filename)
+        if not os.path.exists(full_filename):
+            raise FileNotFoundError('No model weights file found at '
+                                    f'{full_filename}')
+
+        checkpoint = torch.load(full_filename, map_location=device)
+
+        if 'actor_state_dict' in checkpoint:
+            actor.load_state_dict(
+                checkpoint['actor_state_dict']
+            )
+        if 'critics_state_dict' in checkpoint:
+            critics.load_state_dict(
+                checkpoint['critics_state_dict']
+            )
+        if 'actor_optimizer_state_dict' in checkpoint:
+            actor_optimizer.load_state_dict(
+                checkpoint['actor_optimizer_state_dict']
+            )
+        if 'critics_optimizer_state_dict' in checkpoint:
+            critics_optimizer.load_state_dict(
+                checkpoint['critics_optimizer_state_dict']
+            )
+
+    def reset_learned_actor_critic_weights(self):
         """Backup the current weights and start with new random weights."""
         time_string = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        self.save_weights(f'test_weights_backup_{time_string}.pt')
+        self.save_actor_critic_weights(f'test_weights_backup_{time_string}.pt')
         self.delete_saved_weights()
-        # Create a new critic and optimizer with random weights
-        return (
-            DeepActorCritic().to(self.device),
-            torch.optim.Adam(
-                self.actor_critic.parameters(),
-                lr=1e-4)
+
+    def reset_learned_soft_actor_critics_weights(self):
+        """Backup the current weights and start with new random weights."""
+        time_string = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        self.save_soft_actor_critics_weights(
+            f'test_weights_backup_{time_string}.pt'
         )
+        self.delete_saved_weights()
 
     def delete_saved_weights(self, filename):
         """Delete the saved weights file."""
