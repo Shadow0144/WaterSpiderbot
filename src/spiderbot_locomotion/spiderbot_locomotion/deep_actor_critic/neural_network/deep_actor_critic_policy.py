@@ -55,17 +55,10 @@ class DeepActorCriticPolicy():
             self.num_actor_recurrent_hiddens,
             self.num_actor_outputs
         ).to(self.device)
-        self.critic = DeepCritic(
-            self.num_critic_inputs,
-            self.num_critic_hiddens,
-            self.num_critic_outputs
-        ).to(self.device)
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(),
             lr=1e-4)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(),
-            lr=1e-4)
+        self._create_critics()
         self.loss_function = nn.MSELoss()
 
         self.checkpoint_file_manager = CheckpointFileManager()
@@ -87,6 +80,21 @@ class DeepActorCriticPolicy():
 
         # Previous state information
         self.transition_t = None
+
+    def _create_critics(self):
+        """Create the Critic(s) and their optimizer(s)."""
+        self.critics = [
+            DeepCritic(
+                self.num_critic_inputs,
+                self.num_critic_hiddens,
+                self.num_critic_outputs
+            ).to(self.device)
+        ]
+        self.critic_optimizers = [
+            torch.optim.Adam(
+                self.critics[0].parameters(),
+                lr=1e-4)
+        ]
 
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
@@ -111,9 +119,9 @@ class DeepActorCriticPolicy():
             self.checkpoint_file_manager.save_actor_critic_weights(
                 filename,
                 self.actor,
-                self.critic,
                 self.actor_optimizer,
-                self.critic_optimizer
+                self.critics,
+                self.critic_optimizers
             )
             self.logger.info(f'Saved weights: {filename}')
         except RuntimeError:
@@ -127,9 +135,9 @@ class DeepActorCriticPolicy():
                 self.checkpoint_file_manager.load_actor_critic_weights(
                     filename,
                     self.actor,
-                    self.critic,
                     self.actor_optimizer,
-                    self.critic_optimizer,
+                    self.critics,
+                    self.critic_optimizers,
                     self.device
                 )
                 self.logger.info(f'Loaded weights: {filename}')
@@ -153,17 +161,10 @@ class DeepActorCriticPolicy():
             self.num_actor_recurrent_hiddens,
             self.num_actor_outputs
         ).to(self.device)
-        self.critic = DeepCritic(
-            self.num_critic_inputs,
-            self.num_critic_hiddens,
-            self.num_critic_outputs
-        ).to(self.device)
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(),
             lr=1e-4)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(),
-            lr=1e-4)
+        self._create_critics()
         self.start_new_training_episode()
 
     def set_target(self, time_to_reach_target_s, target):
@@ -291,17 +292,19 @@ class DeepActorCriticPolicy():
                                  training_done):
         """Perform a single-step Actor-Critic update."""
         self.actor.train()
-        self.critic.train()
+        self.critics[0].train()
 
         reward_tensor = torch.tensor([reward_t],
                                      dtype=torch.float32,
                                      device=self.device)
 
+        # Compute Bellman Target (t+1)
+
         with torch.no_grad():
             if training_done:
                 target_value = reward_tensor
             else:
-                action_distribution_tp1, _ = (
+                action_distribution_tp1, hidden_state_tp2 = (
                     self.actor(
                         state_tp1,
                         transition_t.hidden_state_tp1
@@ -309,8 +312,8 @@ class DeepActorCriticPolicy():
                 )
                 action_tp1 = action_distribution_tp1.sample()
 
-                critic_value_tp1 = self.critic(
-                    transition_t.hidden_state_tp1,
+                critic_value_tp1 = self.critics[0](
+                    hidden_state_tp2,
                     action_tp1
                 ).view(-1)
 
@@ -320,22 +323,26 @@ class DeepActorCriticPolicy():
                     )
                 )
 
-        critic_value_t = self.critic(
+        # Update Critic
+
+        critic_value_t = self.critics[0](
             transition_t.hidden_state_t,
             transition_t.action_t
         ).view(-1)
         advantage_t = target_value - critic_value_t
 
         critic_loss = self.loss_function(critic_value_t, target_value)
-        self.critic_optimizer.zero_grad()
+        self.critic_optimizers[0].zero_grad()
         critic_loss.backward()
-        nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
-        self.critic_optimizer.step()
+        nn.utils.clip_grad_norm_(self.critics[0].parameters(), max_norm=1.0)
+        self.critic_optimizers[0].step()
 
-        actor_loss = -transition_t.log_probability_t * advantage_t.detach()
+        # Update Actor
+
+        actor_loss = (
+            -transition_t.log_probability_t * advantage_t.detach()
+        ).mean()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_optimizer.step()
-
-        return actor_loss.item() + critic_loss.item()
