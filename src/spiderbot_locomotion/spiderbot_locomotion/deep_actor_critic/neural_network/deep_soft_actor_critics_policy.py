@@ -19,6 +19,9 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
 
     def _create_critics(self):
         """Create the Critic(s) and their optimizer(s)."""
+        self.num_critic_inputs = (
+            self.num_actor_recurrent_hiddens + self.num_actor_outputs
+        )
         self.critics = [
             DeepCritic(
                 self.num_critic_inputs,
@@ -50,9 +53,11 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         for critic in self.critics:
             critic.train()
 
-        reward_tensor = torch.tensor([reward_t],
-                                     dtype=torch.float32,
-                                     device=self.device)
+        reward_tensor = torch.tensor(
+                    [reward_t],
+                    dtype=torch.float32,
+                    device=self.device
+        ).view(-1)
 
         # Compute Bellman Target (t+1)
 
@@ -104,7 +109,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
 
         # Update Actor
 
-        pi_action_distribution_t, pi_hidden_state_tp1 = (
+        pi_action_distribution_t, _ = (
             self.actor(transition_t.state_t, transition_t.hidden_state_t)
         )
         pi_action_t = pi_action_distribution_t.rsample()
@@ -117,7 +122,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         critic_value_t_min = None
         for critic in self.critics:
             pi_critic_value_t = (
-                critic(pi_hidden_state_tp1, pi_action_t)
+                critic(transition_t.hidden_state_t, pi_action_t)
             ).view(-1)
             if critic_value_t_min is None:
                 critic_value_t_min = pi_critic_value_t

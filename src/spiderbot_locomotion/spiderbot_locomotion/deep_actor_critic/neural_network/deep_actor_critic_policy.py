@@ -44,20 +44,12 @@ class DeepActorCriticPolicy():
         self.num_actor_outputs = (8 * 3)  # 24
 
         self.num_critic_inputs = (
-            self.num_actor_recurrent_hiddens + self.num_actor_outputs
+            self.num_actor_recurrent_hiddens
         )
         self.num_critic_hiddens = 256
         self.num_critic_outputs = 1
 
-        self.actor = DeepActor(
-            self.num_actor_inputs,
-            self.num_actor_feature_hiddens,
-            self.num_actor_recurrent_hiddens,
-            self.num_actor_outputs
-        ).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(),
-            lr=1e-4)
+        self._create_actor()
         self._create_critics()
         self.loss_function = nn.MSELoss()
 
@@ -80,6 +72,18 @@ class DeepActorCriticPolicy():
 
         # Previous state information
         self.transition_t = None
+
+    def _create_actor(self):
+        """Create the Actor and its optimizer."""
+        self.actor = DeepActor(
+            self.num_actor_inputs,
+            self.num_actor_feature_hiddens,
+            self.num_actor_recurrent_hiddens,
+            self.num_actor_outputs
+        ).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(),
+            lr=1e-4)
 
     def _create_critics(self):
         """Create the Critic(s) and their optimizer(s)."""
@@ -294,9 +298,11 @@ class DeepActorCriticPolicy():
         self.actor.train()
         self.critics[0].train()
 
-        reward_tensor = torch.tensor([reward_t],
-                                     dtype=torch.float32,
-                                     device=self.device)
+        reward_tensor = torch.tensor(
+            [reward_t],
+            dtype=torch.float32,
+            device=self.device
+        ).view(-1)
 
         # Compute Bellman Target (t+1)
 
@@ -304,17 +310,15 @@ class DeepActorCriticPolicy():
             if training_done:
                 target_value = reward_tensor
             else:
-                action_distribution_tp1, hidden_state_tp2 = (
+                _, hidden_state_tp2 = (
                     self.actor(
                         state_tp1,
                         transition_t.hidden_state_tp1
                     )
                 )
-                action_tp1 = action_distribution_tp1.sample()
 
                 critic_value_tp1 = self.critics[0](
-                    hidden_state_tp2,
-                    action_tp1
+                    hidden_state_tp2
                 ).view(-1)
 
                 target_value = (
@@ -326,8 +330,7 @@ class DeepActorCriticPolicy():
         # Update Critic
 
         critic_value_t = self.critics[0](
-            transition_t.hidden_state_t,
-            transition_t.action_t
+            transition_t.hidden_state_t
         ).view(-1)
         advantage_t = target_value - critic_value_t
 
