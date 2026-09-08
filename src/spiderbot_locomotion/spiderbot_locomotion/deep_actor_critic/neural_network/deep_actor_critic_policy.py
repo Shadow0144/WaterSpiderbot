@@ -146,6 +146,8 @@ class DeepActorCriticPolicy():
                 )
                 self.logger.info(f'Loaded weights: {filename}')
                 self.start_new_training_episode()
+            else:
+                self.logger.warning(f'Weights file {filename} not found')
         except RuntimeError:
             self.logger.warning('Failed to load weights')
 

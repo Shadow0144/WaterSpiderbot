@@ -47,8 +47,8 @@ class CheckpointFileManager():
             'critic_state_dicts': [critic.state_dict() for critic in critics],
             'critic_optimizer_state_dicts': (
                 [critic_optimizer.state_dict()
-                 for critic_optimizer in critic_optimizers],
-            )
+                 for critic_optimizer in critic_optimizers]
+            ),
         }
 
         torch.save(checkpoint, full_filename)

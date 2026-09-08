@@ -54,7 +54,7 @@ class PopulationTrainer():
         try:
             current_candidate_filename = self._get_current_candidate_filename()
             if current_candidate_filename is not None:
-                self.policy.save_weights()
+                self.policy.save_weights(current_candidate_filename)
                 self.logger.info(
                     f'Saved weights: {current_candidate_filename}'
                 )
@@ -79,10 +79,13 @@ class PopulationTrainer():
     def load_population_checkpoint(self, filename='checkpoint.csv'):
         """Load a population training state."""
         try:
+            self.logger.info(f'Loading population: {filename}')
             if not self.get_population_checkpoint_exists(filename):
+                self.logger.warning(
+                    f'Population checkpoint file {filename} not found'
+                )
                 return  # Return early if no checkpoint exists
 
-            self.logger.info(f'Loading population: {filename}')
             (
                 raw_candidates,
                 current_episode,
