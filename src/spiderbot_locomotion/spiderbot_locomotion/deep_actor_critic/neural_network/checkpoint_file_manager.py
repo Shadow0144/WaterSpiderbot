@@ -84,7 +84,7 @@ class CheckpointFileManager():
                 critic.load_state_dict(state_dict)
         if 'critic_optimizer_state_dicts' in checkpoint:
             for critic_optimizer, state_dict in zip(
-                critic_optimizers, checkpoint['critic_state_dicts']
+                critic_optimizers, checkpoint['critic_optimizer_state_dicts']
             ):
                 critic_optimizer.load_state_dict(state_dict)
 
