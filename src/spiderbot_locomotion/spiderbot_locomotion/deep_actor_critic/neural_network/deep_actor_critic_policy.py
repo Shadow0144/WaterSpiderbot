@@ -4,8 +4,8 @@ import torch
 from torch import nn
 
 from .checkpoint_file_manager import CheckpointFileManager
-from .deep_actor import DeepActor
 from .deep_critic import DeepCritic
+from .deep_recurrent_actor import DeepRecurrentActor
 from .reward_calculator import RewardCalculator
 from .step_transition import StepTransition
 from .utility import construct_input_vector
@@ -75,7 +75,7 @@ class DeepActorCriticPolicy():
 
     def _create_actor(self):
         """Create the Actor and its optimizer."""
-        self.actor = DeepActor(
+        self.actor = DeepRecurrentActor(
             self.num_actor_inputs,
             self.num_actor_feature_hiddens,
             self.num_actor_recurrent_hiddens,
@@ -161,7 +161,7 @@ class DeepActorCriticPolicy():
         """Backup the current weights and start with new random weights."""
         self.checkpoint_file_manager.reset_learned_actor_critic_weights()
         # Create a new actor-critic and optimizer with random weights
-        self.actor = DeepActor(
+        self.actor = DeepRecurrentActor(
             self.num_actor_inputs,
             self.num_actor_feature_hiddens,
             self.num_actor_recurrent_hiddens,
