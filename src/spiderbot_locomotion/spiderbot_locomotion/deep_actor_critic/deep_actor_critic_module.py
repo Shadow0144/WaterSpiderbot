@@ -4,11 +4,11 @@ import time
 
 import spiderbot_utilities as utils
 
-from .neural_network.deep_actor_critic_policy import DeepActorCriticPolicy
-from .neural_network.deep_soft_actor_critics_policy import (
+from .policy.deep_actor_critic_policy import DeepActorCriticPolicy
+from .policy.deep_soft_actor_critics_policy import (
     DeepSoftActorCriticsPolicy
 )
-from .neural_network.population_trainer import PopulationTrainer
+from .policy.population_trainer import PopulationTrainer
 from ..locomotion_module import LocomotionModule
 
 

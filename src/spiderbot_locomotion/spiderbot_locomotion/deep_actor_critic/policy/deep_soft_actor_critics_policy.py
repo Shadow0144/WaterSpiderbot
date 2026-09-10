@@ -7,12 +7,12 @@ import random
 import torch
 from torch import nn
 
-from .deep_actor import DeepActor
+from ..neural_network.deep_actor import DeepActor
 from .deep_actor_critic_policy import DeepActorCriticPolicy
-from .deep_critic import DeepCritic
-from .step_transition import StepTransition
-from .step_transition import TrainingObservation
-from .utility import construct_input_vector
+from ..neural_network.deep_critic import DeepCritic
+from ..neural_network.step_transition import StepTransition
+from ..neural_network.step_transition import TrainingObservation
+from ..utility import construct_input_vector
 
 
 class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):

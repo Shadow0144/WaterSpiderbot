@@ -3,12 +3,12 @@
 import torch
 from torch import nn
 
-from .checkpoint_file_manager import CheckpointFileManager
-from .deep_critic import DeepCritic
-from .deep_recurrent_actor import DeepRecurrentActor
-from .reward_calculator import RewardCalculator
-from .step_transition import RecurrentStepTransition
-from .utility import construct_input_vector
+from ..neural_network.checkpoint_file_manager import CheckpointFileManager
+from ..neural_network.deep_critic import DeepCritic
+from ..neural_network.deep_recurrent_actor import DeepRecurrentActor
+from ..reward_functions.reward_calculator import RewardCalculator
+from ..neural_network.step_transition import RecurrentStepTransition
+from ..utility import construct_input_vector
 
 
 class DeepActorCriticPolicy():
