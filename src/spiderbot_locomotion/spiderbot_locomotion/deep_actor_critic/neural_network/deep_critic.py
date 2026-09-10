@@ -30,12 +30,12 @@ class DeepCritic(nn.Module):
                       self.num_outputs)
         )
 
-    def forward(self, hidden_state_tp1, action_t=None):
+    def forward(self, state_t, action_t=None):
         """Forward pass."""
         if action_t is None:
-            critic_input = hidden_state_tp1
+            critic_input = state_t
         else:
-            critic_input = torch.cat([hidden_state_tp1, action_t], dim=-1)
+            critic_input = torch.cat([state_t, action_t], dim=-1)
 
         critic_value_t = self.critic(critic_input)
 

@@ -265,6 +265,7 @@ class HandcraftedAnglesModule(LocomotionModule):
         """Publish target angles for the leg actuators."""
         msg = utils.construct_target_pose_msg(
                     time.time(),
+                    True,
                     self.leg_names,
                     self.current_targets
                 )

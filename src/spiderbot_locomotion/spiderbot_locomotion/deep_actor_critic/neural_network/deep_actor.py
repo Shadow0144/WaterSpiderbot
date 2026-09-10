@@ -5,7 +5,7 @@ from torch import nn
 from torch.distributions import Normal
 
 
-class DeepRecurrentActor(nn.Module):
+class DeepActor(nn.Module):
     """Locomotion Actor using a Deep Neural Network."""
 
     def __init__(
@@ -32,7 +32,7 @@ class DeepRecurrentActor(nn.Module):
             nn.ReLU()
         )
 
-        self.actor_mean = nn.Linear(self.num_recurrent_hiddens,
+        self.actor_mean = nn.Linear(self.num_feature_hiddens,
                                     self.num_outputs)
         self.actor_log_std = nn.Parameter(torch.zeros(self.num_outputs))
 

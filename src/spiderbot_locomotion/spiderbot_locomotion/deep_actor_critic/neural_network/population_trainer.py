@@ -43,6 +43,10 @@ class PopulationTrainer():
         self.current_parent_filename = None
         self.candidate_records = []
 
+    def get_angles_scaled(self):
+        """Return if the angles are pre-scaled or require scaling."""
+        return self.policy.get_angles_scaled()
+
     def get_population_checkpoint_exists(self, filename='checkpoint.csv'):
         """Get if the population checkpoint file exists."""
         return self.checkpoint_file_manager.get_population_checkpoint_exists(
@@ -58,8 +62,8 @@ class PopulationTrainer():
                 self.logger.info(
                     f'Saved weights: {current_candidate_filename}'
                 )
-        except RuntimeError:
-            self.logger.warn('Failed to save population')
+        except RuntimeError as e:
+            self.logger.warn(f'Failed to save population: {e}')
 
     def save_population_checkpoint(self, filename='checkpoint.csv'):
         """Save the current state of the population training."""
@@ -73,8 +77,8 @@ class PopulationTrainer():
                 self.current_parent_filename
             )
             self.logger.info(f'Saved population: {filename}')
-        except RuntimeError:
-            self.logger.warn('Failed to save population')
+        except RuntimeError as e:
+            self.logger.warn(f'Failed to save population: {e}')
 
     def load_population_checkpoint(self, filename='checkpoint.csv'):
         """Load a population training state."""

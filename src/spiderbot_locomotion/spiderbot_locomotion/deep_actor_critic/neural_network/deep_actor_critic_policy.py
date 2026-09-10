@@ -7,7 +7,7 @@ from .checkpoint_file_manager import CheckpointFileManager
 from .deep_critic import DeepCritic
 from .deep_recurrent_actor import DeepRecurrentActor
 from .reward_calculator import RewardCalculator
-from .step_transition import StepTransition
+from .step_transition import RecurrentStepTransition
 from .utility import construct_input_vector
 
 
@@ -18,12 +18,42 @@ class DeepActorCriticPolicy():
         """Initialize the locomotion neural network."""
         self.logger = logger
 
+        # Outputs from the Actor are already scaled up
+        self.angles_scaled = True
+
         self.device = (
             torch.accelerator.current_accelerator().type
             if torch.accelerator.is_available() else
             'cpu'
         )
 
+        self._determine_layer_sizes()
+        self._create_actor()
+        self._create_critics()
+        self.loss_function = nn.MSELoss()
+
+        self.checkpoint_file_manager = CheckpointFileManager()
+
+        # Recurrent hidden state (initialize with zeros)
+        self.hidden_state_t = torch.zeros(
+            1,
+            self.num_actor_recurrent_hiddens,
+            device=self.device
+        )
+
+        self.reward_calculator = RewardCalculator()
+
+        # Reward horizon scaling
+        self.gamma = 0.99
+
+        # Target information
+        self.target = None
+
+        # Previous state information
+        self.transition_t = None
+
+    def _determine_layer_sizes(self):
+        """Set all the layer sizes."""
         # Inputs:
         #  target_x, target_y, target_theta,
         #  body_x, body_y, body_z,
@@ -48,30 +78,6 @@ class DeepActorCriticPolicy():
         )
         self.num_critic_hiddens = 256
         self.num_critic_outputs = 1
-
-        self._create_actor()
-        self._create_critics()
-        self.loss_function = nn.MSELoss()
-
-        self.checkpoint_file_manager = CheckpointFileManager()
-
-        # Recurrent hidden state (initialize with zeros)
-        self.hidden_state_t = torch.zeros(
-            1,
-            self.num_actor_recurrent_hiddens,
-            device=self.device
-        )
-
-        self.reward_calculator = RewardCalculator()
-
-        # Reward horizon scaling
-        self.gamma = 0.99
-
-        # Target information
-        self.target = None
-
-        # Previous state information
-        self.transition_t = None
 
     def _create_actor(self):
         """Create the Actor and its optimizer."""
@@ -99,6 +105,10 @@ class DeepActorCriticPolicy():
                 self.critics[0].parameters(),
                 lr=1e-4)
         ]
+
+    def get_angles_scaled(self):
+        """Return if the angles are pre-scaled or require scaling."""
+        return self.angles_scaled
 
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
@@ -128,8 +138,8 @@ class DeepActorCriticPolicy():
                 self.critic_optimizers
             )
             self.logger.info(f'Saved weights: {filename}')
-        except RuntimeError:
-            self.logger.warning('Failed to save weights')
+        except RuntimeError as e:
+            self.logger.warning(f'Failed to save weights: {e}')
 
     def load_weights(self, filename='test_weights.pt'):
         """Load the learned weights from a file."""
@@ -148,8 +158,8 @@ class DeepActorCriticPolicy():
                 self.start_new_training_episode()
             else:
                 self.logger.warning(f'Weights file {filename} not found')
-        except RuntimeError:
-            self.logger.warning('Failed to load weights')
+        except RuntimeError as e:
+            self.logger.warning(f'Failed to load weights: {e}')
 
     def delete_saved_weights(self, filename):
         """Delete the saved weights file."""
@@ -235,7 +245,7 @@ class DeepActorCriticPolicy():
         hidden_state_tp1 = hidden_state_tp1.detach()
         self.hidden_state_t = hidden_state_tp1
 
-        transition_t = StepTransition(
+        transition_t = RecurrentStepTransition(
             state_t,
             action_t,
             log_probability_t,

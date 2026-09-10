@@ -174,10 +174,11 @@ class SimulationNode(Node):
         leg_poses = dict(zip(self.leg_names, leg_poses_values))
         for leg_name in self.leg_names:
             leg_pose = leg_poses[leg_name]
-            self.legs[leg_name].set_target_qposes(
+            self.legs[leg_name].set_leg_target_angles(
                 leg_pose.coxa_qpos,
                 leg_pose.femur_qpos,
-                leg_pose.tibia_qpos)
+                leg_pose.tibia_qpos,
+                msg.scaled)
 
     def step_reward_callback(self, msg):
         """Enable displaying the step reward and update the reward value."""

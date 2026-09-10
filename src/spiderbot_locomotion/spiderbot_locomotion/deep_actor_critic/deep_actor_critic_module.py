@@ -25,6 +25,10 @@ class DeepActorCriticModule(LocomotionModule):
         """Initialize the locomotion module."""
         super().__init__(locomotion_node, spiderbot_description)
 
+        # Outputs from the Actor are not already scaled up
+        # and require scaling by the correct ranges
+        self.angles_scaled = False
+
         self.training = training_mode_enabled
         self.population_training = self.training and use_population_training
 
@@ -37,6 +41,7 @@ class DeepActorCriticModule(LocomotionModule):
                 self.locomotion_node.get_logger(),
                 use_soft_actor_critics_policy=use_soft_actor_critics_policy
             )
+            self.angles_scaled = self.population_trainer.get_angles_scaled()
             self.population_trainer.load_population_checkpoint()
         else:
             if use_soft_actor_critics_policy:
@@ -47,6 +52,7 @@ class DeepActorCriticModule(LocomotionModule):
                 self.policy = DeepActorCriticPolicy(
                     self.locomotion_node.get_logger()
                 )
+            self.angles_scaled = self.policy.get_angles_scaled()
             self.policy.load_weights()
 
     def update(self, spiderbot_pose_msg):
@@ -109,6 +115,7 @@ class DeepActorCriticModule(LocomotionModule):
             )
         msg = utils.construct_target_pose_msg(
                     time.time(),
+                    self.angles_scaled,
                     self.leg_names,
                     target_angles_per_leg
                 )
