@@ -1,7 +1,7 @@
 """Spiderbot locomotion reward functions."""
 
-from .reward_calculator import RewardCalculator
+from .complex_reward_function import ComplexRewardFunction
 
 __all__ = [
-    'RewardCalculator',
+    'ComplexRewardFunction',
 ]

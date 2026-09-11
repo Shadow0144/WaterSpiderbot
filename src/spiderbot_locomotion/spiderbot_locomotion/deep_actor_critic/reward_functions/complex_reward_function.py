@@ -3,7 +3,7 @@
 import math
 
 
-class RewardCalculator():
+class ComplexRewardFunction():
     """Convenience class to calculate the reward for a single step of RL."""
 
     def __init__(self):
@@ -25,7 +25,7 @@ class RewardCalculator():
         self.max_qvel = 2.0
 
         # Hyperparameters for penalty strengths
-        self.stationary_penalty = -100.0
+        self.stationary_penalty = -1000.0
         self.position_penalty = -100.0
         self.angle_penalty = -0.01
         self.tilt_penalty = -1.0
@@ -115,12 +115,12 @@ class RewardCalculator():
             self.previous_y = position.y
         distance_traveled = math.hypot(self.previous_x - position.x,
                                        self.previous_y - position.y)
-        if delta_time >= 0.0:
+        if delta_time > 0.0:
             speed = distance_traveled / delta_time
         else:
             speed = 0.0
         target_speed_difference = (
-            min(0.0, max(self.target_speed - speed, self.target_speed))
+            max(0.0, self.target_speed - speed)
         )
 
         legs_off_ground = 0

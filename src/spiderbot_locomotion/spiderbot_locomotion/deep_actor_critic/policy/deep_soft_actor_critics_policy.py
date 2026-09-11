@@ -1,14 +1,14 @@
 """Locomotion policy based on a Soft Actor-Critics Deep Neural Network."""
 
 import copy
-from collections import deque
 import random
+from collections import deque
 
 import torch
 from torch import nn
 
-from ..neural_network.deep_actor import DeepActor
 from .deep_actor_critic_policy import DeepActorCriticPolicy
+from ..neural_network.deep_actor import DeepActor
 from ..neural_network.deep_critic import DeepCritic
 from ..neural_network.step_transition import StepTransition
 from ..neural_network.step_transition import TrainingObservation
@@ -107,7 +107,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         """Reset the internal state variables for the episode."""
         self._reset_frame_queue()
         self.transition_t = None
-        self.reward_calculator.start_new_training_episode()
+        self.reward_function.start_new_training_episode()
 
     def _construct_state(self, spiderbot_pose):
         """Construct a state vector from the latest observation."""
@@ -185,7 +185,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             # If there was a previous state,
             # calculate the reward and train the actor-critic
             reward_t, training_done = (
-                self.reward_calculator.compute_step_reward(
+                self.reward_function.compute_step_reward(
                     self.target,
                     spiderbot_pose,
                     delta_time

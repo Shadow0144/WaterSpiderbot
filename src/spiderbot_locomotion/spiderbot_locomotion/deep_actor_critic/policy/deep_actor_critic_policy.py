@@ -6,8 +6,8 @@ from torch import nn
 from ..neural_network.checkpoint_file_manager import CheckpointFileManager
 from ..neural_network.deep_critic import DeepCritic
 from ..neural_network.deep_recurrent_actor import DeepRecurrentActor
-from ..reward_functions.reward_calculator import RewardCalculator
 from ..neural_network.step_transition import RecurrentStepTransition
+from ..reward_functions.complex_reward_function import ComplexRewardFunction
 from ..utility import construct_input_vector
 
 
@@ -41,7 +41,7 @@ class DeepActorCriticPolicy():
             device=self.device
         )
 
-        self.reward_calculator = RewardCalculator()
+        self.reward_function = ComplexRewardFunction()
 
         # Reward horizon scaling
         self.gamma = 0.99
@@ -118,7 +118,7 @@ class DeepActorCriticPolicy():
             device=self.device
         )
         self.transition_t = None
-        self.reward_calculator.start_new_training_episode()
+        self.reward_function.start_new_training_episode()
 
     def get_model_weights_exists(self, filename='test_weights.pt'):
         """Get if the model weight file exists."""
@@ -185,16 +185,16 @@ class DeepActorCriticPolicy():
 
     def set_target(self, time_to_reach_target_s, target):
         """Update the target and the time expected to reach the target."""
-        self.reward_calculator.set_time_to_reach_target(time_to_reach_target_s)
+        self.reward_function.set_time_to_reach_target(time_to_reach_target_s)
         self.target = target
 
     def get_episode_reward(self):
         """Return the average reward rate per second for the episode."""
         return (
             0.0
-            if self.reward_calculator.time_to_reach_target_s == 0.0 else
-            self.reward_calculator.episode_reward /
-            self.reward_calculator.time_to_reach_target_s
+            if self.reward_function.time_to_reach_target_s == 0.0 else
+            self.reward_function.episode_reward /
+            self.reward_function.time_to_reach_target_s
         )
 
     def select_action(self, spiderbot_pose, deterministic=False):
@@ -278,7 +278,7 @@ class DeepActorCriticPolicy():
             # If there was a previous state,
             # calculate the reward and train the actor-critic
             reward_t, training_done = (
-                self.reward_calculator.compute_step_reward(
+                self.reward_function.compute_step_reward(
                     self.target,
                     spiderbot_pose,
                     delta_time
