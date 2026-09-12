@@ -146,7 +146,7 @@ class DeepActorCriticModule(LocomotionModule):
 
         if self.population_training:
             episode_reward = self.population_trainer.get_episode_reward()
-            epoch_reward = self.population_trainer.get_epoch_reward()
+            candidate_reward = self.population_trainer.get_candidate_reward()
             self.population_trainer.start_new_training_episode()
         else:
             episode_reward = self.policy.get_episode_reward()
@@ -172,9 +172,9 @@ class DeepActorCriticModule(LocomotionModule):
         self.locomotion_node.publish_episode_reward(
             episode_reward
         )
-        if (self.population_training and epoch_reward):
-            self.locomotion_node.publish_epoch_reward(
-                epoch_reward
+        if (self.population_training and candidate_reward):
+            self.locomotion_node.publish_candidate_reward(
+                candidate_reward
             )
 
         super().reset()

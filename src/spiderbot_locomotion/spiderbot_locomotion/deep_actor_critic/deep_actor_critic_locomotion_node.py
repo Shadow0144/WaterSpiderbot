@@ -27,8 +27,8 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
         self.episode_reward_publisher = self.create_publisher(
             Float64, 'episode_reward', 10)
 
-        self.epoch_reward_publisher = self.create_publisher(
-            Float64, 'epoch_reward', 10)
+        self.candidate_reward_publisher = self.create_publisher(
+            Float64, 'candidate_reward', 10)
 
         self.reset_learned_weights_service = self.create_service(
             Trigger,
@@ -48,11 +48,11 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
         msg.data = reward
         self.episode_reward_publisher.publish(msg)
 
-    def publish_epoch_reward(self, reward):
-        """Publish the total reward for the full training epoch."""
+    def publish_candidate_reward(self, reward):
+        """Publish the total reward for the full training candidate."""
         msg = Float64()
         msg.data = reward
-        self.epoch_reward_publisher.publish(msg)
+        self.candidate_reward_publisher.publish(msg)
 
     def reset_learned_weights_callback(self, request, response):
         """Backup the current weights and start with new random weights."""

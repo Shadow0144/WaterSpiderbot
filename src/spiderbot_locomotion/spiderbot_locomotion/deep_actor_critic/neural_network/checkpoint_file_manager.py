@@ -112,7 +112,7 @@ class CheckpointFileManager():
                                    filename,
                                    candidates,
                                    current_episode,
-                                   current_epoch,
+                                   current_candidate,
                                    current_generation,
                                    parent_candidate_filename):
         """Save all the current candidate names and rewards."""
@@ -120,7 +120,7 @@ class CheckpointFileManager():
         full_filename = os.path.join(filepath, filename)
         with open(full_filename, 'w') as checkpoint_file:
             checkpoint_file.write(f'{current_episode}\n')
-            checkpoint_file.write(f'{current_epoch}\n')
+            checkpoint_file.write(f'{current_candidate}\n')
             checkpoint_file.write(f'{current_generation}\n')
             if parent_candidate_filename is not None:
                 checkpoint_file.write(parent_candidate_filename + '\n')
@@ -128,8 +128,8 @@ class CheckpointFileManager():
                 checkpoint_file.write('\n')
             for candidate in candidates:
                 filename = candidate.filename
-                epoch_reward = candidate.epoch_reward
-                checkpoint_file.write(f'{filename},{epoch_reward}\n')
+                candidate_reward = candidate.candidate_reward
+                checkpoint_file.write(f'{filename},{candidate_reward}\n')
 
     def load_population_checkpoint(self,
                                    filename):
@@ -143,7 +143,7 @@ class CheckpointFileManager():
                                     f'{full_filename}')
         with open(full_filename, 'r') as checkpoint_file:
             current_episode = int(checkpoint_file.readline())
-            current_epoch = int(checkpoint_file.readline())
+            current_candidate = int(checkpoint_file.readline())
             current_generation = int(checkpoint_file.readline())
             parent_candidate_filename = checkpoint_file.readline().strip()
             for row in checkpoint_file:
@@ -152,7 +152,7 @@ class CheckpointFileManager():
         return (
             raw_candidates,
             current_episode,
-            current_epoch,
+            current_candidate,
             current_generation,
             parent_candidate_filename
         )

@@ -13,19 +13,19 @@ class PopulationTrainer():
     class CandidateRecord:
         """Record of the candidate's filename and the total of its rewards."""
 
-        def __init__(self, filename, epoch_reward):
+        def __init__(self, filename, candidate_reward):
             """Initialize internal state."""
             self.filename = filename
-            self.epoch_reward = epoch_reward
+            self.candidate_reward = candidate_reward
 
     def __init__(self,
                  logger,
-                 episodes_per_epoch=10,
+                 episodes_per_candidate=10,
                  population_size=10,
                  use_soft_actor_critics_policy=True):
         """Initialize the class."""
         self.logger = logger
-        self.episodes_per_epoch = episodes_per_epoch
+        self.episodes_per_candidate = episodes_per_candidate
         self.population_size = population_size
 
         if use_soft_actor_critics_policy:
@@ -36,7 +36,7 @@ class PopulationTrainer():
         self.checkpoint_file_manager = CheckpointFileManager()
 
         self.current_episode = 0
-        self.current_epoch = 0
+        self.current_candidate = 0
         self.current_generation = 0
 
         self.target = None
@@ -75,7 +75,7 @@ class PopulationTrainer():
                 filename,
                 self.candidate_records,
                 self.current_episode,
-                self.current_epoch,
+                self.current_candidate,
                 self.current_generation,
                 self.current_parent_filename
             )
@@ -96,7 +96,7 @@ class PopulationTrainer():
             (
                 raw_candidates,
                 current_episode,
-                self.current_epoch,
+                self.current_candidate,
                 self.current_generation,
                 parent_candidate_filename
             ) = (
@@ -154,10 +154,10 @@ class PopulationTrainer():
         else:
             return None
 
-    def get_current_candidate_epoch_reward(self):
-        """Return the current candidate's epoch reward."""
+    def get_current_candidate_candidate_reward(self):
+        """Return the current candidate's candidate reward."""
         if self.candidate_records:
-            return self.candidate_records[-1].epoch_reward
+            return self.candidate_records[-1].candidate_reward
         else:
             return None
 
@@ -174,32 +174,33 @@ class PopulationTrainer():
         """Get the episode reward from the policy and return it."""
         return self.policy.get_episode_reward()
 
-    def get_epoch_reward(self):
-        """Get the epoch reward from the candidate and return it."""
+    def get_candidate_reward(self):
+        """Get the candidate reward from the candidate and return it."""
         if self.candidate_records:
-            return self.candidate_records[-1].epoch_reward
+            return self.candidate_records[-1].candidate_reward
         else:
             return None
 
-    def _add_episode_reward_to_current_epoch(self):
-        """Add the episode reward to the current epoch reward."""
+    def _add_episode_reward_to_current_candidate(self):
+        """Add the episode reward to the current candidate reward."""
         if self.candidate_records:
-            self.candidate_records[-1].epoch_reward += (
+            self.candidate_records[-1].candidate_reward += (
                 self.get_episode_reward()
             )
 
     def start_new_training_episode(self):
         """Start another training episode or move to the next candidate."""
-        self._add_episode_reward_to_current_epoch()
+        self._add_episode_reward_to_current_candidate()
         if (
             not self.candidate_records or
-            self.current_episode >= self.episodes_per_epoch
+            self.current_episode >= self.episodes_per_candidate
         ):
             self._generate_next_candidate()
         self.policy.start_new_training_episode(False)
         self.current_episode += 1
         self.logger.info(f'Starting training episode '
-                         f'{self.current_episode}/{self.episodes_per_epoch}')
+                         f'{self.current_episode}/'
+                         f'{self.episodes_per_candidate}')
 
     def _create_candidate_filename(self):
         """Create a candidate filename from the system clock."""
@@ -214,9 +215,9 @@ class PopulationTrainer():
 
         # Check if we have enough candidates to advance the population
         self.current_episode = 0
-        self.current_epoch = len(self.candidate_records)
+        self.current_candidate = len(self.candidate_records)
         self.policy.reset()
-        if self.current_epoch >= self.population_size:
+        if self.current_candidate >= self.population_size:
             self._generate_next_generation()
             self.logger.info(f'Starting generation '
                              f'{self.current_generation}')
@@ -234,15 +235,15 @@ class PopulationTrainer():
         if self.current_parent_filename is not None:
             self.policy.load_weights(self.current_parent_filename)
 
-        self.logger.info(f'Starting training epoch '
-                         f'{self.current_epoch}/{self.population_size}')
+        self.logger.info(f'Starting training candidate '
+                         f'{self.current_candidate}/{self.population_size}')
 
     def _generate_next_generation(self):
         """Select the best member of the population and reseed using that."""
-        # Find the candidate with the highest epoch reward to be the
+        # Find the candidate with the highest candidate reward to be the
         # parent of the next generation
         self.current_episode = 0
-        self.current_epoch = 0
+        self.current_candidate = 0
         self.current_generation += 1
         self.current_parent_filename = None
         highest_candidate_filename = 'None'
@@ -250,13 +251,13 @@ class PopulationTrainer():
             highest_candidate_filename = (
                 self.candidate_records[0].filename
             )
-            highest_epoch_reward = (
-                self.candidate_records[0].epoch_reward
+            highest_candidate_reward = (
+                self.candidate_records[0].candidate_reward
             )
             for candidate in self.candidate_records:
-                if candidate.epoch_reward > highest_epoch_reward:
+                if candidate.candidate_reward > highest_candidate_reward:
                     highest_candidate_filename = candidate.filename
-                    highest_epoch_reward = candidate.epoch_reward
+                    highest_candidate_reward = candidate.candidate_reward
             self.current_parent_filename = highest_candidate_filename
             self.policy.load_weights(self.current_parent_filename)
 

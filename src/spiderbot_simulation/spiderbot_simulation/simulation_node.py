@@ -135,10 +135,10 @@ class SimulationNode(Node):
             10
         )
 
-        self.epoch_reward_subscription = self.create_subscription(
+        self.candidate_reward_subscription = self.create_subscription(
             Float64,
-            'epoch_reward',
-            self.epoch_reward_callback,
+            'candidate_reward',
+            self.candidate_reward_callback,
             10
         )
 
@@ -197,16 +197,16 @@ class SimulationNode(Node):
                 msg.scaled)
 
     def step_reward_callback(self, msg):
-        """Enable displaying the step reward and update the reward value."""
+        """Enable displaying the step reward and update it."""
         self.viewer.update_step_reward(msg.data)
 
     def episode_reward_callback(self, msg):
-        """Enable displaying the episode reward and update the reward value."""
+        """Enable displaying the episode reward and update it."""
         self.viewer.update_episode_reward(msg.data)
 
-    def epoch_reward_callback(self, msg):
-        """Enable displaying the epoch reward and update the reward value."""
-        self.viewer.update_epoch_reward(msg.data)
+    def candidate_reward_callback(self, msg):
+        """Enable displaying the candidate reward and update it."""
+        self.viewer.update_candidate_reward(msg.data)
 
     def reset_simulation_callback(self, request, response):
         """Reset simulation."""

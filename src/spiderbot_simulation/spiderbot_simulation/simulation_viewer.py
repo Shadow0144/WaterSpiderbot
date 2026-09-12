@@ -23,8 +23,8 @@ class SimulationViewer():
         self.step_reward = 0.0
         self.displaying_episode_reward = False
         self.episode_reward = 0.0
-        self.displaying_epoch_reward = False
-        self.epoch_reward = 0.0
+        self.displaying_candidate_reward = False
+        self.candidate_reward = 0.0
 
         glfw.init()
         self.window = glfw.create_window(
@@ -169,9 +169,9 @@ class SimulationViewer():
             labels.append('Episode reward:')
             values.append(f'{self.episode_reward}')
 
-        if self.displaying_epoch_reward:
-            labels.append('Epoch reward:')
-            values.append(f'{self.epoch_reward}')
+        if self.displaying_candidate_reward:
+            labels.append('Candidate reward:')
+            values.append(f'{self.candidate_reward}')
 
         if labels and values:
             mujoco.mjr_overlay(
@@ -184,19 +184,19 @@ class SimulationViewer():
             )
 
     def update_step_reward(self, reward):
-        """Enable displaying the step reward and update the reward value."""
+        """Enable displaying the step reward and update it."""
         self.displaying_step_reward = True
         self.step_reward = reward
 
     def update_episode_reward(self, reward):
-        """Enable displaying the episode reward and update the reward value."""
+        """Enable displaying the episode reward and update it."""
         self.displaying_episode_reward = True
         self.episode_reward = reward
 
-    def update_epoch_reward(self, reward):
-        """Enable displaying the epoch reward and update the reward value."""
-        self.displaying_epoch_reward = True
-        self.epoch_reward = reward
+    def update_candidate_reward(self, reward):
+        """Enable displaying the candidate reward and update it."""
+        self.displaying_candidate_reward = True
+        self.candidate_reward = reward
 
     def update(self, current_timestamp):
         """Update the render if enough time has elapsed."""
