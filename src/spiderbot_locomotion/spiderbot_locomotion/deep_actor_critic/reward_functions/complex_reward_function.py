@@ -6,8 +6,10 @@ import math
 class ComplexRewardFunction():
     """Convenience class to calculate the reward for a single step of RL."""
 
-    def __init__(self):
+    def __init__(self, logger):
         """Initialize the reward calculator."""
+        self.logger = logger
+
         # Previous reward function state variables
         self.previous_x = None
         self.previous_y = None
@@ -18,7 +20,7 @@ class ComplexRewardFunction():
         self.episode_terminated = False
 
         # Hyperparameters for ranges
-        self.target_speed = 1.0
+        self.target_speed = 0.02
         self.nominal_z = 0.4
         self.nominal_z_range = 0.2
         self.distance_convergence = 0.05
@@ -28,16 +30,18 @@ class ComplexRewardFunction():
         self.max_qvel = 2.0
 
         # Hyperparameters for penalty strengths
-        self.stationary_penalty = -1000.0
-        self.position_penalty = -100.0
-        self.angle_penalty = -0.01
+        self.stationary_penalty = -100.0
+        self.position_progress_reward = 100.0
+        self.position_anti_progress_penalty = -1.0
+        self.angle_progress_reward = 100.0
+        self.angle_anti_progress_penalty = -0.01
         self.tilt_penalty = -1.0
         self.height_penalty = -0.5
-        self.angle_speed_penalty = -10.0
+        self.angle_speed_penalty = -0.01
         self.feet_raised_penalty = -1.0
         self.feet_too_high_penalty = -1.0
-        self.terminated_early_penalty = -3000.0
-        self.arrival_reward = 1000.0
+        self.terminated_early_penalty = -1_000.0
+        self.arrival_reward = 300.0
 
         # Terminate early conditions
         self.max_tilt = 0.8
@@ -158,16 +162,28 @@ class ComplexRewardFunction():
             )
         too_many_legs_off_ground = max(0, legs_off_ground - 4)
 
-        reward_progress = (
-            self.position_penalty *
-            (current_distance - self.previous_distance)
-        )
+        if current_distance > self.previous_distance:
+            reward_progress = (
+                self.position_anti_progress_penalty *
+                (current_distance - self.previous_distance)
+            )
+        else:
+            reward_progress = (
+                self.position_progress_reward *
+                (self.previous_distance - current_distance)
+            )
         self.previous_distance = current_distance
 
-        reward_facing = (
-                self.angle_penalty *
-                (current_angular_distance - self.previous_angular_distance)
-        )
+        if current_angular_distance > self.previous_angular_distance:
+            reward_facing = (
+                    self.angle_anti_progress_penalty *
+                    (current_angular_distance - self.previous_angular_distance)
+            )
+        else:
+            reward_facing = (
+                    self.angle_progress_reward *
+                    (self.previous_angular_distance - current_angular_distance)
+            )
         self.previous_angular_distance = current_angular_distance
 
         reward_movement = (
@@ -222,5 +238,14 @@ class ComplexRewardFunction():
             self.target_reached = True
 
         self.episode_reward += total_reward
+
+        self.logger.info(f'Reward: Progress: {reward_progress} '
+                         f'Facing: {reward_facing} '
+                         f'Movement: {reward_movement} '
+                         f'Tilt: {reward_tilt} '
+                         f'Height: {reward_height} '
+                         f'Angle Speed: {reward_angle_speed} '
+                         f'Feet Planted: {reward_feet_planted} '
+                         f'Feet Too High: {reward_feet_too_high}')
 
         return total_reward, self.target_reached, self.episode_terminated

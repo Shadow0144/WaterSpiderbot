@@ -43,7 +43,7 @@ class DeepActorCriticPolicy():
             device=self.device
         )
 
-        self.reward_function = ComplexRewardFunction()
+        self.reward_function = ComplexRewardFunction(self.logger)
 
         # Reward horizon scaling
         self.gamma = 0.99
