@@ -112,12 +112,16 @@ class CheckpointFileManager():
                                    filename,
                                    candidates,
                                    current_episode,
+                                   current_epoch,
+                                   current_generation,
                                    parent_candidate_filename):
         """Save all the current candidate names and rewards."""
         filepath = self.get_model_weights_path()
         full_filename = os.path.join(filepath, filename)
         with open(full_filename, 'w') as checkpoint_file:
             checkpoint_file.write(f'{current_episode}\n')
+            checkpoint_file.write(f'{current_epoch}\n')
+            checkpoint_file.write(f'{current_generation}\n')
             if parent_candidate_filename is not None:
                 checkpoint_file.write(parent_candidate_filename + '\n')
             else:
@@ -139,11 +143,19 @@ class CheckpointFileManager():
                                     f'{full_filename}')
         with open(full_filename, 'r') as checkpoint_file:
             current_episode = int(checkpoint_file.readline())
+            current_epoch = int(checkpoint_file.readline())
+            current_generation = int(checkpoint_file.readline())
             parent_candidate_filename = checkpoint_file.readline().strip()
             for row in checkpoint_file:
                 items = row.split(',')
                 raw_candidates.append([items[0], float(items[1])])
-        return raw_candidates, current_episode, parent_candidate_filename
+        return (
+            raw_candidates,
+            current_episode,
+            current_epoch,
+            current_generation,
+            parent_candidate_filename
+        )
 
     def delete_population_checkpoint(self, filename):
         """Delete the saved population file."""

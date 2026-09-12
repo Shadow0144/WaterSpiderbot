@@ -13,6 +13,9 @@ class ComplexRewardFunction():
         self.previous_y = None
         self.previous_distance = None
         self.previous_angular_distance = None
+        self.time_s = 0.0
+        self.target_reached = False
+        self.episode_terminated = False
 
         # Hyperparameters for ranges
         self.target_speed = 1.0
@@ -39,15 +42,13 @@ class ComplexRewardFunction():
         # Terminate early conditions
         self.max_tilt = 0.8
         self.min_height = 0.1
-        self.time_to_reach_target_s = 0.0
-        self.time_left_s = self.time_to_reach_target_s
 
         self.episode_reward = 0.0
 
-    def set_time_to_reach_target(self, time_to_reach_target_s):
-        """Set the time estimated to reach the target."""
-        self.time_to_reach_target_s = time_to_reach_target_s
-        self.time_left_s = self.time_to_reach_target_s
+    def set_target(self, target):
+        """Set the training target."""
+        self.target = target
+        self.target_reached = False
 
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
@@ -55,19 +56,27 @@ class ComplexRewardFunction():
         self.previous_y = None
         self.previous_distance = None
         self.previous_angular_distance = None
+        self.time_s = 0.0
+        self.target_reached = False
+        self.episode_terminated = False
         self.episode_reward = 0.0
-        self.time_left_s = self.time_to_reach_target_s
 
     def compute_step_reward(self,
-                            target,
                             spiderbot_pose,
                             delta_time):
         """Calculate per-step reward."""
-        if target is None:
-            return None, False  # Exit early if there is no target
+        if self.target is None:
+            return None, False, False  # Exit early if there is no target
+
+        if self.target_reached:
+            return 0.0, True, False  # Return no reward
+
+        if self.episode_terminated:
+            return 0.0, False, True  # Return no reward
 
         position = spiderbot_pose.body_odometry.pose.pose.position
         orientation = spiderbot_pose.body_odometry.pose.pose.orientation
+        self.time_s += delta_time
 
         qx = orientation.x
         qy = orientation.y
@@ -76,7 +85,7 @@ class ComplexRewardFunction():
         roll = math.atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx**2 + qy**2))
         pitch = math.asin(max(-1.0, min(1.0, 2 * (qw * qy - qz * qx))))
         yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
-        target_theta = target[2]
+        target_theta = self.target[2]
 
         tilt = (roll**2 + pitch**2)
 
@@ -97,8 +106,8 @@ class ComplexRewardFunction():
                 leg_pose.tibia_qvel
             ]
 
-        current_distance = math.hypot(target[0] - position.x,
-                                      target[1] - position.y)
+        current_distance = math.hypot(self.target[0] - position.x,
+                                      self.target[1] - position.y)
         if self.previous_distance is None:
             self.previous_distance = current_distance
 
@@ -199,21 +208,19 @@ class ComplexRewardFunction():
             reward_feet_too_high
         )
 
-        done = False
-        self.time_left_s -= delta_time
-        if self.time_left_s < 0.0:
-            done = True
+        self.episode_terminated = False
         if (
             abs(roll) > self.max_tilt or
             abs(pitch) > self.max_tilt or
             position.z < self.min_height
         ):
             total_reward += self.terminated_early_penalty
-            done = True
-        elif current_distance < self.distance_convergence:
+            self.episode_terminated = True
+
+        if current_distance < self.distance_convergence:
             total_reward += self.arrival_reward
-            done = True
+            self.target_reached = True
 
         self.episode_reward += total_reward
 
-        return total_reward, done
+        return total_reward, self.target_reached, self.episode_terminated

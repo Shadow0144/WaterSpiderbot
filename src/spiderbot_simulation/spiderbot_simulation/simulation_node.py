@@ -1,5 +1,6 @@
 """Simulate a Spiderbot and launch an interactive viewer."""
 
+import math
 import time
 
 import mujoco
@@ -61,8 +62,8 @@ class SimulationNode(Node):
         self.training_target_visible = False
         self.training_target_position = None
         self.training_target_quaternion = None
-        self.training_target_z = 0.5
         self.training_target = self.data.body('training_target')
+        self.training_target_z = self.model.body('training_target').pos[2]
         training_target_body_id = self.model.body('training_target').id
         self.training_target_mocap_id = self.model.body_mocapid[
             training_target_body_id
@@ -72,6 +73,21 @@ class SimulationNode(Node):
         ).id
         self.training_target_backward_geom_id = self.model.geom(
             'training_target_backward_geom'
+        ).id
+
+        self.pose_arrow_position = None
+        self.pose_arrow_quaternion = None
+        self.pose_arrow = self.data.body('pose_arrow')
+        self.pose_arrow_z = self.model.body('pose_arrow').pos[2]
+        pose_arrow_body_id = self.model.body('pose_arrow').id
+        self.pose_arrow_mocap_id = self.model.body_mocapid[
+            pose_arrow_body_id
+        ]
+        self.pose_arrow_forward_geom_id = self.model.geom(
+            'pose_arrow_forward_geom'
+        ).id
+        self.pose_arrow_backward_geom_id = self.model.geom(
+            'pose_arrow_backward_geom'
         ).id
 
         target_publish_rate_ps = 60.0
@@ -223,6 +239,8 @@ class SimulationNode(Node):
         ]
         self.model.geom_rgba[self.training_target_forward_geom_id, 3] = alpha
         self.model.geom_rgba[self.training_target_backward_geom_id, 3] = alpha
+        self.model.geom_rgba[self.pose_arrow_forward_geom_id, 3] = alpha
+        self.model.geom_rgba[self.pose_arrow_backward_geom_id, 3] = alpha
         self.data.mocap_pos[self.training_target_mocap_id] = (
                     self.training_target_position
                 )
@@ -230,7 +248,32 @@ class SimulationNode(Node):
             self.training_target_quaternion
         )
 
-    def _publish_pose(self, current_timestamp):
+    def _update_pose_arrow(self):
+        """Move the pose arrow to match the Spiderbot pose."""
+        self.pose_arrow_position = [
+            self.body.xpos[0],
+            self.body.xpos[1],
+            self.pose_arrow_z
+        ]
+        self.data.mocap_pos[self.pose_arrow_mocap_id] = (
+                            self.pose_arrow_position
+        )
+
+        qx = self.body.xquat[1]
+        qy = self.body.xquat[2]
+        qz = self.body.xquat[3]
+        qw = self.body.xquat[0]
+        yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
+        half_yaw = yaw * 0.5
+        yaw_quaternion = np.array([
+            np.cos(half_yaw), 0.0, 0.0, np.sin(half_yaw)
+        ])
+        self.pose_arrow_quaternion = yaw_quaternion
+        self.data.mocap_quat[self.pose_arrow_mocap_id] = (
+            self.pose_arrow_quaternion
+        )
+
+    def _publish_pose(self):
         """Publish the current pose."""
         spiderbot_pose_msg = utils.construct_pose_msg(
             self.last_timestamp,
@@ -253,7 +296,8 @@ class SimulationNode(Node):
         # Publish the current pose if enough time has elapsed
         if current_timestamp - self.last_timestamp >= self.publish_interval:
             self.last_timestamp = current_timestamp
-            self._publish_pose(current_timestamp)
+            self._update_pose_arrow()
+            self._publish_pose()
 
         # Update the renderer
         self.viewer.update(current_timestamp)

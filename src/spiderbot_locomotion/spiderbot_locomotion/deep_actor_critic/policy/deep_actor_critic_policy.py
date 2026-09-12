@@ -18,6 +18,8 @@ class DeepActorCriticPolicy():
         """Initialize the locomotion neural network."""
         self.logger = logger
 
+        self.current_episode = 0
+
         # Outputs from the Actor are already scaled up
         self.angles_scaled = True
 
@@ -106,11 +108,15 @@ class DeepActorCriticPolicy():
                 lr=1e-4)
         ]
 
+    def reset(self):
+        """Reset the state."""
+        self.current_episode = 0
+
     def get_angles_scaled(self):
         """Return if the angles are pre-scaled or require scaling."""
         return self.angles_scaled
 
-    def start_new_training_episode(self):
+    def start_new_training_episode(self, print_log=True):
         """Reset the internal state variables for the episode."""
         self.hidden_state_t = torch.zeros(
             1,
@@ -119,6 +125,10 @@ class DeepActorCriticPolicy():
         )
         self.transition_t = None
         self.reward_function.start_new_training_episode()
+        self.current_episode += 1
+        if print_log:
+            self.logger.info(f'Starting training episode '
+                             f'{self.current_episode}')
 
     def get_model_weights_exists(self, filename='test_weights.pt'):
         """Get if the model weight file exists."""
@@ -183,19 +193,14 @@ class DeepActorCriticPolicy():
         self._create_critics()
         self.start_new_training_episode()
 
-    def set_target(self, time_to_reach_target_s, target):
+    def set_target(self, target):
         """Update the target and the time expected to reach the target."""
-        self.reward_function.set_time_to_reach_target(time_to_reach_target_s)
         self.target = target
+        self.reward_function.set_target(self.target)
 
     def get_episode_reward(self):
-        """Return the average reward rate per second for the episode."""
-        return (
-            0.0
-            if self.reward_function.time_to_reach_target_s == 0.0 else
-            self.reward_function.episode_reward /
-            self.reward_function.time_to_reach_target_s
-        )
+        """Return the reward for the episode."""
+        return self.reward_function.episode_reward
 
     def select_action(self, spiderbot_pose, deterministic=False):
         """Select the next action."""
@@ -263,10 +268,10 @@ class DeepActorCriticPolicy():
                    delta_time):
         """Perform a single step of training."""
         reward_t = 0.0
-        training_done = False
+        episode_done = False
 
         if self.target is None:
-            return None, reward_t, training_done  # Return early
+            return None, reward_t, episode_done  # Return early
 
         state_t = construct_input_vector(
                 self.target,
@@ -277,7 +282,7 @@ class DeepActorCriticPolicy():
         if self.transition_t is not None:
             # If there was a previous state,
             # calculate the reward and train the actor-critic
-            reward_t, training_done = (
+            reward_t, episode_done = (
                 self.reward_function.compute_step_reward(
                     self.target,
                     spiderbot_pose,
@@ -290,7 +295,7 @@ class DeepActorCriticPolicy():
                 transition_t=self.transition_t,
                 state_tp1=state_t,
                 reward_t=reward_t,
-                training_done=training_done
+                episode_done=episode_done
             )
 
         action_t, self.transition_t = (
@@ -299,13 +304,13 @@ class DeepActorCriticPolicy():
             )
         )
 
-        return action_t, reward_t, training_done
+        return action_t, reward_t, episode_done
 
     def _train_actor_critic_step(self,
                                  transition_t,
                                  state_tp1,
                                  reward_t,
-                                 training_done):
+                                 episode_done):
         """Perform a single-step Actor-Critic update."""
         self.actor.train()
         self.critics[0].train()
@@ -319,7 +324,7 @@ class DeepActorCriticPolicy():
         # Compute Bellman Target (t+1)
 
         with torch.no_grad():
-            if training_done:
+            if episode_done:
                 target_value = reward_tensor
             else:
                 _, hidden_state_tp2 = (

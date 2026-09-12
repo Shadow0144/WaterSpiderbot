@@ -14,7 +14,7 @@ class TrainingObservation:
     log_probability_t: torch.Tensor
     state_tp1: torch.Tensor
     reward_t: float
-    training_done: bool
+    episode_done: bool
 
 
 @dataclass

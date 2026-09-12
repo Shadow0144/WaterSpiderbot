@@ -36,6 +36,8 @@ class DeepActorCriticModule(LocomotionModule):
         self.num_episodes = 0
         self.episode_save_interval = 10
 
+        self.episode_terminated = False
+
         if self.population_training:
             self.population_trainer = PopulationTrainer(
                 self.locomotion_node.get_logger(),
@@ -57,13 +59,13 @@ class DeepActorCriticModule(LocomotionModule):
 
     def update(self, spiderbot_pose_msg):
         """Walk the spiderbot towards its target."""
-        delta_time = self.get_delta_time_from_msg(spiderbot_pose_msg)
-        if delta_time <= 0.0:
+        super().update(spiderbot_pose_msg)
+        if self.delta_time <= 0.0:
             # Wait at least one step before doing anything
             return
 
-        if self.is_resetting:
-            # Wait until the reset is complete
+        if self.episode_terminated:
+            # Wait until a new episode starts
             return
 
         if not self.training:
@@ -72,36 +74,41 @@ class DeepActorCriticModule(LocomotionModule):
             )
         else:
             angles = self.train_step(
-                spiderbot_pose_msg,
-                delta_time
+                spiderbot_pose_msg
             )
         if angles is not None:
             self.publish_angles(angles)
 
-    def train_step(self, spiderbot_pose_msg, delta_time):
+    def train_step(self, spiderbot_pose_msg):
         """Perform a single training step."""
         if self.population_training:
-            action_np, reward, done = (
+            action_np, reward, target_reached, self.episode_terminated = (
                 self.population_trainer.train_step(
                     spiderbot_pose_msg,
-                    delta_time
+                    self.delta_time
                 )
             )
         else:
-            action_np, reward, done = (
+            action_np, reward, target_reached, self.episode_terminated = (
                 self.policy.train_step(
                     spiderbot_pose_msg,
-                    delta_time
+                    self.delta_time
                 )
             )
+
         self.locomotion_node.publish_step_reward(
             reward
         )
 
-        if done:
-            self.locomotion_node.get_logger().info('Training episode done')
-            # Wait until a reset
-            self.is_resetting = True
+        if target_reached:
+            self.locomotion_node.get_logger().info('Training target reached')
+            self.locomotion_node.publish_training_target_reached()
+
+        if self.episode_terminated:
+            self.locomotion_node.get_logger().info(
+                'Training episode terminated'
+            )
+            self.locomotion_node.publish_training_episode_terminated()
 
         return action_np
 
@@ -124,9 +131,19 @@ class DeepActorCriticModule(LocomotionModule):
     def set_training_target(self, set_training_target_msg):
         """Set the target and the estimated time to reach it."""
         super().set_training_target(set_training_target_msg)
+        if self.population_training:
+            self.population_trainer.set_target(self.target)
+        else:
+            self.policy.set_target(self.target)
+
+    def start_training_episode(self):
+        """Start a new training episode."""
+        self.reset()
 
     def reset(self):
         """Reset the neural network."""
+        self.episode_terminated = False
+
         if self.population_training:
             episode_reward = self.population_trainer.get_episode_reward()
             epoch_reward = self.population_trainer.get_epoch_reward()
@@ -145,12 +162,10 @@ class DeepActorCriticModule(LocomotionModule):
 
         if self.population_training:
             self.population_trainer.set_target(
-                self.time_to_reach_target_s,
                 self.target
             )
         else:
             self.policy.set_target(
-                self.time_to_reach_target_s,
                 self.target
             )
 

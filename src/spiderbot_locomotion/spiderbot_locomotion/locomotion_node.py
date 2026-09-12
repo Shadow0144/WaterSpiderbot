@@ -11,7 +11,8 @@ from spiderbot_interfaces.msg import SpiderbotTargetPose
 from spiderbot_interfaces.msg import TrainingTarget
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
-from std_srvs.srv import Empty
+from std_msgs.msg import Empty
+
 from std_srvs.srv import SetBool
 
 
@@ -47,21 +48,34 @@ class LocomotionNode(Node):
         self.add_on_set_parameters_callback(self.parameter_changed_callback)
 
         self.spiderbot_target_pose_publisher = self.create_publisher(
-            SpiderbotTargetPose, 'spiderbot_target_pose', 10)
+            SpiderbotTargetPose,
+            'spiderbot_target_pose',
+            10
+        )
 
         self.leg_set_targets_publisher = self.create_publisher(
-            LegTargets, 'set_leg_targets', 10)
+            LegTargets,
+            'set_leg_targets',
+            10
+        )
+
+        self.training_target_reached_publisher = self.create_publisher(
+            Empty,
+            'training_target_reached',
+            10
+        )
+
+        self.training_episode_terminated_publisher = self.create_publisher(
+            Empty,
+            'training_episode_terminated',
+            10
+        )
 
         self.spiderbot_pose_subscription = self.create_subscription(
             SpiderbotPose,
             'spiderbot_pose',
             self.spiderbot_pose_callback,
             10
-        )
-
-        self.reset_simulation_client = self.create_client(
-            Empty,
-            'reset_simulation'
         )
 
         self.training_target_subscription = self.create_subscription(
@@ -71,13 +85,18 @@ class LocomotionNode(Node):
             10
         )
 
+        self.start_training_episode_subscriber = self.create_subscription(
+            Empty,
+            'start_training_episode',
+            self.start_training_episode_callback,
+            10
+        )
+
         self.set_training_mode_enabled_service = self.create_service(
             SetBool,
             'set_training_mode_enabled',
             self.set_training_mode_enabled_callback
         )
-
-        self.simulation_reset_queued = False
 
         self.get_logger().info('Spiderbot locomotion node started')
 
@@ -120,11 +139,22 @@ class LocomotionNode(Node):
         """Publish target points for the leg to reach for."""
         self.leg_set_targets_publisher.publish(msg)
 
+    def publish_training_target_reached(self):
+        """Publish that the training target was reached."""
+        self.training_target_reached_publisher.publish(Empty())
+
+    def publish_training_episode_terminated(self):
+        """Publish that the training episode was terminated early."""
+        self.training_episode_terminated_publisher.publish(Empty())
+
     def training_target_callback(self, msg):
         """Reset the simuation and has the Spiderbot move to the target."""
         if self.locomotion_module is not None:
             self.locomotion_module.set_training_target(msg)
-            self._queue_simulation_reset()
+
+    def start_training_episode_callback(self, msg):
+        """Start a new training episode."""
+        self.locomotion_module.start_training_episode()
 
     def set_training_mode_enabled_callback(self, request, response):
         """Toggle if training mode is enabled."""
@@ -132,16 +162,3 @@ class LocomotionNode(Node):
         response.success = True
         response.message = 'Success'
         return response
-
-    def _queue_simulation_reset(self):
-        """Queue a simulation reset for the next available chance."""
-        """(Solves issues with threads)"""
-        self.simulation_reset_queued = True
-
-    def reset_simulation(self):
-        """Request the simulation to reset."""
-        request = Empty.Request()
-        future = self.reset_simulation_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
-        self.simulation_reset_queued = False
-        self.locomotion_module.reset()

@@ -65,6 +65,7 @@ class SimulationViewer():
         glfw.set_cursor_pos_callback(self.window, self.mouse_move_callback)
         glfw.set_mouse_button_callback(self.window, self.mouse_button_callback)
         glfw.set_scroll_callback(self.window, self.mouse_scroll_callback)
+        glfw.set_key_callback(self.window, self.key_callback)
 
     def destroy(self):
         """Destroy the window and terminate glfw."""
@@ -145,6 +146,15 @@ class SimulationViewer():
             -0.05 * y_offset,
             self.cam
         )
+
+    def key_callback(self, window, key, scancode, action, mods):
+        """Handle key events in the window."""
+        if action == glfw.PRESS:
+            if key == glfw.KEY_T:
+                # Toggle translucency
+                self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = (
+                    not self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT]
+                )
 
     def _add_overlays(self, viewport):
         """Add the training overlays to the viewport."""

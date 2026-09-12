@@ -14,9 +14,8 @@ def main(args=None):
     try:
         brain_node = BrainNode()
         while rclpy.ok():
-            if brain_node.training_mode_enabled:
-                brain_node.perform_training_step()
             rclpy.spin_once(brain_node, timeout_sec=0)
+            brain_node.update()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass  # Exit on interrupt
     finally:

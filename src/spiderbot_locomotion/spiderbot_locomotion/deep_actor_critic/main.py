@@ -14,8 +14,6 @@ def main(args=None):
         locomotion_node = DeepActorCriticLocomotionNode()
         while rclpy.ok() and locomotion_node.is_running():
             rclpy.spin_once(locomotion_node, timeout_sec=0)
-            if locomotion_node.simulation_reset_queued:
-                locomotion_node.reset_simulation()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass  # Exit on interrupt
     finally:

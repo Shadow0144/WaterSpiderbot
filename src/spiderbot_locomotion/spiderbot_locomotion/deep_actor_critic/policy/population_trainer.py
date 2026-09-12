@@ -36,8 +36,9 @@ class PopulationTrainer():
         self.checkpoint_file_manager = CheckpointFileManager()
 
         self.current_episode = 0
+        self.current_epoch = 0
+        self.current_generation = 0
 
-        self.time_to_reach_target_s = 0.0
         self.target = None
 
         self.current_parent_filename = None
@@ -74,6 +75,8 @@ class PopulationTrainer():
                 filename,
                 self.candidate_records,
                 self.current_episode,
+                self.current_epoch,
+                self.current_generation,
                 self.current_parent_filename
             )
             self.logger.info(f'Saved population: {filename}')
@@ -93,6 +96,8 @@ class PopulationTrainer():
             (
                 raw_candidates,
                 current_episode,
+                self.current_epoch,
+                self.current_generation,
                 parent_candidate_filename
             ) = (
                 self.checkpoint_file_manager.load_population_checkpoint(
@@ -156,11 +161,10 @@ class PopulationTrainer():
         else:
             return None
 
-    def set_target(self, time_to_reach_target_s, target):
+    def set_target(self, target):
         """Set the target and the estimated time to reach it."""
-        self.time_to_reach_target_s = time_to_reach_target_s
         self.target = target
-        self.policy.set_target(time_to_reach_target_s, target)
+        self.policy.set_target(self.target)
 
     def train_step(self, spiderbot_pose_msg, delta_time):
         """Perform a single training step."""
@@ -192,9 +196,10 @@ class PopulationTrainer():
             self.current_episode >= self.episodes_per_epoch
         ):
             self._generate_next_candidate()
-        self.policy.start_new_training_episode()
+        self.policy.start_new_training_episode(False)
         self.current_episode += 1
-        self.logger.info(f'Current training episode: {self.current_episode}')
+        self.logger.info(f'Starting training episode '
+                         f'{self.current_episode}/{self.episodes_per_epoch}')
 
     def _create_candidate_filename(self):
         """Create a candidate filename from the system clock."""
@@ -209,8 +214,12 @@ class PopulationTrainer():
 
         # Check if we have enough candidates to advance the population
         self.current_episode = 0
-        if len(self.candidate_records) >= self.population_size:
+        self.current_epoch = len(self.candidate_records)
+        self.policy.reset()
+        if self.current_epoch >= self.population_size:
             self._generate_next_generation()
+            self.logger.info(f'Starting generation '
+                             f'{self.current_generation}')
 
         self.candidate_records.append(
             self.CandidateRecord(
@@ -225,10 +234,16 @@ class PopulationTrainer():
         if self.current_parent_filename is not None:
             self.policy.load_weights(self.current_parent_filename)
 
+        self.logger.info(f'Starting training epoch '
+                         f'{self.current_epoch}/{self.population_size}')
+
     def _generate_next_generation(self):
         """Select the best member of the population and reseed using that."""
         # Find the candidate with the highest epoch reward to be the
         # parent of the next generation
+        self.current_episode = 0
+        self.current_epoch = 0
+        self.current_generation += 1
         self.current_parent_filename = None
         highest_candidate_filename = 'None'
         if self.candidate_records:

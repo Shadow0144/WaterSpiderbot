@@ -1,4 +1,3 @@
-float64 time_to_reach_target_s
 float64 target_x
 float64 target_y
 float64 target_theta

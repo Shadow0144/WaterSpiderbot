@@ -46,7 +46,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
     def _determine_layer_sizes(self):
         """Set all the layer sizes."""
         super()._determine_layer_sizes()
-        self.num_frames_k = 5  # Number of frames in each state
+        self.num_frames_k = 10  # Number of frames in each state
         self.num_actor_inputs_k = self.num_actor_inputs * self.num_frames_k
         self.num_critic_inputs = (
             self.num_actor_inputs_k + self.num_actor_outputs
@@ -103,11 +103,15 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         for _ in range(self.num_frames_k):
             self.frames.append(empty_observation)
 
-    def start_new_training_episode(self):
+    def start_new_training_episode(self, print_log=True):
         """Reset the internal state variables for the episode."""
         self._reset_frame_queue()
         self.transition_t = None
         self.reward_function.start_new_training_episode()
+        self.current_episode += 1
+        if print_log:
+            self.logger.info(f'Starting training episode '
+                             f'{self.current_episode}')
 
     def _construct_state(self, spiderbot_pose):
         """Construct a state vector from the latest observation."""
@@ -174,19 +178,19 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
                    delta_time):
         """Perform a single step of training."""
         reward_t = 0.0
-        training_done = False
+        target_reached = False
+        episode_done = False
 
         if self.target is None:
-            return None, reward_t, training_done  # Return early
+            return None, reward_t, target_reached, episode_done  # Return early
 
         state_t = self._construct_state(spiderbot_pose)
 
         if self.transition_t is not None:
             # If there was a previous state,
             # calculate the reward and train the actor-critic
-            reward_t, training_done = (
+            reward_t, target_reached, episode_done = (
                 self.reward_function.compute_step_reward(
-                    self.target,
                     spiderbot_pose,
                     delta_time
                 )
@@ -198,7 +202,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
                 log_probability_t=self.transition_t.log_probability_t,
                 state_tp1=state_t,
                 reward_t=reward_t,
-                training_done=training_done
+                episode_done=episode_done
             )
             self.training_observations.append(training_observation)
 
@@ -211,7 +215,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             )
         )
 
-        return action_t, reward_t, training_done
+        return action_t, reward_t, target_reached, episode_done
 
     def _train_actor_critic_step(self):
         """Perform a batch of Soft Actor-Critic updates."""
@@ -237,7 +241,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             [observation.reward_t for observation in batch_observations],
             dtype=torch.float32, device=self.device).unsqueeze(1)
         trainings_done = torch.tensor(
-            [observation.training_done for observation in batch_observations],
+            [observation.episode_done for observation in batch_observations],
             dtype=torch.float32, device=self.device).unsqueeze(1)
 
         # Compute Bellman Target (t+1)

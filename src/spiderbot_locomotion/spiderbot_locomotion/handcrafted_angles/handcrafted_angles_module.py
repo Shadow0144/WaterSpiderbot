@@ -211,9 +211,9 @@ class HandcraftedAnglesModule(LocomotionModule):
             target_angles[2]
         ]
 
-    def _walk_forward(self, delta_time):
+    def _walk_forward(self):
         """Walk the Spiderbot forward."""
-        self.phase_time_remaining -= delta_time
+        self.phase_time_remaining -= self.delta_time
         if self.phase_time_remaining < 0.0:
             self.phase_time_remaining = self.phase_length_seconds
 
@@ -257,9 +257,9 @@ class HandcraftedAnglesModule(LocomotionModule):
 
     def update(self, spiderbot_pose_msg):
         """Walk the spiderbot forward."""
-        delta_time = self.get_delta_time_from_msg(spiderbot_pose_msg)
-        if delta_time > 0.0:
-            self._walk_forward(delta_time)
+        super().update(spiderbot_pose_msg)
+        if self.delta_time > 0.0:
+            self._walk_forward()
 
     def publish_angles(self):
         """Publish target angles for the leg actuators."""
