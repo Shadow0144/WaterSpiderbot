@@ -26,16 +26,23 @@ class BrainNode(Node):
 
         self.last_timestamp = -1
 
-        self.time_to_reach_target_s = 3
+        self.time_to_reach_target_s = 10
         self.time_left_to_reach_target_s = self.time_to_reach_target_s
         self.num_targets_per_episodes = 30
         self.num_targets_remaining = 0
         self.distance_scaling = 0.10
-        self.rotation_scaling = 0.05
+        self.rotation_half_range = math.pi / 16.0
 
         self.spiderbot_body_x = 0.0
         self.spiderbot_body_y = 0.0
         self.spiderbot_yaw = 0.0
+
+        self.new_episode = True
+        self.episode_direction = 0.0
+        self.episode_rotation = 0.0
+
+        self.direction_jitter_half_range = math.pi / 16
+        self.rotation_jitter_half_range = math.pi / 32
 
         self.declare_parameter('training_mode_enabled',
                                True)
@@ -146,19 +153,39 @@ class BrainNode(Node):
             self.reset_simulation_client.call_async(request)
             self.start_training_episode_publisher.publish(EmptyMsg())
             self.num_targets_remaining = self.num_targets_per_episodes
+            self.new_episode = True
         else:
             self.num_targets_remaining -= 1
 
-            direction = random.uniform(0.0, 2.0 ** math.pi)
+            if self.new_episode:
+                self.episode_direction = random.uniform(0.0, 2.0 ** math.pi)
+                self.episode_rotation = (
+                    random.uniform(
+                        -self.rotation_half_range, self.rotation_half_range
+                    )
+                )
+                self.new_episode = False
+
+            direction = self.episode_direction + random.uniform(
+                    -self.direction_jitter_half_range,
+                    self.direction_jitter_half_range
+                )
             direction_x = math.cos(direction) * self.distance_scaling
             direction_y = math.sin(direction) * self.distance_scaling
-            target_x = self.spiderbot_body_x + direction_x
-            target_y = self.spiderbot_body_y + direction_y
-
-            angle = (
-                random.uniform(0.0, 2.0 ** math.pi) * self.rotation_scaling
+            target_x = (
+                self.spiderbot_body_x + direction_x
             )
-            target_angle = self.spiderbot_yaw + angle
+            target_y = (
+                self.spiderbot_body_y + direction_y
+            )
+
+            rotation = self.episode_rotation + (
+                random.uniform(
+                    -self.rotation_jitter_half_range,
+                    self.rotation_jitter_half_range
+                )
+            )
+            target_angle = self.spiderbot_yaw + rotation
 
             target = [
                 target_x,
@@ -186,7 +213,7 @@ class BrainNode(Node):
 
     def _get_delta_time_from_timestamp(self, spiderbot_pose_msg):
         """Get the change in time between messages."""
-        if (self.last_timestamp < 0.0):
+        if self.last_timestamp < 0.0:
             # Skip the first update to make sure we have an
             # appropriate delta time
             self.last_timestamp = spiderbot_pose_msg.timestamp
