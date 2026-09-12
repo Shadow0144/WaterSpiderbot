@@ -48,9 +48,14 @@ class SimulationViewer():
         mujoco.mjv_defaultFreeCamera(self.model, self.cam)
 
         self.cam.azimuth = 180
-        self.cam.elevation = -20
-        self.cam.distance = 2.0
+        self.cam.elevation = -30
+        self.cam.distance = 3.0
         self.cam.lookat[:] = [0, 0, 0.25]
+
+        self.camera_following = True
+        self.tracking_body_id = self.model.body('cephalothorax').id
+        self.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
+        self.cam.trackbodyid = self.tracking_body_id
 
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_CAMERA] = True
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
@@ -155,6 +160,14 @@ class SimulationViewer():
                 self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = (
                     not self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT]
                 )
+            elif key == glfw.KEY_F:
+                # Follow camera tracking/following
+                self.camera_following = not self.camera_following
+                if self.camera_following:
+                    self.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
+                    self.cam.trackbodyid = self.tracking_body_id
+                else:
+                    self.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
 
     def _add_overlays(self, viewport):
         """Add the training overlays to the viewport."""
