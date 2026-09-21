@@ -27,7 +27,8 @@ class BrainNode(Node):
         self.last_timestamp = -1
 
         self.time_to_reach_target_s = 10
-        self.time_left_to_reach_target_s = self.time_to_reach_target_s
+        self.time_left_to_reach_target_s = 0
+        self.time_left_to_reset_target_s = 1  # After a simulation reset
         self.num_targets_per_episodes = 30
         self.num_targets_remaining = 0
         self.distance_scaling = 0.10
@@ -153,6 +154,7 @@ class BrainNode(Node):
             self.reset_simulation_client.call_async(request)
             self.start_training_episode_publisher.publish(EmptyMsg())
             self.num_targets_remaining = self.num_targets_per_episodes
+            self.time_left_to_reach_target_s = self.time_to_reach_target_s
             self.new_episode = True
         else:
             self.num_targets_remaining -= 1
