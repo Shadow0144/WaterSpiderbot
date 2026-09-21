@@ -14,11 +14,11 @@
             <geom type="sphere" size="0.04" mass="1" contype="4" conaffinity="1"/>
         </default>
         <default class="femur">
-            <joint type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 90"/>
+            <joint type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-90 0"/>
             <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.04" mass="1"/>
         </default>
         <default class="tibia">
-            <joint type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="-45 40"/>
+            <joint type="hinge" axis="1 0 0" pos="0 0 0" limited="true" range="0 135"/>
             <geom type="capsule" fromto="0 0 0  0 0 -0.25" size="0.02" mass="1"/>
         </default>
         <default class="claw">
@@ -41,7 +41,7 @@
             <geom name="pose_arrow_forward_geom" type="sphere" size="0.015 0" rgba="0 0.75 0 0" contype="0" conaffinity="0"/>
         </body>
 
-        <body name="cephalothorax" pos="0 0 0.5">
+        <body name="cephalothorax" pos="0 0 0.25">
             <freejoint name="cephalothorax_joint"/>
             <geom type="ellipsoid" size="0.25 0.25 0.125" rgba="0 0 0 1" mass="0.5" friction="1 0.01 0.0001" contype="2" conaffinity="1"/>
             
@@ -75,30 +75,30 @@
 
     <! Left femur to coxa />
     <actuator>
-        <position name="servo_l_i_femur_pitch" joint="l_i_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_l_i_femur_pitch" joint="l_i_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_l_ii_femur_pitch" joint="l_ii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_l_ii_femur_pitch" joint="l_ii_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_l_iii_femur_pitch" joint="l_iii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_l_iii_femur_pitch" joint="l_iii_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_l_iv_femur_pitch" joint="l_iv_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_l_iv_femur_pitch" joint="l_iv_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
 
     <! Left tibia to femur />
     <actuator>
-        <position name="servo_l_i_tibia_pitch" joint="l_i_femur_tibia_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_l_i_tibia_pitch" joint="l_i_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_l_ii_tibia_pitch" joint="l_ii_femur_tibia_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_l_ii_tibia_pitch" joint="l_ii_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_l_iii_tibia_pitch" joint="l_iii_femur_tibia_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_l_iii_tibia_pitch" joint="l_iii_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_l_iv_tibia_pitch" joint="l_iv_femur_tibia_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_l_iv_tibia_pitch" joint="l_iv_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
 
     <! Right coxa to body />
@@ -117,30 +117,30 @@
 
     <! Right femur to coxa />
     <actuator>
-        <position name="servo_r_i_femur_pitch" joint="r_i_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_r_i_femur_pitch" joint="r_i_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_r_ii_femur_pitch" joint="r_ii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_r_ii_femur_pitch" joint="r_ii_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_r_iii_femur_pitch" joint="r_iii_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_r_iii_femur_pitch" joint="r_iii_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_r_iv_femur_pitch" joint="r_iv_coxa_femur_joint" kp="40" ctrlrange="0 90" forcerange="-20 20"/>
+        <position name="servo_r_iv_femur_pitch" joint="r_iv_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
 
     <! Right tibia to femur />
     <actuator>
-        <position name="servo_r_i_tibia_pitch" joint="r_i_femur_tibia_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_r_i_tibia_pitch" joint="r_i_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_r_ii_tibia_pitch" joint="r_ii_femur_tibia_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_r_ii_tibia_pitch" joint="r_ii_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_r_iii_tibia_pitch" joint="r_iii_femur_tibia_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_r_iii_tibia_pitch" joint="r_iii_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
     <actuator>
-        <position name="servo_r_iv_tibia_pitch" joint="r_iv_femur_tibia_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
+        <position name="servo_r_iv_tibia_pitch" joint="r_iv_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
 
 </mujoco>

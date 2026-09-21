@@ -54,7 +54,7 @@ class Spiderbot:
         # [Metatarsus: 1.0 / 1.05]
         # [Tarsus: 0.4]
         self.segment_lengths_per_leg = []
-        self.base_segment_lengths = [0.0, 0.25, 0.25]
+        self.base_segment_lengths = [0.0, 0.25, 0.5]
         if use_anatomical_lengths:
             self.leg_scales = [1.00, 0.90, 0.75, 1.10]
         else:
@@ -150,7 +150,7 @@ class Spiderbot:
 
             femur = coxa.add_body(
                 name=f'{leg_id}_femur',
-                pos=[0, 0.04, 0], euler=[45, 0, 0])
+                pos=[0, 0.04, 0], euler=[180, 0, 0])
             femur.childclass = 'femur'
             femur.add_joint(name=f'{leg_id}_coxa_femur_joint')
             femur.add_geom(
@@ -162,7 +162,7 @@ class Spiderbot:
             tibia = femur.add_body(
                 name=f'{leg_id}_tibia',
                 pos=[0, 0, -segment_lengths[1]],
-                euler=[-45, 0, 0])
+                euler=[-135, 0, 0])
             tibia.childclass = 'tibia'
             tibia.add_joint(name=f'{leg_id}_femur_tibia_joint')
             tibia.add_geom(
