@@ -22,9 +22,15 @@ class SimulationViewer():
         self.displaying_step_reward = False
         self.step_reward = 0.0
         self.displaying_episode_reward = False
+        self.episode_number = 0
         self.episode_reward = 0.0
         self.displaying_candidate_reward = False
+        self.candidate_number = 0
         self.candidate_reward = 0.0
+        self.generation_number = 0
+
+        self.reward_component_labels = None
+        self.reward_component_values = None
 
         glfw.init()
         self.window = glfw.create_window(
@@ -171,45 +177,68 @@ class SimulationViewer():
 
     def _add_overlays(self, viewport):
         """Add the training overlays to the viewport."""
-        labels = []
-        values = []
+        left_labels = []
+        left_values = []
 
         if self.displaying_step_reward:
-            labels.append('Step reward:')
-            values.append(f'{self.step_reward}')
+            left_labels.append('Step reward:')
+            left_values.append(f'{self.step_reward:.3f}')
 
         if self.displaying_episode_reward:
-            labels.append('Episode reward:')
-            values.append(f'{self.episode_reward}')
+            left_labels.append('Episode number:')
+            left_values.append(f'{self.episode_number}')
+            left_labels.append('Episode reward:')
+            left_values.append(f'{self.episode_reward:.3f}')
 
         if self.displaying_candidate_reward:
-            labels.append('Candidate reward:')
-            values.append(f'{self.candidate_reward}')
+            left_labels.append('Candidate number:')
+            left_values.append(f'{self.candidate_number}')
+            left_labels.append('Candidate reward:')
+            left_values.append(f'{self.candidate_reward:.3f}')
+            left_labels.append('Generation number:')
+            left_values.append(f'{self.generation_number}')
 
-        if labels and values:
+        if left_labels and left_values:
             mujoco.mjr_overlay(
                 mujoco.mjtFont.mjFONT_NORMAL,
                 mujoco.mjtGridPos.mjGRID_TOPLEFT,
                 viewport,
-                '\n'.join(labels),
-                '\n'.join(values),
+                '\n'.join(left_labels),
+                '\n'.join(left_values),
                 self.viewer_context
             )
 
-    def update_step_reward(self, reward):
+        if self.reward_component_labels and self.reward_component_values:
+            mujoco.mjr_overlay(
+                mujoco.mjtFont.mjFONT_NORMAL,
+                mujoco.mjtGridPos.mjGRID_TOPRIGHT,
+                viewport,
+                '\n'.join(self.reward_component_labels),
+                '\n'.join(
+                    [f'{component_value:.3f}' for component_value in
+                     self.reward_component_values]
+                ),
+                self.viewer_context
+            )
+
+    def update_training_status(self, training_status_msg):
         """Enable displaying the step reward and update it."""
         self.displaying_step_reward = True
-        self.step_reward = reward
-
-    def update_episode_reward(self, reward):
-        """Enable displaying the episode reward and update it."""
+        self.step_reward = training_status_msg.step_reward
         self.displaying_episode_reward = True
-        self.episode_reward = reward
-
-    def update_candidate_reward(self, reward):
-        """Enable displaying the candidate reward and update it."""
-        self.displaying_candidate_reward = True
-        self.candidate_reward = reward
+        self.episode_number = training_status_msg.episode_number
+        self.episode_reward = training_status_msg.episode_reward
+        if training_status_msg.using_population_training:
+            self.displaying_candidate_reward = True
+            self.candidate_number = training_status_msg.candidate_number
+            self.candidate_reward = training_status_msg.candidate_reward
+            self.generation_number = training_status_msg.generation_number
+        self.reward_component_labels = (
+            training_status_msg.reward_component_labels
+        )
+        self.reward_component_values = (
+            training_status_msg.reward_component_values
+        )
 
     def update(self, current_timestamp):
         """Update the render if enough time has elapsed."""

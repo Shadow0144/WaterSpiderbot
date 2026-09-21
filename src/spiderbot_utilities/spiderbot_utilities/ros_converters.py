@@ -125,11 +125,14 @@ def construct_target_pose_msg_from_legs(timestamp, leg_names, legs):
     return msg
 
 
-def construct_target_pose_msg(timestamp, scaled, leg_names, target_qposes):
+def construct_target_pose_msg(timestamp,
+                              poses_normalized,
+                              leg_names,
+                              target_qposes):
     """Construct a SpiderbotTargetPose message from target angles."""
     msg = SpiderbotTargetPose()
     msg.timestamp = timestamp
-    msg.scaled = scaled
+    msg.poses_normalized = poses_normalized
     leg_poses = []
     for leg_name in leg_names:
         qposes = target_qposes[leg_name]

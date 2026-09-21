@@ -8,6 +8,7 @@ from ..neural_network.deep_critic import DeepCritic
 from ..neural_network.deep_recurrent_actor import DeepRecurrentActor
 from ..neural_network.step_transition import RecurrentStepTransition
 from ..reward_functions.complex_reward_function import ComplexRewardFunction
+from ..reward_functions.training_status import TrainingStatus
 from ..utility import construct_input_vector
 
 
@@ -18,10 +19,10 @@ class DeepActorCriticPolicy():
         """Initialize the locomotion neural network."""
         self.logger = logger
 
-        self.current_episode = 0
+        self.episode_number = 0
+        self.episode_reward = 0.0
 
-        # Outputs from the Actor are already scaled up
-        self.angles_scaled = True
+        self.poses_normalized = False
 
         self.device = (
             torch.accelerator.current_accelerator().type
@@ -110,11 +111,13 @@ class DeepActorCriticPolicy():
 
     def reset(self):
         """Reset the state."""
-        self.current_episode = 0
+        self.episode_number = 0
+        self.episode_reward = 0.0
+        self.target = None
 
-    def get_angles_scaled(self):
-        """Return if the angles are pre-scaled or require scaling."""
-        return self.angles_scaled
+    def get_poses_normalized(self):
+        """Return if the poses are normalized or already scaled."""
+        return self.poses_normalized
 
     def start_new_training_episode(self, print_log=True):
         """Reset the internal state variables for the episode."""
@@ -125,10 +128,10 @@ class DeepActorCriticPolicy():
         )
         self.transition_t = None
         self.reward_function.start_new_training_episode()
-        self.current_episode += 1
+        self.episode_number += 1
         if print_log:
             self.logger.info(f'Starting training episode '
-                             f'{self.current_episode}')
+                             f'{self.episode_number}')
 
     def get_model_weights_exists(self, filename='test_weights.pt'):
         """Get if the model weight file exists."""
@@ -198,10 +201,6 @@ class DeepActorCriticPolicy():
         self.target = target
         self.reward_function.set_target(self.target)
 
-    def get_episode_reward(self):
-        """Return the reward for the episode."""
-        return self.reward_function.episode_reward
-
     def select_action(self, spiderbot_pose, deterministic=False):
         """Select the next action."""
         if self.target is None:
@@ -267,11 +266,19 @@ class DeepActorCriticPolicy():
                    spiderbot_pose,
                    delta_time):
         """Perform a single step of training."""
-        reward_t = 0.0
-        episode_done = False
+        training_status = TrainingStatus(
+            step_reward=0.0,
+            episode_reward=self.episode_reward,
+            episode_number=self.episode_number,
+            target_reached=False,
+            episode_terminated=False,
+            reward_component_labels=[],
+            reward_component_values=[]
+        )
 
         if self.target is None:
-            return None, reward_t, episode_done  # Return early
+            # Return early
+            return None, training_status
 
         state_t = construct_input_vector(
                 self.target,
@@ -282,20 +289,19 @@ class DeepActorCriticPolicy():
         if self.transition_t is not None:
             # If there was a previous state,
             # calculate the reward and train the actor-critic
-            reward_t, episode_done = (
-                self.reward_function.compute_step_reward(
-                    self.target,
-                    spiderbot_pose,
-                    delta_time
-                )
+            self.reward_function.compute_step_reward(
+                training_status,
+                self.target,
+                spiderbot_pose,
+                delta_time
             )
 
             # From the perspective of the training step, state_t is state_tp1
             self._train_actor_critic_step(
                 transition_t=self.transition_t,
                 state_tp1=state_t,
-                reward_t=reward_t,
-                episode_done=episode_done
+                reward_t=training_status.step_reward,
+                episode_terminated=training_status.episode_terminated
             )
 
         action_t, self.transition_t = (
@@ -304,13 +310,17 @@ class DeepActorCriticPolicy():
             )
         )
 
-        return action_t, reward_t, episode_done
+        self.episode_reward += training_status.step_reward
+        training_status.episode_reward = self.episode_reward
+        training_status.episode_number = self.episode_number
+
+        return action_t, training_status
 
     def _train_actor_critic_step(self,
                                  transition_t,
                                  state_tp1,
                                  reward_t,
-                                 episode_done):
+                                 episode_terminated):
         """Perform a single-step Actor-Critic update."""
         self.actor.train()
         self.critics[0].train()
@@ -324,7 +334,7 @@ class DeepActorCriticPolicy():
         # Compute Bellman Target (t+1)
 
         with torch.no_grad():
-            if episode_done:
+            if episode_terminated:
                 target_value = reward_tensor
             else:
                 _, hidden_state_tp2 = (

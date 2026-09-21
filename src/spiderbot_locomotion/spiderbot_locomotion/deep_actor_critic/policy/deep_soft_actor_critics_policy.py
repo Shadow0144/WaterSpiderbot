@@ -12,6 +12,7 @@ from ..neural_network.deep_actor import DeepActor
 from ..neural_network.deep_critic import DeepCritic
 from ..neural_network.step_transition import StepTransition
 from ..neural_network.step_transition import TrainingObservation
+from ..reward_functions.training_status import TrainingStatus
 from ..utility import construct_input_vector
 
 
@@ -22,8 +23,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         """Initialize the locomotion neural network."""
         super().__init__(logger)
 
-        # Output angles will need to be scaled up
-        self.angles_scaled = False
+        self.poses_normalized = True
 
         self.batch_size = 100
         self.buffer_size = 10_000
@@ -108,10 +108,10 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         self._reset_frame_queue()
         self.transition_t = None
         self.reward_function.start_new_training_episode()
-        self.current_episode += 1
+        self.episode_number += 1
         if print_log:
             self.logger.info(f'Starting training episode '
-                             f'{self.current_episode}')
+                             f'{self.episode_number}')
 
     def _construct_state(self, spiderbot_pose):
         """Construct a state vector from the latest observation."""
@@ -177,23 +177,29 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
                    spiderbot_pose,
                    delta_time):
         """Perform a single step of training."""
-        reward_t = 0.0
-        target_reached = False
-        episode_done = False
+        training_status = TrainingStatus(
+            step_reward=0.0,
+            episode_reward=self.episode_reward,
+            episode_number=self.episode_number,
+            target_reached=False,
+            episode_terminated=False,
+            reward_component_labels=[],
+            reward_component_values=[]
+        )
 
         if self.target is None:
-            return None, reward_t, target_reached, episode_done  # Return early
+            # Return early
+            return None, training_status
 
         state_t = self._construct_state(spiderbot_pose)
 
         if self.transition_t is not None:
             # If there was a previous state,
             # calculate the reward and train the actor-critic
-            reward_t, target_reached, episode_done = (
-                self.reward_function.compute_step_reward(
-                    spiderbot_pose,
-                    delta_time
-                )
+            self.reward_function.compute_step_reward(
+                training_status,
+                spiderbot_pose,
+                delta_time
             )
 
             training_observation = TrainingObservation(
@@ -201,8 +207,8 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
                 action_t=self.transition_t.action_t,
                 log_probability_t=self.transition_t.log_probability_t,
                 state_tp1=state_t,
-                reward_t=reward_t,
-                episode_done=episode_done
+                reward_t=training_status.step_reward,
+                episode_terminated=training_status.episode_terminated
             )
             self.training_observations.append(training_observation)
 
@@ -215,7 +221,11 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             )
         )
 
-        return action_t, reward_t, target_reached, episode_done
+        self.episode_reward += training_status.step_reward
+        training_status.episode_reward = self.episode_reward
+        training_status.episode_number = self.episode_number
+
+        return action_t, training_status
 
     def _train_actor_critic_step(self):
         """Perform a batch of Soft Actor-Critic updates."""
@@ -241,7 +251,8 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             [observation.reward_t for observation in batch_observations],
             dtype=torch.float32, device=self.device).unsqueeze(1)
         trainings_done = torch.tensor(
-            [observation.episode_done for observation in batch_observations],
+            [observation.episode_terminated
+             for observation in batch_observations],
             dtype=torch.float32, device=self.device).unsqueeze(1)
 
         # Compute Bellman Target (t+1)
@@ -249,13 +260,16 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         with torch.no_grad():
             action_distributions_tp1 = self.actor(states_tp1)
             actions_tp1 = action_distributions_tp1.sample()
+            bounded_pi_actions_tp1 = torch.tanh(actions_tp1)
             log_probability_tp1 = action_distributions_tp1.log_prob(
-                actions_tp1
+                bounded_pi_actions_tp1
             ).sum(dim=-1, keepdim=True)
 
             critic_values_tp1_min = None
             for target_critic in self.target_critics:
-                critic_values_tp1 = target_critic(states_tp1, actions_tp1)
+                critic_values_tp1 = target_critic(
+                    states_tp1, bounded_pi_actions_tp1
+                )
                 if critic_values_tp1_min is None:
                     critic_values_tp1_min = critic_values_tp1
                 else:
@@ -291,7 +305,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         pi_actions_t = pi_action_distributions_t.rsample()
         bounded_pi_actions_t = torch.tanh(pi_actions_t)
         jacobian_correction_t = torch.log(
-            1.0 - bounded_pi_actions_t.pow(2) + self.epsilon
+            torch.clamp(1.0 - bounded_pi_actions_t.pow(2), self.epsilon)
         )
         corrected_pi_action_distributions_t = (
             pi_action_distributions_t.log_prob(
@@ -304,7 +318,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
 
         critic_values_t_min = None
         for critic in self.critics:
-            pi_critic_values_t = critic(states_t, pi_actions_t)
+            pi_critic_values_t = critic(states_t, bounded_pi_actions_t)
             if critic_values_t_min is None:
                 critic_values_t_min = pi_critic_values_t
             else:

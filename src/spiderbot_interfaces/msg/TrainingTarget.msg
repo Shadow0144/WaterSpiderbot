@@ -1,3 +1,3 @@
-float64 target_x
-float64 target_y
-float64 target_theta
+float32 target_x
+float32 target_y
+float32 target_theta

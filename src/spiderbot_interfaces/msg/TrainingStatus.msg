@@ -1,0 +1,13 @@
+float32 step_reward
+float32 episode_reward
+float32 candidate_reward
+bool using_population_training
+int32 episode_number
+int32 episodes_per_candidate
+int32 candidate_number
+int32 candidates_per_generation
+int32 generation_number
+bool target_reached
+bool episode_terminated
+string[] reward_component_labels
+float32[] reward_component_values

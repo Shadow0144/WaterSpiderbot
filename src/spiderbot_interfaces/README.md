@@ -14,6 +14,8 @@ Provides the ROS 2 message, service, and action interface definitions.
  Provides a timestamp, a position and orientation of the Spiderbot body, and a pose for each of the legs
 - SpiderbotTargetPose
  Provides a timestamp and a target pose for each of the legs
+- TrainingStatus
+ Provides information on the current status of the train
 - TrainingTarget
  Provides a max time to reach a target pose, an x and y coordinate for the target, and an angle for the target
 

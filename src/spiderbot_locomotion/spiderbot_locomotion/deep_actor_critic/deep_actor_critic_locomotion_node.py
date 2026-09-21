@@ -1,6 +1,7 @@
 """Spiderbot locomotion node using a deep learning actor-critic."""
 
-from std_msgs.msg import Float64
+
+from spiderbot_interfaces.msg import TrainingStatus
 
 from std_srvs.srv import Trigger
 
@@ -21,14 +22,11 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
             self.spiderbot_description
         )
 
-        self.step_reward_publisher = self.create_publisher(
-            Float64, 'step_reward', 10)
-
-        self.episode_reward_publisher = self.create_publisher(
-            Float64, 'episode_reward', 10)
-
-        self.candidate_reward_publisher = self.create_publisher(
-            Float64, 'candidate_reward', 10)
+        self.training_status_publisher = self.create_publisher(
+            TrainingStatus,
+            'training_status',
+            10
+        )
 
         self.reset_learned_weights_service = self.create_service(
             Trigger,
@@ -36,23 +34,31 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
             self.reset_learned_weights_callback
         )
 
-    def publish_step_reward(self, reward):
-        """Publish the reward for the last step."""
-        msg = Float64()
-        msg.data = reward
-        self.step_reward_publisher.publish(msg)
-
-    def publish_episode_reward(self, reward):
-        """Publish the reward for the full training episode."""
-        msg = Float64()
-        msg.data = reward
-        self.episode_reward_publisher.publish(msg)
-
-    def publish_candidate_reward(self, reward):
-        """Publish the total reward for the full training candidate."""
-        msg = Float64()
-        msg.data = reward
-        self.candidate_reward_publisher.publish(msg)
+    def publish_training_status(self, training_status):
+        """Publish information on the training and the reward."""
+        msg = TrainingStatus()
+        msg.step_reward = training_status.step_reward
+        msg.episode_reward = training_status.episode_reward
+        msg.candidate_reward = training_status.candidate_reward
+        msg.using_population_training = (
+            training_status.using_population_training
+        )
+        msg.episode_number = training_status.episode_number
+        msg.episodes_per_candidate = training_status.episodes_per_candidate
+        msg.candidate_number = training_status.candidate_number
+        msg.candidates_per_generation = (
+            training_status.candidates_per_generation
+        )
+        msg.generation_number = training_status.generation_number
+        msg.target_reached = training_status.target_reached
+        msg.episode_terminated = training_status.episode_terminated
+        msg.reward_component_labels = (
+            training_status.reward_component_labels
+        )
+        msg.reward_component_values = (
+            training_status.reward_component_values
+        )
+        self.training_status_publisher.publish(msg)
 
     def reset_learned_weights_callback(self, request, response):
         """Backup the current weights and start with new random weights."""

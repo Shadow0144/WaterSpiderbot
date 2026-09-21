@@ -13,12 +13,11 @@ from rclpy.node import Node
 from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
+from spiderbot_interfaces.msg import TrainingStatus
 from spiderbot_interfaces.msg import TrainingTarget
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 import spiderbot_utilities as utils
-
-from std_msgs.msg import Float64
 
 from std_srvs.srv import Empty
 
@@ -121,24 +120,10 @@ class SimulationNode(Node):
             10
         )
 
-        self.step_reward_subscription = self.create_subscription(
-            Float64,
-            'step_reward',
-            self.step_reward_callback,
-            10
-        )
-
-        self.episode_reward_subscription = self.create_subscription(
-            Float64,
-            'episode_reward',
-            self.episode_reward_callback,
-            10
-        )
-
-        self.candidate_reward_subscription = self.create_subscription(
-            Float64,
-            'candidate_reward',
-            self.candidate_reward_callback,
+        self.training_status_subscription = self.create_subscription(
+            TrainingStatus,
+            'training_status',
+            self.training_status_callback,
             10
         )
 
@@ -188,25 +173,26 @@ class SimulationNode(Node):
         if len(leg_poses_values) != len(self.leg_names):
             return  # Break early
         leg_poses = dict(zip(self.leg_names, leg_poses_values))
-        for leg_name in self.leg_names:
-            leg_pose = leg_poses[leg_name]
-            self.legs[leg_name].set_leg_target_angles(
-                leg_pose.coxa_qpos,
-                leg_pose.femur_qpos,
-                leg_pose.tibia_qpos,
-                msg.scaled)
+        if msg.poses_normalized:
+            for leg_name in self.leg_names:
+                leg_pose = leg_poses[leg_name]
+                self.legs[leg_name].set_leg_actions(
+                    leg_pose.coxa_qpos,
+                    leg_pose.femur_qpos,
+                    leg_pose.tibia_qpos
+                )
+        else:
+            for leg_name in self.leg_names:
+                leg_pose = leg_poses[leg_name]
+                self.legs[leg_name].set_leg_target_angles(
+                    leg_pose.coxa_qpos,
+                    leg_pose.femur_qpos,
+                    leg_pose.tibia_qpos
+                )
 
-    def step_reward_callback(self, msg):
-        """Enable displaying the step reward and update it."""
-        self.viewer.update_step_reward(msg.data)
-
-    def episode_reward_callback(self, msg):
-        """Enable displaying the episode reward and update it."""
-        self.viewer.update_episode_reward(msg.data)
-
-    def candidate_reward_callback(self, msg):
-        """Enable displaying the candidate reward and update it."""
-        self.viewer.update_candidate_reward(msg.data)
+    def training_status_callback(self, msg):
+        """Enable displaying and update the information on the training."""
+        self.viewer.update_training_status(msg)
 
     def reset_simulation_callback(self, request, response):
         """Reset simulation."""

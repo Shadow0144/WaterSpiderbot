@@ -31,23 +31,31 @@ class ComplexRewardFunction():
 
         # Hyperparameters for penalty strengths
         self.stationary_penalty = -100.0
-        self.position_progress_reward = 100.0
-        self.position_anti_progress_penalty = -1.0
-        self.angle_progress_reward = 100.0
-        self.angle_anti_progress_penalty = -0.01
+        self.position_progress_reward = 1_000.0
+        self.position_anti_progress_penalty = -100.0
+        self.angle_progress_reward = 1_000.0
+        self.angle_anti_progress_penalty = -0.1
         self.tilt_penalty = -1.0
         self.height_penalty = -0.5
         self.angle_speed_penalty = -0.01
-        self.feet_raised_penalty = -1.0
-        self.feet_too_high_penalty = -1.0
-        self.terminated_early_penalty = -1_000.0
-        self.arrival_reward = 300.0
+        self.feet_raised_penalty = -0.01
+        self.feet_too_high_penalty = -0.02
+        self.terminated_early_penalty = -10.0
+        self.arrival_reward = 30.0
+        self.reward_component_labels = [
+            'Progress',
+            'Facing',
+            'Movement',
+            'Tilt',
+            'Height',
+            'Angle Speed',
+            'Feet Planted',
+            'Feet Too High',
+        ]
 
         # Terminate early conditions
         self.max_tilt = 0.8
         self.min_height = 0.1
-
-        self.episode_reward = 0.0
 
     def set_target(self, target):
         """Set the training target."""
@@ -61,22 +69,31 @@ class ComplexRewardFunction():
         self.previous_distance = None
         self.previous_angular_distance = None
         self.time_s = 0.0
+        self.target = None
         self.target_reached = False
         self.episode_terminated = False
-        self.episode_reward = 0.0
 
     def compute_step_reward(self,
+                            training_status,
                             spiderbot_pose,
                             delta_time):
         """Calculate per-step reward."""
-        if self.target is None:
-            return None, False, False  # Exit early if there is no target
-
-        if self.target_reached:
-            return 0.0, True, False  # Return no reward
-
-        if self.episode_terminated:
-            return 0.0, False, True  # Return no reward
+        if (
+            self.target is None or
+            self.target_reached or
+            self.episode_terminated
+        ):
+            reward_component_values = [0.0] * len(self.reward_component_labels)
+            training_status.step_reward = 0.0
+            training_status.target_reached = self.target_reached
+            training_status.episode_terminated = self.episode_terminated
+            training_status.reward_component_labels = (
+                self.reward_component_labels
+            )
+            training_status.reward_component_values = (
+                reward_component_values
+            )
+            return  # Return early
 
         position = spiderbot_pose.body_odometry.pose.pose.position
         orientation = spiderbot_pose.body_odometry.pose.pose.orientation
@@ -137,19 +154,13 @@ class ComplexRewardFunction():
         )
 
         legs_off_ground = 0
-        total_actuation_outside_of_range = 0
+        actuators_not_actuating = 0
         legs_above_body = 0
         for leg_pose in spiderbot_pose.leg_poses:
             leg_actuator_speeds = actuator_speeds[leg_pose.leg_name]
             for actuator_speed in leg_actuator_speeds:
                 if abs(actuator_speed) < self.min_qvel:
-                    total_actuation_outside_of_range += (
-                        abs(self.min_qvel) - actuator_speed
-                    )
-                elif abs(actuator_speed) > self.max_qvel:
-                    total_actuation_outside_of_range += (
-                        abs(actuator_speed) - self.max_qvel
-                    )
+                    actuators_not_actuating += 1
 
             legs_off_ground += (
                 1 if leg_pose.claw_z > self.foot_off_ground_z else 0
@@ -202,7 +213,7 @@ class ComplexRewardFunction():
         )
 
         reward_angle_speed = (
-            self.angle_speed_penalty * total_actuation_outside_of_range
+            self.angle_speed_penalty * actuators_not_actuating
         )
 
         reward_feet_planted = (
@@ -237,15 +248,19 @@ class ComplexRewardFunction():
             total_reward += self.arrival_reward
             self.target_reached = True
 
-        self.episode_reward += total_reward
+        reward_component_values = [
+            reward_progress,
+            reward_facing,
+            reward_movement,
+            reward_tilt,
+            reward_height,
+            reward_angle_speed,
+            reward_feet_planted,
+            reward_feet_too_high,
+        ]
 
-        self.logger.info(f'Reward: Progress: {reward_progress} '
-                         f'Facing: {reward_facing} '
-                         f'Movement: {reward_movement} '
-                         f'Tilt: {reward_tilt} '
-                         f'Height: {reward_height} '
-                         f'Angle Speed: {reward_angle_speed} '
-                         f'Feet Planted: {reward_feet_planted} '
-                         f'Feet Too High: {reward_feet_too_high}')
-
-        return total_reward, self.target_reached, self.episode_terminated
+        training_status.step_reward = total_reward
+        training_status.target_reached = self.target_reached
+        training_status.episode_terminated = self.episode_terminated
+        training_status.reward_component_labels = self.reward_component_labels
+        training_status.reward_component_values = reward_component_values

@@ -25,25 +25,25 @@ class DeepActorCriticModule(LocomotionModule):
         """Initialize the locomotion module."""
         super().__init__(locomotion_node, spiderbot_description)
 
-        # Outputs from the Actor are not already scaled up
-        # and require scaling by the correct ranges
-        self.angles_scaled = False
-
         self.training = training_mode_enabled
-        self.population_training = self.training and use_population_training
+        self.using_population_training = (
+            self.training and use_population_training
+        )
 
         self.target = None
-        self.num_episodes = 0
+        self.episode_number = 0
         self.episode_save_interval = 10
 
         self.episode_terminated = False
 
-        if self.population_training:
+        if self.using_population_training:
             self.population_trainer = PopulationTrainer(
                 self.locomotion_node.get_logger(),
                 use_soft_actor_critics_policy=use_soft_actor_critics_policy
             )
-            self.angles_scaled = self.population_trainer.get_angles_scaled()
+            self.poses_normalized = (
+                self.population_trainer.get_poses_normalized()
+            )
             self.population_trainer.load_population_checkpoint()
         else:
             if use_soft_actor_critics_policy:
@@ -54,7 +54,7 @@ class DeepActorCriticModule(LocomotionModule):
                 self.policy = DeepActorCriticPolicy(
                     self.locomotion_node.get_logger()
                 )
-            self.angles_scaled = self.policy.get_angles_scaled()
+            self.poses_normalized = self.policy.get_poses_normalized()
             self.policy.load_weights()
 
     def update(self, spiderbot_pose_msg):
@@ -72,45 +72,47 @@ class DeepActorCriticModule(LocomotionModule):
             angles = self.policy.select_action(
                 spiderbot_pose_msg
             )
+            if angles is not None:
+                self.publish_angles(angles)
         else:
-            angles = self.train_step(
+            angles, training_status = self.train_step(
                 spiderbot_pose_msg
             )
-        if angles is not None:
-            self.publish_angles(angles)
+            if angles is not None:
+                self.publish_angles(angles)
+            if training_status is not None:
+                self.publish_training_status(training_status)
 
     def train_step(self, spiderbot_pose_msg):
         """Perform a single training step."""
-        if self.population_training:
-            action_np, reward, target_reached, self.episode_terminated = (
-                self.population_trainer.train_step(
+        if self.using_population_training:
+            action_t, training_status = self.population_trainer.train_step(
                     spiderbot_pose_msg,
                     self.delta_time
                 )
-            )
         else:
-            action_np, reward, target_reached, self.episode_terminated = (
-                self.policy.train_step(
+            action_t, training_status = self.policy.train_step(
                     spiderbot_pose_msg,
                     self.delta_time
                 )
-            )
-
-        self.locomotion_node.publish_step_reward(
-            reward
+        training_status.using_population_training = (
+            self.using_population_training
         )
 
-        if target_reached:
+        self.locomotion_node.publish_training_status(training_status)
+
+        if training_status.target_reached:
             self.locomotion_node.get_logger().info('Training target reached')
             self.locomotion_node.publish_training_target_reached()
 
+        self.episode_terminated = training_status.episode_terminated
         if self.episode_terminated:
             self.locomotion_node.get_logger().info(
                 'Training episode terminated'
             )
             self.locomotion_node.publish_training_episode_terminated()
 
-        return action_np
+        return action_t, training_status
 
     def publish_angles(self, target_angles):
         """Publish target angles for the leg actuators."""
@@ -122,16 +124,20 @@ class DeepActorCriticModule(LocomotionModule):
             )
         msg = utils.construct_target_pose_msg(
                     time.time(),
-                    self.angles_scaled,
+                    self.poses_normalized,
                     self.leg_names,
                     target_angles_per_leg
                 )
         self.locomotion_node.publish_angles(msg)
 
+    def publish_training_status(self, training_status):
+        """Publish information on the training step."""
+        self.locomotion_node.publish_training_status(training_status)
+
     def set_training_target(self, set_training_target_msg):
         """Set the target and the estimated time to reach it."""
         super().set_training_target(set_training_target_msg)
-        if self.population_training:
+        if self.using_population_training:
             self.population_trainer.set_target(self.target)
         else:
             self.policy.set_target(self.target)
@@ -144,23 +150,20 @@ class DeepActorCriticModule(LocomotionModule):
         """Reset the neural network."""
         self.episode_terminated = False
 
-        if self.population_training:
-            episode_reward = self.population_trainer.get_episode_reward()
-            candidate_reward = self.population_trainer.get_candidate_reward()
+        if self.using_population_training:
             self.population_trainer.start_new_training_episode()
         else:
-            episode_reward = self.policy.get_episode_reward()
             self.policy.start_new_training_episode()
 
         # Save the weights periodically
-        self.num_episodes += 1
-        if self.num_episodes % self.episode_save_interval == 1:
-            if self.population_training:
+        self.episode_number += 1
+        if self.episode_number % self.episode_save_interval == 1:
+            if self.using_population_training:
                 self.population_trainer.save_population_checkpoint()
             else:
                 self.policy.save_weights()
 
-        if self.population_training:
+        if self.using_population_training:
             self.population_trainer.set_target(
                 self.target
             )
@@ -169,19 +172,11 @@ class DeepActorCriticModule(LocomotionModule):
                 self.target
             )
 
-        self.locomotion_node.publish_episode_reward(
-            episode_reward
-        )
-        if (self.population_training and candidate_reward):
-            self.locomotion_node.publish_candidate_reward(
-                candidate_reward
-            )
-
         super().reset()
 
     def reset_learned_weights(self):
         """Back up the current weights and start with new random weights."""
-        if self.population_training:
+        if self.using_population_training:
             self.population_trainer.reset_checkpoints()
         else:
             self.policy.reset_learned_weights()
