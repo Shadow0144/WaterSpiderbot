@@ -51,15 +51,15 @@ class SpiderLeg:
                               femur_joint_qpos,
                               tibia_joint_qpos]
 
-        self.coxa_actuator_limits = self.model.actuator_ctrlrange[
-            self.servo_coxa_actuator_id
-        ]
-        self.femur_actuator_limits = self.model.actuator_ctrlrange[
-            self.servo_femur_actuator_id
-        ]
-        self.tibia_actuator_limits = self.model.actuator_ctrlrange[
-            self.servo_tibia_actuator_id
-        ]
+        self.coxa_actuator_limits = np.radians(
+            self.model.actuator_ctrlrange[self.servo_coxa_actuator_id]
+        )
+        self.femur_actuator_limits = np.radians(
+            self.model.actuator_ctrlrange[self.servo_femur_actuator_id]
+        )
+        self.tibia_actuator_limits = np.radians(
+            self.model.actuator_ctrlrange[self.servo_tibia_actuator_id]
+        )
 
         self.leg_actuator_limits = [self.coxa_actuator_limits,
                                     self.femur_actuator_limits,
@@ -73,13 +73,13 @@ class SpiderLeg:
         self.femur_actuator_limit_high = self.femur_actuator_limits[1]
         self.tibia_actuator_limit_high = self.tibia_actuator_limits[1]
 
-        self.coxa_actuator_limit_center = 0.5 * (
+        self.coxa_actuator_limit_half_range = 0.5 * (
             self.coxa_actuator_limit_high - self.coxa_actuator_limit_low
         )
-        self.femur_actuator_limit_center = 0.5 * (
+        self.femur_actuator_limit_half_range = 0.5 * (
             self.femur_actuator_limit_high - self.femur_actuator_limit_low
         )
-        self.tibia_actuator_limit_center = 0.5 * (
+        self.tibia_actuator_limit_half_range = 0.5 * (
             self.tibia_actuator_limit_high - self.tibia_actuator_limit_low
         )
 
@@ -104,45 +104,56 @@ class SpiderLeg:
         self.q_target = self.data.qpos[self.leg_qpos_adrs].copy()
         self.q_cmd_filtered = self.q_target.copy()
 
-    def set_coxa_target_angle(self, target_angle_rad, scaled=True):
+    def scale_action_to_radians(self, action, range_low, half_range):
+        """Scale up the action in the range [-1, 1] to the target angle."""
+        return (range_low + ((action + 1.0) * half_range))
+
+    def set_coxa_target_angle(self, target_angle):
         """Set the target angle for the coxa joint."""
-        if not scaled:
-            # Scale up the targets by the actuator range
-            target_angle_rad = self.coxa_actuator_limit_low + (
-                (target_angle_rad + 1.0) *
-                self.coxa_actuator_limit_center
-            )
-        self.data.ctrl[self.servo_coxa_actuator_id] = target_angle_rad
+        self.data.ctrl[self.servo_coxa_actuator_id] = target_angle
 
-    def set_femur_target_angle(self, target_angle_rad, scaled=True):
+    def set_femur_target_angle(self, target_angle):
         """Set the target angle for the femur joint."""
-        if not scaled:
-            # Scale up the targets by the actuator range
-            target_angle_rad = self.femur_actuator_limit_low + (
-                (target_angle_rad + 1.0) *
-                self.femur_actuator_limit_center
-            )
-        self.data.ctrl[self.servo_femur_actuator_id] = target_angle_rad
+        self.data.ctrl[self.servo_femur_actuator_id] = target_angle
 
-    def set_tibia_target_angle(self, target_angle_rad, scaled=True):
+    def set_tibia_target_angle(self, target_angle):
         """Set the target angle for the tibia joint."""
-        if not scaled:
-            # Scale up the targets by the actuator range
-            target_angle_rad = self.tibia_actuator_limit_low + (
-                (target_angle_rad + 1.0) *
-                self.tibia_actuator_limit_center
-            )
-        self.data.ctrl[self.servo_tibia_actuator_id] = target_angle_rad
+        self.data.ctrl[self.servo_tibia_actuator_id] = target_angle
 
     def set_leg_target_angles(self,
-                              coxa_target_angle_rad,
-                              femur_target_angle_rad,
-                              tibia_target_angle_rad,
-                              scaled=True):
+                              coxa_target_angle,
+                              femur_target_angle,
+                              tibia_target_angle):
         """Set the target angles for the leg joints."""
-        self.set_coxa_target_angle(coxa_target_angle_rad, scaled)
-        self.set_femur_target_angle(femur_target_angle_rad, scaled)
-        self.set_tibia_target_angle(tibia_target_angle_rad, scaled)
+        self.set_coxa_target_angle(coxa_target_angle)
+        self.set_femur_target_angle(femur_target_angle)
+        self.set_tibia_target_angle(tibia_target_angle)
+
+    def set_leg_actions(self,
+                        coxa_action,
+                        femur_action,
+                        tibia_action):
+        """Actions are in the range [-1, 1] and need to be scaled up."""
+        coxa_target_angle = self.scale_action_to_radians(
+            coxa_action,
+            self.coxa_actuator_limit_low,
+            self.coxa_actuator_limit_half_range
+        )
+        femur_target_angle = self.scale_action_to_radians(
+            femur_action,
+            self.femur_actuator_limit_low,
+            self.femur_actuator_limit_half_range
+        )
+        tibia_target_angle = self.scale_action_to_radians(
+            tibia_action,
+            self.tibia_actuator_limit_low,
+            self.tibia_actuator_limit_half_range
+        )
+        self.set_leg_target_angles(
+            coxa_target_angle,
+            femur_target_angle,
+            tibia_target_angle
+        )
 
     def get_qposes(self):
         """Return the qposes of all actuators."""
