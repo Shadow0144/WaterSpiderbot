@@ -1,5 +1,5 @@
 <launch>
-    <node pkg="spiderbot_brain" exec="brain_node"/>
+    <node pkg="spiderbot_brain" exec="target_generator_node"/>
     <node pkg="spiderbot_cartography" exec="cartography_node"/>
     <node pkg="spiderbot_description" exec="description_node"/>
     <node pkg="spiderbot_locomotion" exec="deep_actor_critic_locomotion_node">

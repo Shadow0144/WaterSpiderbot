@@ -26,7 +26,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'brain_node = spiderbot_brain.main:main',
+            'target_generator_node = target_generator.main:main',
         ],
     },
 )

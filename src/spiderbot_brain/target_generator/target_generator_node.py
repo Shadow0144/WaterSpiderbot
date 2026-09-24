@@ -1,4 +1,4 @@
-"""Perform high-level planning and training."""
+"""Generate training targets."""
 
 import math
 import random
@@ -15,14 +15,16 @@ from std_srvs.srv import Empty as EmptySrv
 from std_srvs.srv import SetBool
 
 
-class BrainNode(Node):
-    """A brain node for a Spiderbot."""
+class TargetGeneratorNode(Node):
+    """A node for generating training targets for a Spiderbot."""
 
     def __init__(self):
         """Initialize and run a brain."""
-        super().__init__('brain_node')
+        super().__init__('target_generator_node')
 
-        self.get_logger().info('Starting spiderbot brain node')
+        self.get_logger().info(
+            'Starting spiderbot training target generator node'
+        )
 
         self.last_timestamp = -1
 

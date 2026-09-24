@@ -4,7 +4,7 @@ Provides high-level planning and goal setting for a Spiderbot. Currently, just g
 
 ## Nodes
 
-### brain_node
+### target_generator_node
 
 Provides the training targets and times.
 
