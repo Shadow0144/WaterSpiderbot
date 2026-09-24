@@ -4,11 +4,7 @@ import time
 
 import spiderbot_utilities as utils
 
-from .policy.deep_actor_critic_policy import DeepActorCriticPolicy
-from .policy.deep_soft_actor_critics_policy import (
-    DeepSoftActorCriticsPolicy
-)
-from .policy.population_trainer import PopulationTrainer
+from .policy.policy_trainer import PolicyTrainer
 from ..locomotion_module import LocomotionModule
 
 
@@ -33,29 +29,23 @@ class DeepActorCriticModule(LocomotionModule):
         self.target = None
         self.episode_number = 0
         self.episode_save_interval = 10
+        self.population_size = 10 if self.using_population_training else 1
 
         self.episode_terminated = False
 
-        if self.using_population_training:
-            self.population_trainer = PopulationTrainer(
-                self.locomotion_node.get_logger(),
-                use_soft_actor_critics_policy=use_soft_actor_critics_policy
-            )
-            self.poses_normalized = (
-                self.population_trainer.get_poses_normalized()
-            )
-            self.population_trainer.load_population_checkpoint()
-        else:
-            if use_soft_actor_critics_policy:
-                self.policy = DeepSoftActorCriticsPolicy(
-                    self.locomotion_node.get_logger()
-                )
-            else:
-                self.policy = DeepActorCriticPolicy(
-                    self.locomotion_node.get_logger()
-                )
-            self.poses_normalized = self.policy.get_poses_normalized()
-            self.policy.load_weights()
+        self.policy_trainer = PolicyTrainer(
+            self.locomotion_node.get_logger(),
+            use_soft_actor_critics_policy=use_soft_actor_critics_policy
+        )
+        self.are_poses_normalized = (
+            self.policy_trainer.get_are_poses_normalized()
+        )
+        self.policy_trainer.load_population_checkpoint()
+
+        # If not training, then just use the policy directly
+        # The policy trainer can handle loading the policy first though
+        if not self.training:
+            self.policy = self.policy_trainer.policy
 
     def update(self, spiderbot_pose_msg):
         """Walk the spiderbot towards its target."""
@@ -85,16 +75,10 @@ class DeepActorCriticModule(LocomotionModule):
 
     def train_step(self, spiderbot_pose_msg):
         """Perform a single training step."""
-        if self.using_population_training:
-            action_t, training_status = self.population_trainer.train_step(
-                    spiderbot_pose_msg,
-                    self.delta_time
-                )
-        else:
-            action_t, training_status = self.policy.train_step(
-                    spiderbot_pose_msg,
-                    self.delta_time
-                )
+        action_t, training_status = self.policy_trainer.train_step(
+                spiderbot_pose_msg,
+                self.delta_time
+        )
         training_status.using_population_training = (
             self.using_population_training
         )
@@ -124,7 +108,7 @@ class DeepActorCriticModule(LocomotionModule):
             )
         msg = utils.construct_target_pose_msg(
                     time.time(),
-                    self.poses_normalized,
+                    self.are_poses_normalized,
                     self.leg_names,
                     target_angles_per_leg
                 )
@@ -137,10 +121,7 @@ class DeepActorCriticModule(LocomotionModule):
     def set_training_target(self, set_training_target_msg):
         """Set the target and the estimated time to reach it."""
         super().set_training_target(set_training_target_msg)
-        if self.using_population_training:
-            self.population_trainer.set_target(self.target)
-        else:
-            self.policy.set_target(self.target)
+        self.policy_trainer.set_target(self.target)
 
     def start_training_episode(self):
         """Start a new training episode."""
@@ -150,21 +131,18 @@ class DeepActorCriticModule(LocomotionModule):
         """Reset the neural network."""
         self.episode_terminated = False
 
-        if self.using_population_training:
-            self.population_trainer.start_new_training_episode()
-        else:
-            self.policy.start_new_training_episode()
+        self.policy_trainer.start_new_training_episode()
 
         # Save the weights periodically
         self.episode_number += 1
         if self.episode_number % self.episode_save_interval == 1:
             if self.using_population_training:
-                self.population_trainer.save_population_checkpoint()
+                self.policy_trainer.save_population_checkpoint()
             else:
                 self.policy.save_weights()
 
         if self.using_population_training:
-            self.population_trainer.set_target(
+            self.policy_trainer.set_target(
                 self.target
             )
         else:
@@ -176,7 +154,7 @@ class DeepActorCriticModule(LocomotionModule):
 
     def reset_learned_weights(self):
         """Back up the current weights and start with new random weights."""
-        if self.using_population_training:
-            self.population_trainer.reset_checkpoints()
+        if self.training:
+            self.policy_trainer.reset_checkpoints()
         else:
             self.policy.reset_learned_weights()

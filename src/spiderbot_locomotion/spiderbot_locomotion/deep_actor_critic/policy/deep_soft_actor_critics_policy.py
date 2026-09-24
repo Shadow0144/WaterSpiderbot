@@ -23,7 +23,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         """Initialize the locomotion neural network."""
         super().__init__(logger)
 
-        self.poses_normalized = True
+        self.are_poses_normalized = True
 
         self.batch_size = 100
         self.buffer_size = 10_000
@@ -103,15 +103,11 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         for _ in range(self.num_frames_k):
             self.frames.append(empty_observation)
 
-    def start_new_training_episode(self, print_log=True):
+    def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
         self._reset_frame_queue()
         self.transition_t = None
         self.reward_function.start_new_training_episode()
-        self.episode_number += 1
-        if print_log:
-            self.logger.info(f'Starting training episode '
-                             f'{self.episode_number}')
 
     def _construct_state(self, spiderbot_pose):
         """Construct a state vector from the latest observation."""
@@ -179,8 +175,6 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         """Perform a single step of training."""
         training_status = TrainingStatus(
             step_reward=0.0,
-            episode_reward=self.episode_reward,
-            episode_number=self.episode_number,
             target_reached=False,
             episode_terminated=False,
             reward_component_labels=[],
@@ -220,10 +214,6 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
                 state_t
             )
         )
-
-        self.episode_reward += training_status.step_reward
-        training_status.episode_reward = self.episode_reward
-        training_status.episode_number = self.episode_number
 
         return action_t, training_status
 

@@ -1,4 +1,4 @@
-"""Population-based evolutionary selection."""
+"""Policy training class with population-based evolutionary selection."""
 
 from datetime import datetime
 
@@ -7,8 +7,8 @@ from .deep_soft_actor_critics_policy import DeepSoftActorCriticsPolicy
 from ..neural_network.checkpoint_file_manager import CheckpointFileManager
 
 
-class PopulationTrainer():
-    """Select the best-performing candidates to seed next training rounds."""
+class PolicyTrainer():
+    """Train a policy and select the best-performing candidates as seeds."""
 
     class CandidateRecord:
         """Record of the candidate's filename and the total of its rewards."""
@@ -39,14 +39,16 @@ class PopulationTrainer():
         self.candidate_number = 0
         self.generation_number = 1
 
+        self.episode_reward = 0.0
+
         self.target = None
 
         self.current_parent_filename = None
         self.candidate_records = []
 
-    def get_poses_normalized(self):
+    def get_are_poses_normalized(self):
         """Return if the angles are pre-scaled or require scaling."""
-        return self.policy.get_poses_normalized()
+        return self.policy.get_are_poses_normalized()
 
     def get_population_checkpoint_exists(self, filename='checkpoint.csv'):
         """Get if the population checkpoint file exists."""
@@ -173,6 +175,11 @@ class PopulationTrainer():
             self.policy.train_step(spiderbot_pose_msg, delta_time)
         )
 
+        # Add the reward to the episode
+        self.episode_reward += reward_information.step_reward
+        reward_information.episode_number = self.episode_number
+        reward_information.episode_reward = self.episode_reward
+
         # Add the reward to the candidate
         candidate_reward = 0.0
         candidate_number = 0
@@ -195,16 +202,28 @@ class PopulationTrainer():
 
     def start_new_training_episode(self):
         """Start another training episode or move to the next candidate."""
+        # If the candidate records array is empty, make a new candidate
+        # Otherwise, make a new candidate if there's more than one per
+        #  generation and the current candidate has completed their
+        #  training episodes
         if (
             not self.candidate_records or
-            self.episode_number >= self.episodes_per_candidate
+            (
+                self.candidates_per_generation > 1 and
+                self.episode_number >= self.episodes_per_candidate
+            )
         ):
             self._generate_next_candidate()
-        self.policy.start_new_training_episode(False)
+        self.policy.start_new_training_episode()
         self.episode_number += 1
-        self.logger.info(f'Starting training episode '
-                         f'{self.episode_number}/'
-                         f'{self.episodes_per_candidate}')
+        self.episode_reward = 0.0
+        if self.candidates_per_generation > 1:
+            self.logger.info(f'Starting training episode '
+                             f'({self.episode_number}/'
+                             f'{self.episodes_per_candidate})')
+        else:
+            self.logger.info(f'Starting training episode '
+                             f'({self.episode_number})')
 
     def _create_candidate_filename(self):
         """Create a candidate filename from the system clock."""
@@ -219,18 +238,20 @@ class PopulationTrainer():
 
         # Check if we have enough candidates to advance the population
         self.episode_number = 0
+        self.episode_reward = 0.0
         self.candidate_number = len(self.candidate_records)
         self.policy.reset()
         if self.candidate_number >= self.candidates_per_generation:
             self._generate_next_generation()
-            self.logger.info(f'Starting generation '
-                             f'{self.generation_number}')
+            self.logger.info(f'Starting new generation '
+                             f'({self.generation_number})')
 
         self.candidate_records.append(
             self.CandidateRecord(
                 self._create_candidate_filename(), 0.0
             )
         )
+        self.candidate_number += 1
         self.logger.info(
             f'Current candidate: {self.candidate_records[-1].filename}'
         )
@@ -240,14 +261,15 @@ class PopulationTrainer():
             self.policy.load_weights(self.current_parent_filename)
 
         self.logger.info(f'Starting training candidate '
-                         f'{self.candidate_number}/'
-                         f'{self.candidates_per_generation}')
+                         f'({self.candidate_number}/'
+                         f'{self.candidates_per_generation})')
 
     def _generate_next_generation(self):
         """Select the best member of the population and reseed using that."""
         # Find the candidate with the highest candidate reward to be the
         # parent of the next generation
         self.episode_number = 0
+        self.episode_reward = 0.0
         self.policy.reset()
         self.candidate_number = 0
         self.generation_number += 1
@@ -288,5 +310,5 @@ class PopulationTrainer():
         self.save_population_checkpoint()
 
         self.logger.info(
-            f'Starting next population from {self.current_parent_filename}'
+            f'Starting new generation from {self.current_parent_filename}'
         )

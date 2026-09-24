@@ -19,10 +19,7 @@ class DeepActorCriticPolicy():
         """Initialize the locomotion neural network."""
         self.logger = logger
 
-        self.episode_number = 0
-        self.episode_reward = 0.0
-
-        self.poses_normalized = False
+        self.are_poses_normalized = False
 
         self.device = (
             torch.accelerator.current_accelerator().type
@@ -111,15 +108,13 @@ class DeepActorCriticPolicy():
 
     def reset(self):
         """Reset the state."""
-        self.episode_number = 0
-        self.episode_reward = 0.0
         self.target = None
 
-    def get_poses_normalized(self):
+    def get_are_poses_normalized(self):
         """Return if the poses are normalized or already scaled."""
-        return self.poses_normalized
+        return self.are_poses_normalized
 
-    def start_new_training_episode(self, print_log=True):
+    def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
         self.hidden_state_t = torch.zeros(
             1,
@@ -128,10 +123,6 @@ class DeepActorCriticPolicy():
         )
         self.transition_t = None
         self.reward_function.start_new_training_episode()
-        self.episode_number += 1
-        if print_log:
-            self.logger.info(f'Starting training episode '
-                             f'{self.episode_number}')
 
     def get_model_weights_exists(self, filename='test_weights.pt'):
         """Get if the model weight file exists."""
@@ -268,8 +259,6 @@ class DeepActorCriticPolicy():
         """Perform a single step of training."""
         training_status = TrainingStatus(
             step_reward=0.0,
-            episode_reward=self.episode_reward,
-            episode_number=self.episode_number,
             target_reached=False,
             episode_terminated=False,
             reward_component_labels=[],
@@ -309,10 +298,6 @@ class DeepActorCriticPolicy():
                 state_t
             )
         )
-
-        self.episode_reward += training_status.step_reward
-        training_status.episode_reward = self.episode_reward
-        training_status.episode_number = self.episode_number
 
         return action_t, training_status
 
