@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'target_generator_node = target_generator.main:main',
+            'teleop_node = teleop.main:main',
         ],
     },
 )

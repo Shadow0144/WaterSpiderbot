@@ -86,8 +86,8 @@ class DeepActorCriticModule(LocomotionModule):
         self.locomotion_node.publish_training_status(training_status)
 
         if training_status.target_reached:
-            self.locomotion_node.get_logger().info('Training target reached')
-            self.locomotion_node.publish_training_target_reached()
+            self.locomotion_node.get_logger().info('Target reached')
+            self.locomotion_node.publish_target_reached()
 
         self.episode_terminated = training_status.episode_terminated
         if self.episode_terminated:
@@ -118,9 +118,9 @@ class DeepActorCriticModule(LocomotionModule):
         """Publish information on the training step."""
         self.locomotion_node.publish_training_status(training_status)
 
-    def set_training_target(self, set_training_target_msg):
-        """Set the target and the estimated time to reach it."""
-        super().set_training_target(set_training_target_msg)
+    def set_target(self, set_target_msg):
+        """Update the target."""
+        super().set_target(set_target_msg)
         self.policy_trainer.set_target(self.target)
 
     def start_training_episode(self):

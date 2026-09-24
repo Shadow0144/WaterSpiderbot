@@ -13,8 +13,8 @@ from rclpy.node import Node
 from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
+from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.msg import TrainingStatus
-from spiderbot_interfaces.msg import TrainingTarget
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 import spiderbot_utilities as utils
@@ -58,20 +58,20 @@ class SimulationNode(Node):
             self.spiderbot_description
         )
 
-        self.training_target_visible = False
-        self.training_target_position = None
-        self.training_target_quaternion = None
-        self.training_target = self.data.body('training_target')
-        self.training_target_z = self.model.body('training_target').pos[2]
-        training_target_body_id = self.model.body('training_target').id
-        self.training_target_mocap_id = self.model.body_mocapid[
-            training_target_body_id
+        self.target_visible = False
+        self.target_position = None
+        self.target_quaternion = None
+        self.target = self.data.body('target')
+        self.target_z = self.model.body('target').pos[2]
+        target_body_id = self.model.body('target').id
+        self.target_mocap_id = self.model.body_mocapid[
+            target_body_id
         ]
-        self.training_target_forward_geom_id = self.model.geom(
-            'training_target_forward_geom'
+        self.target_forward_geom_id = self.model.geom(
+            'target_forward_geom'
         ).id
-        self.training_target_backward_geom_id = self.model.geom(
-            'training_target_backward_geom'
+        self.target_backward_geom_id = self.model.geom(
+            'target_backward_geom'
         ).id
 
         self.pose_arrow_position = None
@@ -113,10 +113,10 @@ class SimulationNode(Node):
             10
         )
 
-        self.training_target_subscription = self.create_subscription(
-            TrainingTarget,
-            'training_target',
-            self.training_target_callback,
+        self.target_subscription = self.create_subscription(
+            Target,
+            'target',
+            self.target_callback,
             10
         )
 
@@ -198,12 +198,12 @@ class SimulationNode(Node):
         """Reset simulation."""
         mujoco.mj_resetData(self.model, self.data)
         # Move the target back to where it should be if necessary
-        if self.training_target_visible:
-            self.data.mocap_pos[self.training_target_mocap_id] = (
-                self.training_target_position
+        if self.target_visible:
+            self.data.mocap_pos[self.target_mocap_id] = (
+                self.target_position
             )
-            self.data.mocap_quat[self.training_target_mocap_id] = (
-                self.training_target_quaternion
+            self.data.mocap_quat[self.target_mocap_id] = (
+                self.target_quaternion
             )
         mujoco.mj_forward(self.model, self.data)
         for leg_name in self.leg_names:
@@ -211,28 +211,28 @@ class SimulationNode(Node):
         self._publish_pose()
         return response
 
-    def training_target_callback(self, msg):
+    def target_callback(self, msg):
         """Move the target to the location and make it visible."""
-        self.training_target_visible = True
+        self.target_visible = True
         alpha = 0.75
-        self.training_target_position = [
+        self.target_position = [
             msg.target_x,
             msg.target_y,
-            self.training_target_z
+            self.target_z
         ]
         half_theta = msg.target_theta / 2.0
-        self.training_target_quaternion = [
+        self.target_quaternion = [
             np.cos(half_theta), 0.0, 0.0, np.sin(half_theta)
         ]
-        self.model.geom_rgba[self.training_target_forward_geom_id, 3] = alpha
-        self.model.geom_rgba[self.training_target_backward_geom_id, 3] = alpha
+        self.model.geom_rgba[self.target_forward_geom_id, 3] = alpha
+        self.model.geom_rgba[self.target_backward_geom_id, 3] = alpha
         self.model.geom_rgba[self.pose_arrow_forward_geom_id, 3] = alpha
         self.model.geom_rgba[self.pose_arrow_backward_geom_id, 3] = alpha
-        self.data.mocap_pos[self.training_target_mocap_id] = (
-                    self.training_target_position
+        self.data.mocap_pos[self.target_mocap_id] = (
+                    self.target_position
                 )
-        self.data.mocap_quat[self.training_target_mocap_id] = (
-            self.training_target_quaternion
+        self.data.mocap_quat[self.target_mocap_id] = (
+            self.target_quaternion
         )
 
     def _update_pose_arrow(self):

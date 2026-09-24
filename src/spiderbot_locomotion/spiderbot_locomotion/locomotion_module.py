@@ -47,11 +47,11 @@ class LocomotionModule:
         """Walk the Spiderbot towards its target."""
         self._update_delta_time(spiderbot_pose_msg)
 
-    def set_training_target(self, set_training_target_msg):
-        """Set a target (x, y + rotation) for the Spiderbot to move towards."""
-        self.target_x = set_training_target_msg.target_x
-        self.target_y = set_training_target_msg.target_y
-        self.target_theta = set_training_target_msg.target_theta
+    def set_target(self, set_target_msg):
+        """Set a target (x, y, rotation) for the Spiderbot to move towards."""
+        self.target_x = set_target_msg.target_x
+        self.target_y = set_target_msg.target_y
+        self.target_theta = set_target_msg.target_theta
         self.target = [
             self.target_x,
             self.target_y,

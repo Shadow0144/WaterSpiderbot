@@ -188,7 +188,7 @@ class DeepActorCriticPolicy():
         self.start_new_training_episode()
 
     def set_target(self, target):
-        """Update the target and the time expected to reach the target."""
+        """Update the target."""
         self.target = target
         self.reward_function.set_target(self.target)
 

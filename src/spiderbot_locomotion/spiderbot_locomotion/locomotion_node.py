@@ -8,7 +8,7 @@ from rclpy.node import Node
 from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
-from spiderbot_interfaces.msg import TrainingTarget
+from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 
 from std_msgs.msg import Empty
@@ -59,9 +59,9 @@ class LocomotionNode(Node):
             10
         )
 
-        self.training_target_reached_publisher = self.create_publisher(
+        self.target_reached_publisher = self.create_publisher(
             Empty,
-            'training_target_reached',
+            'target_reached',
             10
         )
 
@@ -78,10 +78,10 @@ class LocomotionNode(Node):
             10
         )
 
-        self.training_target_subscription = self.create_subscription(
-            TrainingTarget,
-            'training_target',
-            self.training_target_callback,
+        self.target_subscription = self.create_subscription(
+            Target,
+            'target',
+            self.target_callback,
             10
         )
 
@@ -139,18 +139,18 @@ class LocomotionNode(Node):
         """Publish target points for the leg to reach for."""
         self.leg_set_targets_publisher.publish(msg)
 
-    def publish_training_target_reached(self):
+    def publish_target_reached(self):
         """Publish that the training target was reached."""
-        self.training_target_reached_publisher.publish(Empty())
+        self.target_reached_publisher.publish(Empty())
 
     def publish_training_episode_terminated(self):
         """Publish that the training episode was terminated early."""
         self.training_episode_terminated_publisher.publish(Empty())
 
-    def training_target_callback(self, msg):
+    def target_callback(self, msg):
         """Reset the simuation and has the Spiderbot move to the target."""
         if self.locomotion_module is not None:
-            self.locomotion_module.set_training_target(msg)
+            self.locomotion_module.set_target(msg)
 
     def start_training_episode_callback(self, msg):
         """Start a new training episode."""

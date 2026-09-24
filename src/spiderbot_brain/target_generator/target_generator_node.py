@@ -7,7 +7,7 @@ import rclpy
 from rclpy.node import Node
 
 from spiderbot_interfaces.msg import SpiderbotPose
-from spiderbot_interfaces.msg import TrainingTarget
+from spiderbot_interfaces.msg import Target
 
 from std_msgs.msg import Empty as EmptyMsg
 
@@ -66,9 +66,9 @@ class TargetGeneratorNode(Node):
         _ = self._set_training_mode()
         self.get_logger().info('Training mode status set')
 
-        self.training_target_publisher = self.create_publisher(
-            TrainingTarget,
-            'training_target',
+        self.target_publisher = self.create_publisher(
+            Target,
+            'target',
             10
         )
 
@@ -85,10 +85,10 @@ class TargetGeneratorNode(Node):
             10
         )
 
-        self.training_target_reached_subscription = self.create_subscription(
+        self.target_reached_subscription = self.create_subscription(
             EmptyMsg,
-            'training_target_reached',
-            self.training_target_reached_callback,
+            'target_reached',
+            self.target_reached_callback,
             10
         )
 
@@ -108,7 +108,7 @@ class TargetGeneratorNode(Node):
 
         self.get_logger().info('Spiderbot brain node started')
 
-        self._generate_training_target()
+        self._generate_target()
 
     def spiderbot_pose_callback(self, msg):
         """Handle the updated Spiderbot pose."""
@@ -132,18 +132,18 @@ class TargetGeneratorNode(Node):
             delta_time = self._get_delta_time_from_timestamp(msg)
             self.time_left_to_reach_target_s -= delta_time
             if self.time_left_to_reach_target_s <= 0.0:
-                self._generate_training_target()
+                self._generate_target()
 
-    def training_target_reached_callback(self, msg):
+    def target_reached_callback(self, msg):
         """Handle when the Spiderbot reaches the training target."""
-        self._generate_training_target()
+        self._generate_target()
 
     def training_episode_terminated_callback(self, msg):
         """Handle when the Spiderbot terminates the training episode."""
         # Set the number of targets remaining to 0 to trigger a simulation
         # reset when generating the next target
         self.num_targets_remaining = 0
-        self._generate_training_target()
+        self._generate_target()
 
     def _set_training_mode(self):
         """Call the service to set the training mode."""
@@ -152,7 +152,7 @@ class TargetGeneratorNode(Node):
         rclpy.spin_until_future_complete(self, future)
         return future.result()
 
-    def _generate_training_target(self):
+    def _generate_target(self):
         """Create a training target near the Spiderbot and publish it."""
         if self.num_targets_remaining <= 0:
             request = EmptySrv.Request()
@@ -201,21 +201,21 @@ class TargetGeneratorNode(Node):
                 target_angle
             ]
 
-            self._set_training_target(target)
+            self._set_target(target)
             self.time_left_to_reach_target_s = self.time_to_reach_target_s
 
     def reset_simulation_callback(self, future):
         """Publish a new training target for the new episode."""
         self.waiting_for_simulation_reset = False
-        self._generate_training_target()
+        self._generate_target()
 
-    def _set_training_target(self, target):
+    def _set_target(self, target):
         """Publish a new training target."""
-        msg = TrainingTarget()
+        msg = Target()
         msg.target_x = target[0]
         msg.target_y = target[1]
         msg.target_theta = target[2]
-        self.training_target_publisher.publish(msg)
+        self.target_publisher.publish(msg)
         target_num = (
             self.num_targets_per_episodes - self.num_targets_remaining
         )

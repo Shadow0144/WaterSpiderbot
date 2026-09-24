@@ -19,3 +19,11 @@ Provides the training targets and times.
 - Services:
  * set_training_mode_enabled -> SetBool
   Sets if the Spiderbot is in training mode for training its locomotion or in production mode
+
+### teleop_node
+
+Provides an interface to teleoperate a Spiderbot.
+
+- Publishers:
+ * training_target -> TrainingTarget
+  Publishes a target (x, y)-coordinate, a target facing (i.e. yaw), and a max time to reach that target
