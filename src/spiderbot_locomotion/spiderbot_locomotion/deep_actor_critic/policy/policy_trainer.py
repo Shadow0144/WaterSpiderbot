@@ -22,11 +22,13 @@ class PolicyTrainer():
                  logger,
                  episodes_per_candidate=10,
                  candidates_per_generation=10,
-                 use_soft_actor_critics_policy=True):
+                 use_soft_actor_critics_policy=True,
+                 autosave_checkpoints=True):
         """Initialize the class."""
         self.logger = logger
         self.episodes_per_candidate = episodes_per_candidate
         self.candidates_per_generation = candidates_per_generation
+        self.autosave_checkpoints = autosave_checkpoints
 
         if use_soft_actor_critics_policy:
             self.policy = DeepSoftActorCriticsPolicy(self.logger)
@@ -117,7 +119,6 @@ class PolicyTrainer():
 
             # The current episode will be incremented immediately so subtract 1
             self.episode_number = episode_number - 1
-            self.policy.episode_number = self.episode_number
             if parent_candidate_filename:
                 self.current_parent_filename = parent_candidate_filename
                 self.policy.load_weights(parent_candidate_filename)
@@ -214,9 +215,11 @@ class PolicyTrainer():
             )
         ):
             self._generate_next_candidate()
-        self.policy.start_new_training_episode()
+
         self.episode_number += 1
         self.episode_reward = 0.0
+        self.policy.start_new_training_episode()
+
         if self.candidates_per_generation > 1:
             self.logger.info(f'Starting training episode '
                              f'({self.episode_number}/'
@@ -224,6 +227,10 @@ class PolicyTrainer():
         else:
             self.logger.info(f'Starting training episode '
                              f'({self.episode_number})')
+
+        # Save a checkpoint
+        if self.autosave_checkpoints:
+            self.save_population_checkpoint()
 
     def _create_candidate_filename(self):
         """Create a candidate filename from the system clock."""
@@ -305,9 +312,6 @@ class PolicyTrainer():
                 self.checkpoint_file_manager.delete_saved_weights(
                     candidate_filename
                 )
-
-        # Save a checkpoint
-        self.save_population_checkpoint()
 
         self.logger.info(
             f'Starting new generation from {self.current_parent_filename}'
