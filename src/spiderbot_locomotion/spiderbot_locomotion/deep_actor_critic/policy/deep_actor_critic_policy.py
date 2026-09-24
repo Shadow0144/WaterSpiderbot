@@ -3,7 +3,7 @@
 import torch
 from torch import nn
 
-from ..neural_network.checkpoint_file_manager import CheckpointFileManager
+from ..checkpoint_file_manager import CheckpointFileManager
 from ..neural_network.deep_critic import DeepCritic
 from ..neural_network.deep_recurrent_actor import DeepRecurrentActor
 from ..neural_network.step_transition import RecurrentStepTransition

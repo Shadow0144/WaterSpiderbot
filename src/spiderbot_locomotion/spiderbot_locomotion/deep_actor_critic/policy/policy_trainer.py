@@ -4,7 +4,7 @@ from datetime import datetime
 
 from .deep_actor_critic_policy import DeepActorCriticPolicy
 from .deep_soft_actor_critics_policy import DeepSoftActorCriticsPolicy
-from ..neural_network.checkpoint_file_manager import CheckpointFileManager
+from ..checkpoint_file_manager import CheckpointFileManager
 
 
 class PolicyTrainer():
