@@ -13,7 +13,7 @@ def main(args=None):
     target_generator_node = None
     try:
         target_generator_node = TargetGeneratorNode()
-        while rclpy.ok():
+        while rclpy.ok() and target_generator_node.is_running():
             rclpy.spin_once(target_generator_node, timeout_sec=0)
             target_generator_node.update()
     except (KeyboardInterrupt, ExternalShutdownException):

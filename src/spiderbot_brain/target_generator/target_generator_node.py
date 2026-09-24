@@ -110,6 +110,10 @@ class TargetGeneratorNode(Node):
 
         self._generate_target()
 
+    def is_running(self):
+        """Return if the node is running."""
+        return True
+
     def spiderbot_pose_callback(self, msg):
         """Handle the updated Spiderbot pose."""
         # Update the stored position of the Spiderbot
