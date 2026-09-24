@@ -25,8 +25,10 @@ colcon build --symlink-install && source install/setup.bash
 
 ## Launch
 
-- Simulation:
-`ros2 launch spiderbot_bringup spiderbot_simulation.launch.xml`
+- Simulation training:
+`ros2 launch spiderbot_bringup spiderbot_simulation_training.launch.xml`
+- Simulation teleop:
+`ros2 launch spiderbot_bringup spiderbot_simulation_teleop.launch.xml`
 - Real:
 `ros2 launch spiderbot_bringup spiderbot_real.launch.xml`
 
