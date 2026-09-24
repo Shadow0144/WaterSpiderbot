@@ -174,6 +174,12 @@ class SimulationViewer():
                     self.cam.trackbodyid = self.tracking_body_id
                 else:
                     self.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
+            elif key == glfw.KEY_R:
+                # Reset the camera
+                self.cam.azimuth = 180
+                self.cam.elevation = -30
+                self.cam.distance = 3.0
+                self.cam.lookat[:] = [0, 0, 0.25]
 
     def _add_overlays(self, viewport):
         """Add the training overlays to the viewport."""
