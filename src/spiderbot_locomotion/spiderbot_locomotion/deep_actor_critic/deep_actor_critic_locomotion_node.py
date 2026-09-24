@@ -19,7 +19,8 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
         # Set the module after getting the description
         self.locomotion_module = DeepActorCriticModule(
             self,
-            self.spiderbot_description
+            self.spiderbot_description,
+            self.training_mode_enabled
         )
 
         self.training_status_publisher = self.create_publisher(
