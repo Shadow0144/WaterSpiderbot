@@ -26,9 +26,9 @@ class BrainNode(Node):
 
         self.last_timestamp = -1
 
-        self.time_to_reach_target_s = 10
-        self.time_left_to_reach_target_s = 0
-        self.time_left_to_reset_target_s = 1  # After a simulation reset
+        self.waiting_for_simulation_reset = True
+        self.time_to_reach_target_s = 10.0
+        self.time_left_to_reach_target_s = 0.0
         self.num_targets_per_episodes = 30
         self.num_targets_remaining = 0
         self.distance_scaling = 0.10
@@ -42,8 +42,8 @@ class BrainNode(Node):
         self.episode_direction = 0.0
         self.episode_rotation = 0.0
 
-        self.direction_jitter_half_range = math.pi / 16
-        self.rotation_jitter_half_range = math.pi / 32
+        self.direction_jitter_half_range = math.pi / 16.0
+        self.rotation_jitter_half_range = math.pi / 32.0
 
         self.declare_parameter('training_mode_enabled',
                                True)
@@ -106,6 +106,8 @@ class BrainNode(Node):
 
         self.get_logger().info('Spiderbot brain node started')
 
+        self._generate_training_target()
+
     def spiderbot_pose_callback(self, msg):
         """Handle the updated Spiderbot pose."""
         # Update the stored position of the Spiderbot
@@ -122,12 +124,13 @@ class BrainNode(Node):
             math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
         )
 
-        # Get the time between the last poses
-        # and decide to update the training target if too much time has passed
-        delta_time = self._get_delta_time_from_timestamp(msg)
-        self.time_left_to_reach_target_s -= delta_time
-        if self.time_left_to_reach_target_s <= 0.0:
-            self._generate_training_target()
+        if not self.waiting_for_simulation_reset:
+            # Get the time between the last poses and
+            # decide to update the training target if too much time has passed
+            delta_time = self._get_delta_time_from_timestamp(msg)
+            self.time_left_to_reach_target_s -= delta_time
+            if self.time_left_to_reach_target_s <= 0.0:
+                self._generate_training_target()
 
     def training_target_reached_callback(self, msg):
         """Handle when the Spiderbot reaches the training target."""
@@ -151,10 +154,11 @@ class BrainNode(Node):
         """Create a training target near the Spiderbot and publish it."""
         if self.num_targets_remaining <= 0:
             request = EmptySrv.Request()
-            self.reset_simulation_client.call_async(request)
+            future = self.reset_simulation_client.call_async(request)
+            future.add_done_callback(self.reset_simulation_callback)
             self.start_training_episode_publisher.publish(EmptyMsg())
             self.num_targets_remaining = self.num_targets_per_episodes
-            self.time_left_to_reach_target_s = self.time_to_reach_target_s
+            self.waiting_for_simulation_reset = True
             self.new_episode = True
         else:
             self.num_targets_remaining -= 1
@@ -198,6 +202,11 @@ class BrainNode(Node):
             self._set_training_target(target)
             self.time_left_to_reach_target_s = self.time_to_reach_target_s
 
+    def reset_simulation_callback(self, future):
+        """Publish a new training target for the new episode."""
+        self.waiting_for_simulation_reset = False
+        self._generate_training_target()
+
     def _set_training_target(self, target):
         """Publish a new training target."""
         msg = TrainingTarget()
@@ -210,7 +219,8 @@ class BrainNode(Node):
         )
         self.get_logger().info(
             f'Setting training target '
-            f'({target_num}/{self.num_targets_per_episodes}): {target}'
+            f'({target_num}/{self.num_targets_per_episodes}): '
+            f'{[f"{item:.6f}" for item in target]}'
         )
 
     def _get_delta_time_from_timestamp(self, spiderbot_pose_msg):

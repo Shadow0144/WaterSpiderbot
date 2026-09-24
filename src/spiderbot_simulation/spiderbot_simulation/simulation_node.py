@@ -208,6 +208,7 @@ class SimulationNode(Node):
         mujoco.mj_forward(self.model, self.data)
         for leg_name in self.leg_names:
             self.legs[leg_name].reset_leg()
+        self._publish_pose()
         return response
 
     def training_target_callback(self, msg):
