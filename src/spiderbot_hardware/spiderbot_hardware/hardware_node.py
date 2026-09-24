@@ -9,3 +9,7 @@ class HardwareNode(Node):
     def __init__(self):
         """Initialize the hardware node."""
         super().__init__('hardware_node')
+
+    def is_running(self):
+        """Return if the node is running."""
+        return False
