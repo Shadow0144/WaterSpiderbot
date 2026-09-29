@@ -18,16 +18,18 @@ class PolicyTrainer():
             self.filename = filename
             self.candidate_reward = candidate_reward
 
-    def __init__(self,
-                 logger,
-                 episodes_per_candidate=10,
-                 candidates_per_generation=10,
-                 use_soft_actor_critics_policy=True,
-                 autosave_checkpoints=True):
+    def __init__(
+            self,
+            logger,
+            num_episodes_per_candidate,
+            num_candidates_per_generation,
+            use_soft_actor_critics_policy,
+            autosave_checkpoints=True
+            ):
         """Initialize the class."""
         self.logger = logger
-        self.episodes_per_candidate = episodes_per_candidate
-        self.candidates_per_generation = candidates_per_generation
+        self.num_episodes_per_candidate = num_episodes_per_candidate
+        self.num_candidates_per_generation = num_candidates_per_generation
         self.autosave_checkpoints = autosave_checkpoints
 
         if use_soft_actor_critics_policy:
@@ -192,10 +194,12 @@ class PolicyTrainer():
             candidate_number = len(self.candidate_records)
 
         reward_information.candidate_reward = candidate_reward
-        reward_information.episodes_per_candidate = self.episodes_per_candidate
+        reward_information.num_episodes_per_candidate = (
+            self.num_episodes_per_candidate
+        )
         reward_information.candidate_number = candidate_number
-        reward_information.candidates_per_generation = (
-            self.candidates_per_generation
+        reward_information.num_candidates_per_generation = (
+            self.num_candidates_per_generation
         )
         reward_information.generation_number = self.generation_number
 
@@ -210,8 +214,8 @@ class PolicyTrainer():
         if (
             not self.candidate_records or
             (
-                self.candidates_per_generation > 1 and
-                self.episode_number >= self.episodes_per_candidate
+                self.num_candidates_per_generation > 1 and
+                self.episode_number >= self.num_episodes_per_candidate
             )
         ):
             self._generate_next_candidate()
@@ -220,10 +224,10 @@ class PolicyTrainer():
         self.episode_reward = 0.0
         self.policy.start_new_training_episode()
 
-        if self.candidates_per_generation > 1:
+        if self.num_candidates_per_generation > 1:
             self.logger.info(f'Starting training episode '
                              f'({self.episode_number}/'
-                             f'{self.episodes_per_candidate})')
+                             f'{self.num_episodes_per_candidate})')
         else:
             self.logger.info(f'Starting training episode '
                              f'({self.episode_number})')
@@ -248,7 +252,7 @@ class PolicyTrainer():
         self.episode_reward = 0.0
         self.candidate_number = len(self.candidate_records)
         self.policy.reset()
-        if self.candidate_number >= self.candidates_per_generation:
+        if self.candidate_number >= self.num_candidates_per_generation:
             self._generate_next_generation()
             self.logger.info(f'Starting new generation '
                              f'({self.generation_number})')
@@ -269,7 +273,7 @@ class PolicyTrainer():
 
         self.logger.info(f'Starting training candidate '
                          f'({self.candidate_number}/'
-                         f'{self.candidates_per_generation})')
+                         f'{self.num_candidates_per_generation})')
 
     def _generate_next_generation(self):
         """Select the best member of the population and reseed using that."""

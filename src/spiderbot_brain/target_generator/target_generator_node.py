@@ -3,16 +3,17 @@
 import math
 import random
 
-import rclpy
 from rclpy.node import Node
 
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import Target
+from spiderbot_interfaces.srv import GetTrainingConfiguration
 
-from std_msgs.msg import Empty as EmptyMsg
+from std_msgs.msg import Empty
+from std_msgs.msg import Int32
 
-from std_srvs.srv import Empty as EmptySrv
 from std_srvs.srv import SetBool
+from std_srvs.srv import Trigger
 
 
 class TargetGeneratorNode(Node):
@@ -28,10 +29,14 @@ class TargetGeneratorNode(Node):
 
         self.last_timestamp = -1
 
+        self.training_started = False
+
         self.waiting_for_simulation_reset = True
         self.time_to_reach_target_s = 10.0
         self.time_left_to_reach_target_s = 0.0
         self.num_targets_per_episodes = 30
+        self.num_episodes_per_candidate = 10
+        self.num_candidates_per_generation = 3
         self.num_targets_remaining = 0
         self.distance_scaling = 0.10
         self.rotation_half_range = math.pi / 16.0
@@ -47,33 +52,20 @@ class TargetGeneratorNode(Node):
         self.direction_jitter_half_range = math.pi / 16.0
         self.rotation_jitter_half_range = math.pi / 32.0
 
-        self.declare_parameter('training_mode_enabled',
-                               True)
-        self.training_mode_enabled = (
-            self.get_parameter('training_mode_enabled').value
-        )
-
-        self._set_training_mode_enabled_client = self.create_client(
-            SetBool,
-            'set_training_mode_enabled')
-        while not self._set_training_mode_enabled_client.wait_for_service(
-            timeout_sec=1.0
-        ):
-            self.get_logger().info(
-                'Waiting on set_training_mode_enabled service',
-                once=True
-            )
-        _ = self._set_training_mode()
-        self.get_logger().info('Training mode status set')
-
         self.target_publisher = self.create_publisher(
             Target,
             'target',
             10
         )
 
+        self.target_number_publisher = self.create_publisher(
+            Int32,
+            'target_number',
+            10
+        )
+
         self.start_training_episode_publisher = self.create_publisher(
-            EmptyMsg,
+            Empty,
             'start_training_episode',
             10
         )
@@ -86,7 +78,7 @@ class TargetGeneratorNode(Node):
         )
 
         self.target_reached_subscription = self.create_subscription(
-            EmptyMsg,
+            Empty,
             'target_reached',
             self.target_reached_callback,
             10
@@ -94,21 +86,39 @@ class TargetGeneratorNode(Node):
 
         self.training_episode_terminated_subscription = (
             self.create_subscription(
-                EmptyMsg,
+                Empty,
                 'training_episode_terminated',
                 self.training_episode_terminated_callback,
                 10
             )
         )
 
-        self.reset_simulation_client = self.create_client(
-            EmptySrv,
-            'reset_simulation'
+        self.get_training_configuration_service = self.create_service(
+            GetTrainingConfiguration,
+            'get_training_configuration',
+            self.get_training_configuration_callback
         )
 
-        self.get_logger().info('Spiderbot brain node started')
+        self.enable_training_service = self.create_service(
+            SetBool,
+            'enable_training',
+            self.enable_training_callback
+        )
 
-        self._generate_target()
+        self.reset_simulation_client = self.create_client(
+            Trigger,
+            'reset_simulation'
+        )
+        while not self.reset_simulation_client.wait_for_service(
+            timeout_sec=1.0
+        ):
+            self.get_logger().info(
+                'Waiting on reset_simulation service',
+                once=True
+            )
+        self.get_logger().info('Simulation connected')
+
+        self.get_logger().info('Spiderbot target generate node started')
 
     def is_running(self):
         """Return if the node is running."""
@@ -130,13 +140,18 @@ class TargetGeneratorNode(Node):
             math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
         )
 
-        if not self.waiting_for_simulation_reset:
-            # Get the time between the last poses and
-            # decide to update the training target if too much time has passed
-            delta_time = self._get_delta_time_from_timestamp(msg)
-            self.time_left_to_reach_target_s -= delta_time
-            if self.time_left_to_reach_target_s <= 0.0:
-                self._generate_target()
+        # Return early if the training has not started
+        #  (i.e. the locomotion node is not ready)
+        # or the simulation has been requested to reset but has not finished
+        if not self.training_started or self.waiting_for_simulation_reset:
+            return
+
+        # Get the time between the last poses and
+        # decide to update the training target if too much time has passed
+        delta_time = self._get_delta_time_from_timestamp(msg)
+        self.time_left_to_reach_target_s -= delta_time
+        if self.time_left_to_reach_target_s <= 0.0:
+            self._generate_target()
 
     def target_reached_callback(self, msg):
         """Handle when the Spiderbot reaches the training target."""
@@ -149,20 +164,13 @@ class TargetGeneratorNode(Node):
         self.num_targets_remaining = 0
         self._generate_target()
 
-    def _set_training_mode(self):
-        """Call the service to set the training mode."""
-        request = SetBool.Request()
-        future = self._set_training_mode_enabled_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
-        return future.result()
-
     def _generate_target(self):
         """Create a training target near the Spiderbot and publish it."""
         if self.num_targets_remaining <= 0:
-            request = EmptySrv.Request()
+            request = Trigger.Request()
             future = self.reset_simulation_client.call_async(request)
             future.add_done_callback(self.reset_simulation_callback)
-            self.start_training_episode_publisher.publish(EmptyMsg())
+            self.start_training_episode_publisher.publish(Empty())
             self.num_targets_remaining = self.num_targets_per_episodes
             self.waiting_for_simulation_reset = True
             self.new_episode = True
@@ -208,6 +216,23 @@ class TargetGeneratorNode(Node):
             self._set_target(target)
             self.time_left_to_reach_target_s = self.time_to_reach_target_s
 
+    def get_training_configuration_callback(self, request, response):
+        """Provide the training configuration."""
+        response.training_mode_enabled = True
+        response.num_targets_per_episode = self.num_targets_per_episodes
+        response.num_episodes_per_candidate = self.num_episodes_per_candidate
+        response.num_candidates_per_generation = (
+            self.num_candidates_per_generation
+        )
+        return response
+
+    def enable_training_callback(self, request, response):
+        """Enable the training when the locomotion node is up and ready."""
+        self.training_started = request.data
+        self._generate_target()
+        response.success = True
+        return response
+
     def reset_simulation_callback(self, future):
         """Publish a new training target for the new episode."""
         self.waiting_for_simulation_reset = False
@@ -215,14 +240,17 @@ class TargetGeneratorNode(Node):
 
     def _set_target(self, target):
         """Publish a new training target."""
-        msg = Target()
-        msg.target_x = target[0]
-        msg.target_y = target[1]
-        msg.target_theta = target[2]
-        self.target_publisher.publish(msg)
+        target_message = Target()
+        target_message.target_x = target[0]
+        target_message.target_y = target[1]
+        target_message.target_theta = target[2]
+        self.target_publisher.publish(target_message)
         target_num = (
             self.num_targets_per_episodes - self.num_targets_remaining
         )
+        target_number_message = Int32()
+        target_number_message.data = target_num
+        self.target_number_publisher.publish(target_number_message)
         self.get_logger().info(
             f'Setting training target '
             f'({target_num}/{self.num_targets_per_episodes}): '

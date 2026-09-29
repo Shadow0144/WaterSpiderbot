@@ -1,0 +1,5 @@
+---
+bool training_mode_enabled
+int32 num_targets_per_episode
+int32 num_episodes_per_candidate
+int32 num_candidates_per_generation

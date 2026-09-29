@@ -1,7 +1,5 @@
 """Spiderbot locomotion node."""
 
-from rcl_interfaces.msg import SetParametersResult
-
 import rclpy
 from rclpy.node import Node
 
@@ -10,6 +8,7 @@ from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
 from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.srv import GetSpiderbotDescription
+from spiderbot_interfaces.srv import GetTrainingConfiguration
 
 from std_msgs.msg import Empty
 
@@ -27,25 +26,39 @@ class LocomotionNode(Node):
             f'Starting spiderbot locomotion node: {node_name}'
         )
 
-        self.declare_parameter('training_mode_enabled',
-                               True)
-        self.training_mode_enabled = (
-            self.get_parameter('training_mode_enabled').value
-        )
+        self.locomotion_module = None
+        self.training_mode_enabled = False
+        self.num_targets_per_episode = 0
+        self.num_episodes_per_candidate = 0
+        self.num_candidates_per_generation = 0
 
         self.spiderbot_description_client = self.create_client(
             GetSpiderbotDescription,
-            'get_spiderbot_description')
+            'get_spiderbot_description'
+        )
         while not self.spiderbot_description_client.wait_for_service(
             timeout_sec=1.0
         ):
             self.get_logger().info(
                 'Waiting on get_spec_xml service',
-                once=True)
-        self.spiderbot_description = self.request_spiderbot_description()
+                once=True
+            )
+        self._get_spiderbot_description()
         self.get_logger().info('Spiderbot description received')
 
-        self.add_on_set_parameters_callback(self.parameter_changed_callback)
+        self.get_training_configuration_client = self.create_client(
+            GetTrainingConfiguration,
+            'get_training_configuration'
+        )
+        while not self.get_training_configuration_client.wait_for_service(
+            timeout_sec=1.0
+        ):
+            self.get_logger().info(
+                'Waiting on get_training_configuration service',
+                once=True
+            )
+        self.get_logger().info('Spiderbot training configuration received')
+        self._get_training_configuration()
 
         self.spiderbot_target_pose_publisher = self.create_publisher(
             SpiderbotTargetPose,
@@ -92,10 +105,9 @@ class LocomotionNode(Node):
             10
         )
 
-        self.set_training_mode_enabled_service = self.create_service(
+        self.enable_training_client = self.create_client(
             SetBool,
-            'set_training_mode_enabled',
-            self.set_training_mode_enabled_callback
+            'enable_training'
         )
 
         self.get_logger().info('Spiderbot locomotion node started')
@@ -104,22 +116,26 @@ class LocomotionNode(Node):
         """Return if the node is running or if it's ready to shut down."""
         return True
 
-    def parameter_changed_callback(self, params):
-        """React to parameters updating."""
-        for param in params:
-            if param.name == 'training_mode_enabled':
-                if self.locomotion_module is not None:
-                    self.locomotion_module.set_training_mode_enabled(
-                        param.value
-                    )
-        return SetParametersResult(successful=True)
-
-    def request_spiderbot_description(self):
+    def _get_spiderbot_description(self):
         """Get the spec xml from the description."""
         request = GetSpiderbotDescription.Request()
         future = self.spiderbot_description_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
-        return future.result()
+        result = future.result()
+        self.spiderbot_description = result
+
+    def _get_training_configuration(self):
+        """Get the training configuration from the brain."""
+        request = GetTrainingConfiguration.Request()
+        future = self.get_training_configuration_client.call_async(request)
+        rclpy.spin_until_future_complete(self, future)
+        result = future.result()
+        self.training_mode_enabled = result.training_mode_enabled
+        self.num_targets_per_episode = result.num_targets_per_episode
+        self.num_episodes_per_candidate = result.num_episodes_per_candidate
+        self.num_candidates_per_generation = (
+            result.num_candidates_per_generation
+        )
 
     def spiderbot_pose_callback(self, msg):
         """Publish a set of leg targets whenever a new pose is received."""

@@ -3,6 +3,7 @@
 
 from spiderbot_interfaces.msg import TrainingStatus
 
+from std_srvs.srv import SetBool
 from std_srvs.srv import Trigger
 
 from .deep_actor_critic_module import DeepActorCriticModule
@@ -20,7 +21,9 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
         self.locomotion_module = DeepActorCriticModule(
             self,
             self.spiderbot_description,
-            self.training_mode_enabled
+            self.training_mode_enabled,
+            self.num_episodes_per_candidate,
+            self.num_candidates_per_generation
         )
 
         self.training_status_publisher = self.create_publisher(
@@ -34,6 +37,11 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
             'reset_learned_weights',
             self.reset_learned_weights_callback
         )
+
+        if self.training_mode_enabled:
+            start_training_request = SetBool.Request()
+            start_training_request.data = True
+            self.enable_training_client.call_async(start_training_request)
 
     def publish_training_status(self, training_status):
         """Publish information on the training and the reward."""

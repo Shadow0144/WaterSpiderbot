@@ -19,6 +19,9 @@ class SimulationViewer():
         self.render_interval = 1.0 / target_fps
         self.last_render_time = time.time()
 
+        self.displaying_target_number = False
+        self.target_number = 0
+        self.max_target_number = 0
         self.displaying_step_reward = False
         self.step_reward = 0.0
         self.displaying_episode_reward = False
@@ -28,6 +31,11 @@ class SimulationViewer():
         self.candidate_number = 0
         self.candidate_reward = 0.0
         self.generation_number = 0
+
+        self.display_num_limits = False
+        self.num_targets_per_episode = 0
+        self.num_episodes_per_candidate = 0
+        self.num_candidates_per_generation = 0
 
         self.reward_component_labels = None
         self.reward_component_values = None
@@ -186,19 +194,35 @@ class SimulationViewer():
         left_labels = []
         left_values = []
 
+        if self.displaying_target_number:
+            left_labels.append('Target number:')
+            if not self.display_num_limits:
+                left_values.append(f'{self.target_number}')
+            else:
+                left_values.append(f'{self.target_number} / '
+                                   f'{self.num_targets_per_episode}')
+
         if self.displaying_step_reward:
             left_labels.append('Step reward:')
             left_values.append(f'{self.step_reward:.3f}')
 
         if self.displaying_episode_reward:
             left_labels.append('Episode number:')
-            left_values.append(f'{self.episode_number}')
+            if not self.display_num_limits:
+                left_values.append(f'{self.episode_number}')
+            else:
+                left_values.append(f'{self.episode_number} / '
+                                   f'{self.num_episodes_per_candidate}')
             left_labels.append('Episode reward:')
             left_values.append(f'{self.episode_reward:.3f}')
 
         if self.displaying_candidate_reward:
             left_labels.append('Candidate number:')
-            left_values.append(f'{self.candidate_number}')
+            if not self.display_num_limits:
+                left_values.append(f'{self.candidate_number}')
+            else:
+                left_values.append(f'{self.candidate_number} / '
+                                   f'{self.num_candidates_per_generation}')
             left_labels.append('Candidate reward:')
             left_values.append(f'{self.candidate_reward:.3f}')
             left_labels.append('Generation number:')
@@ -226,6 +250,23 @@ class SimulationViewer():
                 ),
                 self.viewer_context
             )
+
+    def set_training_configuration(
+            self,
+            num_targets_per_episode,
+            num_episodes_per_candidate,
+            num_candidates_per_generation
+            ):
+        """Set the training configuration for the display."""
+        self.display_num_limits = True
+        self.num_targets_per_episode = num_targets_per_episode
+        self.num_episodes_per_candidate = num_episodes_per_candidate
+        self.num_candidates_per_generation = num_candidates_per_generation
+
+    def update_target_number(self, target_number):
+        """Enable displaying the target number and update it."""
+        self.displaying_target_number = True
+        self.target_number = target_number
 
     def update_training_status(self, training_status_msg):
         """Enable displaying the step reward and update it."""

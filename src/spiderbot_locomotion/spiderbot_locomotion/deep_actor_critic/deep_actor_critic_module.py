@@ -15,26 +15,31 @@ class DeepActorCriticModule(LocomotionModule):
             self,
             locomotion_node,
             spiderbot_description,
-            training_mode_enabled=True,
-            use_population_training=True,
+            training_mode_enabled,
+            num_episodes_per_candidate,
+            num_candidates_per_generation,
             use_soft_actor_critics_policy=True):
         """Initialize the locomotion module."""
         super().__init__(locomotion_node, spiderbot_description)
 
         self.training = training_mode_enabled
+        self.num_episodes_per_candidate = num_episodes_per_candidate
+        self.num_candidates_per_generation = num_candidates_per_generation
         self.using_population_training = (
-            self.training and use_population_training
+            self.training and self.num_episodes_per_candidate > 1
         )
 
         self.target = None
         self.episode_number = 0
         self.episode_save_interval = 10
-        self.population_size = 10 if self.using_population_training else 1
+        self.population_size = 3 if self.using_population_training else 1
 
         self.episode_terminated = False
 
         self.policy_trainer = PolicyTrainer(
             self.locomotion_node.get_logger(),
+            num_episodes_per_candidate=self.num_episodes_per_candidate,
+            num_candidates_per_generation=self.num_candidates_per_generation,
             use_soft_actor_critics_policy=use_soft_actor_critics_policy
         )
         self.are_poses_normalized = (

@@ -16,10 +16,13 @@ from spiderbot_interfaces.msg import SpiderbotTargetPose
 from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.msg import TrainingStatus
 from spiderbot_interfaces.srv import GetSpiderbotDescription
+from spiderbot_interfaces.srv import GetTrainingConfiguration
 
 import spiderbot_utilities as utils
 
-from std_srvs.srv import Empty
+from std_msgs.msg import Int32
+
+from std_srvs.srv import Trigger
 
 from .simulation_viewer import SimulationViewer
 
@@ -33,6 +36,11 @@ class SimulationNode(Node):
 
         self.get_logger().info('Starting spiderbot simulation node')
 
+        self.training_mode_enabled = False
+        self.num_targets_per_episode = 0
+        self.num_episodes_per_candidate = 0
+        self.num_candidates_per_generation = 0
+
         self.spiderbot_description_client = self.create_client(
             GetSpiderbotDescription,
             'get_spiderbot_description')
@@ -42,7 +50,7 @@ class SimulationNode(Node):
             self.get_logger().info(
                 'Waiting on get_spec_xml service',
                 once=True)
-        self.spiderbot_description = self._request_spiderbot_description()
+        self.spiderbot_description = self._get_spiderbot_description()
         self.get_logger().info('Spiderbot description received')
 
         (
@@ -120,6 +128,13 @@ class SimulationNode(Node):
             10
         )
 
+        self.target_number_subscription = self.create_subscription(
+            Int32,
+            'target_number',
+            self.target_number_callback,
+            10
+        )
+
         self.training_status_subscription = self.create_subscription(
             TrainingStatus,
             'training_status',
@@ -128,14 +143,34 @@ class SimulationNode(Node):
         )
 
         self.reset_simulation_service = self.create_service(
-            Empty,
+            Trigger,
             'reset_simulation',
             self.reset_simulation_callback
         )
 
+        self.get_training_configuration_client = self.create_client(
+            GetTrainingConfiguration,
+            'get_training_configuration'
+        )
+        while not self.get_training_configuration_client.wait_for_service(
+            timeout_sec=1.0
+        ):
+            self.get_logger().info(
+                'Waiting on get_training_configuration service',
+                once=True
+            )
+        self.get_logger().info('Spiderbot training configuration received')
+        self._get_training_configuration()
+
         self.last_timestamp = time.time()
 
         self.viewer = SimulationViewer(self.model, self.data)
+        if self.training_mode_enabled:
+            self.viewer.set_training_configuration(
+                self.num_targets_per_episode,
+                self.num_episodes_per_candidate,
+                self.num_candidates_per_generation
+            )
 
         self.get_logger().info('Spiderbot simulation node started')
 
@@ -148,12 +183,25 @@ class SimulationNode(Node):
         """Return if the node is running or if it's ready to shut down."""
         return self.viewer.is_running()
 
-    def _request_spiderbot_description(self):
+    def _get_spiderbot_description(self):
         """Get the spec xml from the description."""
         request = GetSpiderbotDescription.Request()
         future = self.spiderbot_description_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
         return future.result()
+
+    def _get_training_configuration(self):
+        """Get the training configuration from the brain."""
+        request = GetTrainingConfiguration.Request()
+        future = self.get_training_configuration_client.call_async(request)
+        rclpy.spin_until_future_complete(self, future)
+        result = future.result()
+        self.training_mode_enabled = result.training_mode_enabled
+        self.num_targets_per_episode = result.num_targets_per_episode
+        self.num_episodes_per_candidate = result.num_episodes_per_candidate
+        self.num_candidates_per_generation = (
+            result.num_candidates_per_generation
+        )
 
     def set_leg_targets_callback(self, msg):
         """Move the mocaps to the targets."""
@@ -209,6 +257,7 @@ class SimulationNode(Node):
         for leg_name in self.leg_names:
             self.legs[leg_name].reset_leg()
         self._publish_pose()
+        response.success = True
         return response
 
     def target_callback(self, msg):
@@ -234,6 +283,10 @@ class SimulationNode(Node):
         self.data.mocap_quat[self.target_mocap_id] = (
             self.target_quaternion
         )
+
+    def target_number_callback(self, msg):
+        """Update the viewer with the current target number."""
+        self.viewer.update_target_number(msg.data)
 
     def _update_pose_arrow(self):
         """Move the pose arrow to match the Spiderbot pose."""

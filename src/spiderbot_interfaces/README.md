@@ -23,3 +23,6 @@ Provides the ROS 2 message, service, and action interface definitions.
 
 - GetSpiderbotDescription
  Asks the description node to provide a description of a Spiderbot, including the MuJoCo spec and a description of each leg
+
+- GetTrainingConfiguration
+ Asks a node from the Spiderbot brain package to provide if the Spiderbot is in training mode and if so, the current training configuration

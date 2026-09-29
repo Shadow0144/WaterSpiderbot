@@ -8,10 +8,6 @@ All of the locomotion nodes are mutually exclusive. The deep_actor_critic_locomo
 
 The locomotion nodes all share the following properties:
 
-- Parameters:
- * training_mode_enabled -> bool
-  If enabled, the actor-critic will operate in training mode and train the neural network; if disabled, the actor-critic will be in production mode and use what it perceives as best action each step and not perform any training
-
 - Publishers:
  * spiderbot_target_pose -> SpiderbotTargetPose
   Publishes the set of target angles for the actuators of the Spiderbot

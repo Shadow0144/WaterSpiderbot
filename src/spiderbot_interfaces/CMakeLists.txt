@@ -18,6 +18,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     "msg/Target.msg"
     "msg/TrainingStatus.msg"
     "srv/GetSpiderbotDescription.srv"
+    "srv/GetTrainingConfiguration.srv"
     DEPENDENCIES
         geometry_msgs
         nav_msgs
