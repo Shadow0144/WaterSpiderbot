@@ -7,7 +7,10 @@ from ..checkpoint_file_manager import CheckpointFileManager
 from ..neural_network.deep_critic import DeepCritic
 from ..neural_network.deep_recurrent_actor import DeepRecurrentActor
 from ..neural_network.step_transition import RecurrentStepTransition
-from ..reward_functions.complex_reward_function import ComplexRewardFunction
+from ..reward_functions.canonical_pose_reward_function import (
+    CanonicalPoseRewardFunction
+)
+# from ..reward_functions.complex_reward_function import ComplexRewardFunction
 from ..reward_functions.training_status import TrainingStatus
 from ..utility import construct_input_vector
 
@@ -41,7 +44,8 @@ class DeepActorCriticPolicy():
             device=self.device
         )
 
-        self.reward_function = ComplexRewardFunction(self.logger)
+        # self.reward_function = ComplexRewardFunction(self.logger)
+        self.reward_function = CanonicalPoseRewardFunction(self.logger)
 
         # Reward horizon scaling
         self.gamma = 0.99

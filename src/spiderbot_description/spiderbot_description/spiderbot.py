@@ -54,7 +54,7 @@ class Spiderbot:
         # [Metatarsus: 1.0 / 1.05]
         # [Tarsus: 0.4]
         self.segment_lengths_per_leg = []
-        self.base_segment_lengths = [0.0, 0.25, 0.5]
+        self.base_segment_lengths = [0.0, 0.35, 0.6]
         if use_anatomical_lengths:
             self.leg_scales = [1.00, 0.90, 0.75, 1.10]
         else:

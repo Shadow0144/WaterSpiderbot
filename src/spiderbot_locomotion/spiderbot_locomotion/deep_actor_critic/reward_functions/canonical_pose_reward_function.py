@@ -1,9 +1,9 @@
-"""Calculates the reward for a single step of RL based on several factors."""
+"""Calculates the reward for a single step of RL based on a canonical pose."""
 
 import math
 
 
-class ComplexRewardFunction():
+class CanonicalPoseRewardFunction():
     """Convenience class to calculate the reward for a single step of RL."""
 
     def __init__(self, logger):
@@ -15,7 +15,6 @@ class ComplexRewardFunction():
         self.previous_y = None
         self.previous_distance = None
         self.previous_angular_distance = None
-        self.time_s = 0.0
         self.target_reached = False
         self.episode_terminated = False
 
@@ -27,38 +26,29 @@ class ComplexRewardFunction():
         self.target_speed = 0.02
         self.nominal_z = 0.4
         self.nominal_z_range = 0.2
-        self.foot_off_ground_z = 0.05
-        self.foot_max_z_above_body = 0.1
-        self.min_qvel = 0.02
-        self.max_qvel = 2.0
 
         # Hyperparameters for penalty strengths
-        self.stationary_penalty = -100.0
-        self.position_progress_reward = 1_000.0
-        self.position_anti_progress_penalty = -100.0
-        self.angle_progress_reward = 1_000.0
-        self.angle_anti_progress_penalty = -0.1
+        self.position_progress_reward = 100.0
+        self.position_anti_progress_penalty = -10.0
+        self.angle_progress_reward = 100.0
+        self.angle_anti_progress_penalty = -10.0
         self.tilt_penalty = -1.0
         self.height_penalty = -0.5
-        self.angle_speed_penalty = -0.01
-        self.feet_raised_penalty = -0.01
-        self.feet_too_high_penalty = -0.02
-        self.terminated_early_penalty = -10.0
-        self.arrival_reward = 30.0
+        self.pose_divergence_penalty = -0.01
+        self.arrival_reward = 100.0
+        self.terminated_early_penalty = -1_000.0
         self.reward_component_labels = [
             'Progress',
             'Facing',
-            'Movement',
             'Tilt',
             'Height',
-            'Angle Speed',
-            'Feet Planted',
-            'Feet Too High',
+            'Pose',
+            'Arrival',
         ]
 
         # Terminate early conditions
         self.max_tilt = 0.8
-        self.min_height = 0.1
+        self.min_height = 0.0
 
     def set_target(self, target):
         """Set the training target."""
@@ -71,7 +61,6 @@ class ComplexRewardFunction():
         self.previous_y = None
         self.previous_distance = None
         self.previous_angular_distance = None
-        self.time_s = 0.0
         self.target = None
         self.target_reached = False
         self.episode_terminated = False
@@ -100,7 +89,6 @@ class ComplexRewardFunction():
 
         position = spiderbot_pose.body_odometry.pose.pose.position
         orientation = spiderbot_pose.body_odometry.pose.pose.orientation
-        self.time_s += delta_time
 
         qx = orientation.x
         qy = orientation.y
@@ -122,14 +110,6 @@ class ComplexRewardFunction():
         else:
             z_distance = 0.0
 
-        actuator_speeds = {}
-        for leg_pose in spiderbot_pose.leg_poses:
-            actuator_speeds[leg_pose.leg_name] = [
-                leg_pose.coxa_qvel,
-                leg_pose.femur_qvel,
-                leg_pose.tibia_qvel
-            ]
-
         current_distance = math.hypot(self.target[0] - position.x,
                                       self.target[1] - position.y)
         if self.previous_distance is None:
@@ -142,40 +122,6 @@ class ComplexRewardFunction():
         if self.previous_angular_distance is None:
             self.previous_angular_distance = current_angular_distance
 
-        if self.previous_x is None:
-            self.previous_x = position.x
-        if self.previous_y is None:
-            self.previous_y = position.y
-        distance_traveled = math.hypot(self.previous_x - position.x,
-                                       self.previous_y - position.y)
-        if delta_time > 0.0:
-            speed = distance_traveled / delta_time
-        else:
-            speed = 0.0
-        target_speed_difference = (
-            max(0.0, self.target_speed - speed)
-        )
-
-        legs_off_ground = 0
-        actuators_not_actuating = 0
-        legs_above_body = 0
-        for leg_pose in spiderbot_pose.leg_poses:
-            leg_actuator_speeds = actuator_speeds[leg_pose.leg_name]
-            for actuator_speed in leg_actuator_speeds:
-                if abs(actuator_speed) < self.min_qvel:
-                    actuators_not_actuating += 1
-
-            legs_off_ground += (
-                1 if leg_pose.claw_z > self.foot_off_ground_z else 0
-            )
-
-            legs_above_body += (
-                1 if leg_pose.claw_z > (
-                    position.z + self.foot_max_z_above_body
-                ) else 0
-            )
-        too_many_legs_off_ground = max(0, legs_off_ground - 4)
-
         if current_distance > self.previous_distance:
             reward_progress = (
                 self.position_anti_progress_penalty *
@@ -186,6 +132,8 @@ class ComplexRewardFunction():
                 self.position_progress_reward *
                 (self.previous_distance - current_distance)
             )
+        self.previous_x = position.x
+        self.previous_y = position.y
         self.previous_distance = current_distance
 
         if current_angular_distance > self.previous_angular_distance:
@@ -200,13 +148,6 @@ class ComplexRewardFunction():
             )
         self.previous_angular_distance = current_angular_distance
 
-        reward_movement = (
-                self.stationary_penalty *
-                target_speed_difference
-        )
-        self.previous_x = position.x
-        self.previous_y = position.y
-
         reward_tilt = (
             self.tilt_penalty * tilt
         )
@@ -215,54 +156,50 @@ class ComplexRewardFunction():
             self.height_penalty * z_distance
         )
 
-        reward_angle_speed = (
-            self.angle_speed_penalty * actuators_not_actuating
-        )
+        qpose_divergence = 0.0
+        for leg_pose in spiderbot_pose.leg_poses:
+            qpose_divergence += (
+                abs(leg_pose.coxa_qpos) +
+                abs(leg_pose.femur_qpos) +
+                abs(leg_pose.tibia_qpos)
+            )
+        reward_pose = qpose_divergence * self.pose_divergence_penalty
 
-        reward_feet_planted = (
-            self.feet_raised_penalty * too_many_legs_off_ground
-        )
+        reward_arrival = 0.0
+        if (
+            current_distance < self.distance_convergence and
+            current_angular_distance < self.angle_convergence
+        ):
+            reward_arrival = self.arrival_reward
+            self.target_reached = True
 
-        reward_feet_too_high = (
-            self.feet_too_high_penalty * legs_above_body
-        )
-
-        total_reward = (
-            reward_progress +
-            reward_facing +
-            reward_movement +
-            reward_tilt +
-            reward_height +
-            reward_angle_speed +
-            reward_feet_planted +
-            reward_feet_too_high
-        )
-
+        reward_terminated = 0.0
         self.episode_terminated = False
         if (
             abs(roll) > self.max_tilt or
             abs(pitch) > self.max_tilt or
             position.z < self.min_height
         ):
-            total_reward += self.terminated_early_penalty
+            reward_terminated = self.terminated_early_penalty
             self.episode_terminated = True
 
-        if (
-            current_distance < self.distance_convergence and
-            current_angular_distance < self.angle_convergence
-        ):
-            total_reward += self.arrival_reward
-            self.target_reached = True
+        total_reward = (
+            reward_progress +
+            reward_facing +
+            reward_tilt +
+            reward_height +
+            reward_arrival +
+            reward_pose +
+            reward_terminated
+        )
 
         reward_component_values = [
             reward_progress,
             reward_facing,
-            reward_movement,
             reward_tilt,
             reward_height,
-            reward_angle_speed,
-            reward_feet_planted,
-            reward_feet_too_high,
+            reward_pose,
+            reward_arrival,
         ]
 
         training_status.step_reward = total_reward

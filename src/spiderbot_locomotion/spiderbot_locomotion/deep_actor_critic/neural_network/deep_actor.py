@@ -23,16 +23,13 @@ class DeepActor(nn.Module):
         self.feature_extractor = nn.Sequential(
             nn.Linear(self.num_inputs,
                       self.num_feature_hiddens),
-            nn.Sigmoid(),
-            nn.Linear(self.num_feature_hiddens,
-                      self.num_feature_hiddens),
-            nn.ReLU(),
+            nn.SELU(),
             nn.Linear(self.num_feature_hiddens,
                       self.num_feature_hiddens),
             nn.Sigmoid(),
             nn.Linear(self.num_feature_hiddens,
                       self.num_feature_hiddens),
-            nn.ReLU()
+            nn.SELU()
         )
 
         self.actor_mean = nn.Linear(self.num_feature_hiddens,

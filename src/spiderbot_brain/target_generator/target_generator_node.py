@@ -49,6 +49,8 @@ class TargetGeneratorNode(Node):
         self.episode_direction = 0.0
         self.episode_rotation = 0.0
 
+        self.create_new_target_on_reaching = False
+
         self.direction_jitter_half_range = math.pi / 16.0
         self.rotation_jitter_half_range = math.pi / 32.0
 
@@ -155,7 +157,8 @@ class TargetGeneratorNode(Node):
 
     def target_reached_callback(self, msg):
         """Handle when the Spiderbot reaches the training target."""
-        self._generate_target()
+        if self.create_new_target_on_reaching:
+            self._generate_target()
 
     def training_episode_terminated_callback(self, msg):
         """Handle when the Spiderbot terminates the training episode."""

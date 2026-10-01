@@ -25,10 +25,7 @@ class DeepCritic(nn.Module):
             nn.ReLU(),
             nn.Linear(self.num_hiddens,
                       self.num_hiddens),
-            nn.ReLU(),
-            nn.Linear(self.num_hiddens,
-                      self.num_hiddens),
-            nn.ReLU(),
+            nn.SELU(),
             nn.Linear(self.num_hiddens,
                       self.num_outputs)
         )
