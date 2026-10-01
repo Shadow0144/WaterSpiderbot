@@ -1,4 +1,4 @@
-<mujoco model="test_scene">
+<mujoco model="spiderbot_scene">
 
     <option gravity="0 0 -9.81" timestep="0.002" />
 
@@ -43,23 +43,23 @@
 
         <body name="cephalothorax" pos="0 0 0.25">
             <freejoint name="cephalothorax_joint"/>
-            <geom type="ellipsoid" size="0.25 0.25 0.125" rgba="0 0 0 1" mass="0.5" friction="1 0.01 0.0001" contype="2" conaffinity="1"/>
+            <geom type="ellipsoid" size="0.3 0.25 0.125" rgba="0 0 0 1" mass="0.5" friction="1 0.01 0.0001" contype="2" conaffinity="1"/>
             
             <body name="abdomen" pos="-0.5 0 0">
-                <geom type="ellipsoid" size="0.3 0.3 0.175" rgba="0.2 0.2 0.2 1" mass="0.05" friction="1 0.01 0.0001"/>
+                <geom type="ellipsoid" size="0.35 0.275 0.125" rgba="0.2 0.2 0.2 1" mass="0.05" friction="1 0.01 0.0001"/>
             </body>
             
-            <! Eyes>
-            <camera name="l_eye" pos="0.25 0.045 0" euler="90 -90 0"/>
-            <camera name="r_eye" pos="0.25 -0.045 0" euler="90 -90 0"/>
+            <!-- Eyes -->
+            <camera name="l_eye" pos="0.3 0.05 0" euler="90 -90 0"/>
+            <camera name="r_eye" pos="0.3 -0.05 0" euler="90 -90 0"/>
 
-            <! cephalothorax connects to coxa [then trochanter] then femur [then patella] then tibia [then metatarsus] [then tarsus] then claws />
-            <! legs are built dynamically in the python code />
+            <!-- Cephalothorax connects to coxa [then trochanter] then femur [then patella] then tibia [then metatarsus] [then tarsus] then claws -->
+            <!-- Legs are built dynamically with Python -->
 
         </body>
     </worldbody>
 
-    <! Left coxa to cephalothorax />
+    <!-- Left coxa to cephalothorax -->
     <actuator>
         <position name="servo_l_i_coxa_pitch" joint="l_i_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
@@ -73,7 +73,7 @@
         <position name="servo_l_iv_coxa_pitch" joint="l_iv_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
 
-    <! Left femur to coxa />
+    <!-- Left femur to coxa -->
     <actuator>
         <position name="servo_l_i_femur_pitch" joint="l_i_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
@@ -87,7 +87,7 @@
         <position name="servo_l_iv_femur_pitch" joint="l_iv_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
 
-    <! Left tibia to femur />
+    <!-- Left tibia to femur -->
     <actuator>
         <position name="servo_l_i_tibia_pitch" joint="l_i_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
@@ -101,7 +101,7 @@
         <position name="servo_l_iv_tibia_pitch" joint="l_iv_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
 
-    <! Right coxa to body />
+    <!-- Right coxa to body -->
     <actuator>
         <position name="servo_r_i_coxa_pitch" joint="r_i_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
@@ -115,7 +115,7 @@
         <position name="servo_r_iv_coxa_pitch" joint="r_iv_cephalothorax_coxa_joint" kp="40" ctrlrange="-45 45" forcerange="-20 20"/>
     </actuator>
 
-    <! Right femur to coxa />
+    <!-- Right femur to coxa -->
     <actuator>
         <position name="servo_r_i_femur_pitch" joint="r_i_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
@@ -129,7 +129,7 @@
         <position name="servo_r_iv_femur_pitch" joint="r_iv_coxa_femur_joint" kp="40" ctrlrange="-90 0" forcerange="-20 20"/>
     </actuator>
 
-    <! Right tibia to femur />
+    <!-- Right tibia to femur -->
     <actuator>
         <position name="servo_r_i_tibia_pitch" joint="r_i_femur_tibia_joint" kp="40" ctrlrange="0 135" forcerange="-20 20"/>
     </actuator>
