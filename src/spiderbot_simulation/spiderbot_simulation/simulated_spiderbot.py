@@ -18,9 +18,7 @@ class SimulatedSpiderbot():
         self.topic_prefix = topic_prefix
         self.description = description
 
-        spec = mujoco.MjSpec.from_string(
-            self.description.spec_xml
-        )
+        spec = mujoco.MjSpec.from_string(self.description.spec_xml)
         self.model = spec.compile()
         self.data = mujoco.MjData(self.model)
 

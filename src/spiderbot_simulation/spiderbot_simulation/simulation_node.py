@@ -3,6 +3,8 @@
 import time
 from functools import partial
 
+import mujoco
+
 import rclpy
 from rclpy.node import Node
 
@@ -75,6 +77,10 @@ class SimulationNode(Node):
                 once=True)
         self.spiderbot_description = self._get_spiderbot_description()
         self.get_logger().info('Spiderbot description received')
+
+        spec = mujoco.MjSpec.from_string(self.spiderbot_description.spec_xml)
+        model = spec.compile()
+        self.timestep = model.opt.timestep
 
         self._create_spiderbot_topics()
 
@@ -277,10 +283,10 @@ class SimulationNode(Node):
         # Update the renderer
         self.viewer.update(current_timestamp)
 
-        # # Sleep until it is time for the next simulation step
-        # time_elapsed = time.time() - current_timestamp
-        # time_until_next_step = (
-        #     self.model.opt.timestep - time_elapsed
-        # )
-        # if time_until_next_step > 0.0:
-        #     time.sleep(time_until_next_step)
+        # Sleep until it is time for the next simulation step
+        time_elapsed = time.time() - current_timestamp
+        time_until_next_step = (
+            self.timestep - time_elapsed
+        )
+        if time_until_next_step > 0.0:
+            time.sleep(time_until_next_step)
