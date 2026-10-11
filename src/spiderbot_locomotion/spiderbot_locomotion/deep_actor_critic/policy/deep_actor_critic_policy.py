@@ -3,7 +3,7 @@
 import torch
 from torch import nn
 
-from ..checkpoint_file_manager import CheckpointFileManager
+from ..file_managers.model_weights_file_manager import ModelWeightsFileManager
 from ..neural_network.deep_critic import DeepCritic
 from ..neural_network.deep_recurrent_actor import DeepRecurrentActor
 from ..neural_network.step_transition import RecurrentStepTransition
@@ -18,9 +18,10 @@ from ..utility import construct_input_vector
 class DeepActorCriticPolicy():
     """Provides an action based on the current state."""
 
-    def __init__(self, logger):
+    def __init__(self, logger, model_weights_filename):
         """Initialize the locomotion neural network."""
         self.logger = logger
+        self.model_weights_filename = model_weights_filename
 
         self.are_poses_normalized = False
 
@@ -35,7 +36,9 @@ class DeepActorCriticPolicy():
         self._create_critics()
         self.loss_function = nn.MSELoss()
 
-        self.checkpoint_file_manager = CheckpointFileManager()
+        self.model_weights_file_manager = ModelWeightsFileManager(
+            model_weights_filename
+        )
 
         # Recurrent hidden state (initialize with zeros)
         self.hidden_state_t = torch.zeros(
@@ -93,7 +96,8 @@ class DeepActorCriticPolicy():
         ).to(self.device)
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(),
-            lr=1e-4)
+            lr=1e-4
+        )
 
     def _create_critics(self):
         """Create the Critic(s) and their optimizer(s)."""
@@ -107,7 +111,8 @@ class DeepActorCriticPolicy():
         self.critic_optimizers = [
             torch.optim.Adam(
                 self.critics[0].parameters(),
-                lr=1e-4)
+                lr=1e-4
+            )
         ]
 
     def reset(self):
@@ -128,56 +133,64 @@ class DeepActorCriticPolicy():
         self.transition_t = None
         self.reward_function.start_new_training_episode()
 
-    def get_model_weights_exists(self, filename='test_weights.pt'):
-        """Get if the model weight file exists."""
-        return self.checkpoint_file_manager.get_model_weights_exists(
-            filename
-        )
-
-    def save_weights(self, filename='test_weights.pt'):
+    def save_weights(self, filename_override=None):
         """Save the learned weights to a file."""
+        filename = (
+            filename_override
+            if filename_override else
+            self.model_weights_filename
+        )
         self.logger.info(f'Saving weights: {filename}')
         try:
-            self.checkpoint_file_manager.save_actor_critic_weights(
-                filename,
+            self.model_weights_file_manager.save_model_weights(
                 self.actor,
                 self.actor_optimizer,
                 self.critics,
-                self.critic_optimizers
+                self.critic_optimizers,
+                filename_override
             )
             self.logger.info(f'Saved weights: {filename}')
         except RuntimeError as e:
             self.logger.warning(f'Failed to save weights: {e}')
 
-    def load_weights(self, filename='test_weights.pt'):
+    def load_weights(self, filename_override=None):
         """Load the learned weights from a file."""
         try:
+            filename = (
+                filename_override
+                if filename_override else
+                self.model_weights_filename
+            )
             self.logger.info(f'Loading weights: {filename}')
-            if self.get_model_weights_exists(filename):
-                self.checkpoint_file_manager.load_actor_critic_weights(
-                    filename,
+            if self.model_weights_file_manager.get_model_weights_exists():
+                self.model_weights_file_manager.load_model_weights(
                     self.actor,
                     self.actor_optimizer,
                     self.critics,
                     self.critic_optimizers,
-                    self.device
+                    self.device,
+                    filename_override
                 )
-                self.logger.info(f'Loaded weights: {filename}')
+                self.logger.info(
+                    f'Loaded weights: {filename}'
+                )
                 self.start_new_training_episode()
             else:
-                self.logger.warning(f'Weights file {filename} not found')
+                self.logger.warning(
+                    f'Weights file {filename} not found'
+                )
         except RuntimeError as e:
             self.logger.warning(f'Failed to load weights: {e}')
 
-    def delete_saved_weights(self, filename):
+    def delete_saved_weights(self):
         """Delete the saved weights file."""
-        if self.checkpoint_file_manager.get_model_weights_exists(filename):
-            self.checkpoint_file_manager.delete_saved_weights(filename)
-            self.logger.info(f'Deleted weights: {filename}')
+        if self.model_weights_file_manager.get_model_weights_exists():
+            self.model_weights_file_manager.delete_model_weights()
+            self.logger.info(f'Deleted weights: {self.model_weights_filename}')
 
     def reset_learned_weights(self):
         """Backup the current weights and start with new random weights."""
-        self.checkpoint_file_manager.reset_learned_actor_critic_weights()
+        self.model_weights_file_manager.reset_model_weights()
         # Create a new actor-critic and optimizer with random weights
         self.actor = DeepRecurrentActor(
             self.num_actor_inputs,
@@ -196,14 +209,14 @@ class DeepActorCriticPolicy():
         self.target = target
         self.reward_function.set_target(self.target)
 
-    def select_action(self, spiderbot_pose, deterministic=False):
+    def select_action(self, spiderbot_pose_msg, deterministic=False):
         """Select the next action."""
         if self.target is None:
             return None  # Exit early if there is no target
 
         state_t = construct_input_vector(
                 self.target,
-                spiderbot_pose,
+                spiderbot_pose_msg,
                 self.device
         )
 
@@ -257,9 +270,11 @@ class DeepActorCriticPolicy():
             transition_t
         )
 
-    def train_step(self,
-                   spiderbot_pose,
-                   delta_time):
+    def train_step(
+            self,
+            spiderbot_pose_msg,
+            delta_time
+            ):
         """Perform a single step of training."""
         training_status = TrainingStatus(
             step_reward=0.0,
@@ -275,7 +290,7 @@ class DeepActorCriticPolicy():
 
         state_t = construct_input_vector(
                 self.target,
-                spiderbot_pose,
+                spiderbot_pose_msg,
                 self.device
         )
 
@@ -285,7 +300,7 @@ class DeepActorCriticPolicy():
             self.reward_function.compute_step_reward(
                 training_status,
                 self.target,
-                spiderbot_pose,
+                spiderbot_pose_msg,
                 delta_time
             )
 
@@ -305,11 +320,13 @@ class DeepActorCriticPolicy():
 
         return action_t, training_status
 
-    def _train_actor_critic_step(self,
-                                 transition_t,
-                                 state_tp1,
-                                 reward_t,
-                                 episode_terminated):
+    def _train_actor_critic_step(
+            self,
+            transition_t,
+            state_tp1,
+            reward_t,
+            episode_terminated
+            ):
         """Perform a single-step Actor-Critic update."""
         self.actor.train()
         self.critics[0].train()

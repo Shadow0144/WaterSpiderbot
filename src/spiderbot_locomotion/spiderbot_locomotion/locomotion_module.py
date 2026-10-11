@@ -43,11 +43,11 @@ class LocomotionModule:
             self.delta_time = timestamp - self.last_timestamp
             self.last_timestamp = timestamp
 
-    def update(self, spiderbot_pose_msg):
+    def update(self, topic_prefix, spiderbot_pose_msg):
         """Walk the Spiderbot towards its target."""
         self._update_delta_time(spiderbot_pose_msg)
 
-    def set_target(self, set_target_msg):
+    def set_target(self, topic_prefix, set_target_msg):
         """Set a target (x, y, rotation) for the Spiderbot to move towards."""
         self.target_x = set_target_msg.target_x
         self.target_y = set_target_msg.target_y

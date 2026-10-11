@@ -115,7 +115,8 @@ class TeleopNode(Node):
         response.training_mode_enabled = False
         response.num_targets_per_episode = 0
         response.num_episodes_per_candidate = 0
-        response.num_candidates_per_generation = 0
+        response.candidate_topic_prefixes = []
+        response.train_parallel = False
         return response
 
     def _set_target(self, target):

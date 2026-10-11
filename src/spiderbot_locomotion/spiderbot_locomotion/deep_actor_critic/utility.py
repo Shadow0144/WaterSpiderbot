@@ -3,9 +3,9 @@
 import torch
 
 
-def construct_input_vector(target, spiderbot_pose, device):
+def construct_input_vector(target, spiderbot_pose_msg, device):
     """Construct a Pytorch tensor from the target and Spiderbot pose."""
-    body_odometry = spiderbot_pose.body_odometry
+    body_odometry = spiderbot_pose_msg.body_odometry
     body_pose = body_odometry.pose.pose.position
     body_orientation = body_odometry.pose.pose.orientation
     body_pose_vel = body_odometry.twist.twist.linear
@@ -28,7 +28,7 @@ def construct_input_vector(target, spiderbot_pose, device):
         body_orientation_vel.y,
         body_orientation_vel.z,
     ]
-    for leg_pose in spiderbot_pose.leg_poses:
+    for leg_pose in spiderbot_pose_msg.leg_poses:
         data.extend(
             [
                 leg_pose.coxa_qpos,

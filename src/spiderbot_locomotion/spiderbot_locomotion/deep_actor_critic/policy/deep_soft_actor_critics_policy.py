@@ -19,9 +19,9 @@ from ..utility import construct_input_vector
 class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
     """Provides an action based on the current state."""
 
-    def __init__(self, logger):
+    def __init__(self, logger, model_weights_filename):
         """Initialize the locomotion neural network."""
-        super().__init__(logger)
+        super().__init__(logger, model_weights_filename)
 
         self.are_poses_normalized = True
 
@@ -109,23 +109,23 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         self.transition_t = None
         self.reward_function.start_new_training_episode()
 
-    def _construct_state(self, spiderbot_pose):
+    def _construct_state(self, spiderbot_pose_msg):
         """Construct a state vector from the latest observation."""
         frame_t = construct_input_vector(
                 self.target,
-                spiderbot_pose,
+                spiderbot_pose_msg,
                 self.device
         )
         self.frames.append(frame_t)
         state_t = torch.cat(list(self.frames), dim=-1)
         return state_t
 
-    def select_action(self, spiderbot_pose, deterministic=False):
+    def select_action(self, spiderbot_pose_msg, deterministic=False):
         """Select the next action."""
         if self.target is None:
             return None  # Exit early if there is no target
 
-        state_t = self._construct_state(spiderbot_pose)
+        state_t = self._construct_state(spiderbot_pose_msg)
 
         if deterministic:
             action_t = self._select_action_deterministic(state_t)

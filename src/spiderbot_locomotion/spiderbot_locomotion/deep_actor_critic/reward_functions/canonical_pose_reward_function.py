@@ -34,6 +34,9 @@ class CanonicalPoseRewardFunction():
         self.angle_anti_progress_penalty = -10.0
         self.tilt_penalty = -1.0
         self.height_penalty = -0.5
+        self.coxa_divergence_strength = 0.1
+        self.femur_divergence_strength = 1.0
+        self.tibia_divergence_strength = 1.0
         self.pose_divergence_penalty = -0.01
         self.arrival_reward = 100.0
         self.terminated_early_penalty = -1_000.0
@@ -159,10 +162,11 @@ class CanonicalPoseRewardFunction():
         qpose_divergence = 0.0
         for leg_pose in spiderbot_pose.leg_poses:
             qpose_divergence += (
-                abs(leg_pose.coxa_qpos) +
-                abs(leg_pose.femur_qpos) +
-                abs(leg_pose.tibia_qpos)
+                (self.coxa_divergence_strength * abs(leg_pose.coxa_qpos)) +
+                (self.femur_divergence_strength * abs(leg_pose.femur_qpos)) +
+                (self.tibia_divergence_strength * abs(leg_pose.tibia_qpos))
             )
+        qpose_divergence *= qpose_divergence  # Square it
         reward_pose = qpose_divergence * self.pose_divergence_penalty
 
         reward_arrival = 0.0

@@ -23,14 +23,23 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
             self.spiderbot_description,
             self.training_mode_enabled,
             self.num_episodes_per_candidate,
-            self.num_candidates_per_generation
+            self.candidate_topic_prefixes,
+            self.train_parallel
         )
 
-        self.training_status_publisher = self.create_publisher(
-            TrainingStatus,
-            'training_status',
-            10
-        )
+        self.training_status_publishers = {}
+        if self.train_parallel:
+            self.topic_prefixes = self.candidate_topic_prefixes
+        else:
+            self.topic_prefixes = ['']
+        for topic_prefix in self.topic_prefixes:
+            self.training_status_publishers[topic_prefix] = (
+                self.create_publisher(
+                    TrainingStatus,
+                    f'{topic_prefix}training_status',
+                    10
+                )
+            )
 
         self.reset_learned_weights_service = self.create_service(
             Trigger,
@@ -43,7 +52,7 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
             start_training_request.data = True
             self.enable_training_client.call_async(start_training_request)
 
-    def publish_training_status(self, training_status):
+    def publish_training_status(self, topic_prefix, training_status):
         """Publish information on the training and the reward."""
         msg = TrainingStatus()
         msg.step_reward = training_status.step_reward
@@ -67,7 +76,7 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
         msg.reward_component_values = (
             training_status.reward_component_values
         )
-        self.training_status_publisher.publish(msg)
+        self.training_status_publishers[topic_prefix].publish(msg)
 
     def reset_learned_weights_callback(self, request, response):
         """Backup the current weights and start with new random weights."""

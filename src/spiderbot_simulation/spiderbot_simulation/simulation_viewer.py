@@ -6,39 +6,33 @@ import glfw
 
 import mujoco
 
+from .scene import Scene
+
 
 class SimulationViewer():
     """Window and viewer for a Spiderbot simulation."""
 
-    def __init__(self, model, data):
+    def __init__(
+            self,
+            topic_prefixes,
+            simulated_spiderbots,
+            train_parallel
+            ):
         """Initialize the window and viewer."""
-        self.model = model
-        self.data = data
+        self.topic_prefixes = topic_prefixes
+        self.simulated_spiderbots = simulated_spiderbots
+        self.train_parallel = train_parallel
+
+        if not self.topic_prefixes or not self.simulated_spiderbots:
+            raise RuntimeError(
+                'There must be at least one topic and spiderbot'
+            )
 
         target_fps = 60.0
         self.render_interval = 1.0 / target_fps
         self.last_render_time = time.time()
 
-        self.displaying_target_number = False
-        self.target_number = 0
-        self.max_target_number = 0
-        self.displaying_step_reward = False
-        self.step_reward = 0.0
-        self.displaying_episode_reward = False
-        self.episode_number = 0
-        self.episode_reward = 0.0
-        self.displaying_candidate_reward = False
-        self.candidate_number = 0
-        self.candidate_reward = 0.0
-        self.generation_number = 0
-
-        self.display_num_limits = False
-        self.num_targets_per_episode = 0
-        self.num_episodes_per_candidate = 0
-        self.num_candidates_per_generation = 0
-
-        self.reward_component_labels = None
-        self.reward_component_values = None
+        self.current_topic_index = 0
 
         glfw.init()
         self.window = glfw.create_window(
@@ -51,29 +45,15 @@ class SimulationViewer():
         glfw.make_context_current(self.window)
         glfw.swap_interval(0)
 
-        self.cam = mujoco.MjvCamera()
-        self.opt = mujoco.MjvOption()
-        self.scene = mujoco.MjvScene(self.model, maxgeom=10_000)
-        self.viewer_context = mujoco.MjrContext(
-            self.model,
-            mujoco.mjtFontScale.mjFONTSCALE_150
-        )
-
-        mujoco.mjv_defaultFreeCamera(self.model, self.cam)
-
-        self.cam.azimuth = 180
-        self.cam.elevation = -30
-        self.cam.distance = 3.0
-        self.cam.lookat[:] = [0, 0, 0.25]
-
-        self.camera_following = True
-        self.tracking_body_id = self.model.body('cephalothorax').id
-        self.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
-        self.cam.trackbodyid = self.tracking_body_id
-
-        self.opt.flags[mujoco.mjtVisFlag.mjVIS_CAMERA] = True
-        self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
-        self.opt.frame = mujoco.mjtFrame.mjFRAME_SITE
+        self.num_scenes = len(self.topic_prefixes)
+        self.scenes = {}
+        for topic_prefix in self.topic_prefixes:
+            if topic_prefix in self.simulated_spiderbots.keys():
+                self.scenes[topic_prefix] = Scene(
+                    topic_prefix,
+                    self.simulated_spiderbots[topic_prefix],
+                    self.train_parallel
+                )
 
         self.mouse_button_left_pressed = False
         self.mouse_button_middle_pressed = False
@@ -132,12 +112,13 @@ class SimulationViewer():
         elif self.mouse_button_middle_pressed:
             action = mujoco.mjtMouse.mjMOUSE_ZOOM
 
+        current_scene = self._get_current_scene()
         mujoco.mjv_moveCamera(
-            self.model,
+            current_scene.model,
             int(action),
             mouse_dx / width,
             mouse_dy / height,
-            self.cam
+            current_scene.cam
         )
 
     def mouse_button_callback(self, window, button, action, mods):
@@ -158,155 +139,77 @@ class SimulationViewer():
 
     def mouse_scroll_callback(self, window, x_offset, y_offset):
         """Handle mouse scroll in the window."""
+        current_scene = self._get_current_scene()
         mujoco.mjv_moveCamera(
-            self.model,
+            current_scene.model,
             int(mujoco.mjtMouse.mjMOUSE_ZOOM),
             0,
             -0.05 * y_offset,
-            self.cam
+            current_scene.camera
         )
 
     def key_callback(self, window, key, scancode, action, mods):
         """Handle key events in the window."""
+        current_scene = self._get_current_scene()
         if action == glfw.PRESS:
-            if key == glfw.KEY_T:
-                # Toggle translucency
-                self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = (
-                    not self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT]
+            if key == glfw.KEY_LEFT:
+                # Decrease the scene index
+                self.current_topic_index = (
+                    (self.current_topic_index - 1) % self.num_scenes
+                )  # Python will preserve the sign of the divisor
+            if key == glfw.KEY_RIGHT:
+                # Increase the scene index
+                self.current_topic_index = (
+                    (self.current_topic_index + 1) % self.num_scenes
                 )
+            elif key == glfw.KEY_T:
+                # Toggle translucency
+                current_scene.toggle_translucency()
             elif key == glfw.KEY_F:
                 # Follow camera tracking/following
-                self.camera_following = not self.camera_following
-                if self.camera_following:
-                    self.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
-                    self.cam.trackbodyid = self.tracking_body_id
-                else:
-                    self.cam.type = mujoco.mjtCamera.mjCAMERA_FREE
+                current_scene.toggle_camera_following()
             elif key == glfw.KEY_R:
                 # Reset the camera
-                self.cam.azimuth = 180
-                self.cam.elevation = -30
-                self.cam.distance = 3.0
-                self.cam.lookat[:] = [0, 0, 0.25]
+                current_scene.reset_camera()
 
-    def _add_overlays(self, viewport):
-        """Add the training overlays to the viewport."""
-        left_labels = []
-        left_values = []
-
-        if self.displaying_target_number:
-            left_labels.append('Target number:')
-            if not self.display_num_limits:
-                left_values.append(f'{self.target_number}')
-            else:
-                left_values.append(f'{self.target_number} / '
-                                   f'{self.num_targets_per_episode}')
-
-        if self.displaying_step_reward:
-            left_labels.append('Step reward:')
-            left_values.append(f'{self.step_reward:.3f}')
-
-        if self.displaying_episode_reward:
-            left_labels.append('Episode number:')
-            if not self.display_num_limits:
-                left_values.append(f'{self.episode_number}')
-            else:
-                left_values.append(f'{self.episode_number} / '
-                                   f'{self.num_episodes_per_candidate}')
-            left_labels.append('Episode reward:')
-            left_values.append(f'{self.episode_reward:.3f}')
-
-        if self.displaying_candidate_reward:
-            left_labels.append('Candidate number:')
-            if not self.display_num_limits:
-                left_values.append(f'{self.candidate_number}')
-            else:
-                left_values.append(f'{self.candidate_number} / '
-                                   f'{self.num_candidates_per_generation}')
-            left_labels.append('Candidate reward:')
-            left_values.append(f'{self.candidate_reward:.3f}')
-            left_labels.append('Generation number:')
-            left_values.append(f'{self.generation_number}')
-
-        if left_labels and left_values:
-            mujoco.mjr_overlay(
-                mujoco.mjtFont.mjFONT_NORMAL,
-                mujoco.mjtGridPos.mjGRID_TOPLEFT,
-                viewport,
-                '\n'.join(left_labels),
-                '\n'.join(left_values),
-                self.viewer_context
-            )
-
-        if self.reward_component_labels and self.reward_component_values:
-            mujoco.mjr_overlay(
-                mujoco.mjtFont.mjFONT_NORMAL,
-                mujoco.mjtGridPos.mjGRID_TOPRIGHT,
-                viewport,
-                '\n'.join(self.reward_component_labels),
-                '\n'.join(
-                    [f'{component_value:.3f}' for component_value in
-                     self.reward_component_values]
-                ),
-                self.viewer_context
-            )
+    def _get_current_scene(self):
+        """Shorthand for getting the current scene."""
+        return self.scenes[self.topic_prefixes[self.current_topic_index]]
 
     def set_training_configuration(
             self,
             num_targets_per_episode,
             num_episodes_per_candidate,
-            num_candidates_per_generation
+            num_candidates_per_generation,
             ):
         """Set the training configuration for the display."""
-        self.display_num_limits = True
-        self.num_targets_per_episode = num_targets_per_episode
-        self.num_episodes_per_candidate = num_episodes_per_candidate
-        self.num_candidates_per_generation = num_candidates_per_generation
+        for scene in self.scenes.values():
+            scene.set_training_configuration(
+                num_targets_per_episode,
+                num_episodes_per_candidate,
+                num_candidates_per_generation
+            )
 
-    def update_target_number(self, target_number):
+    def update_target_number(self, topic_prefix, target_number):
         """Enable displaying the target number and update it."""
-        self.displaying_target_number = True
-        self.target_number = target_number
+        if topic_prefix in self.scenes.keys():
+            self.scenes[topic_prefix].update_target_number(target_number)
 
-    def update_training_status(self, training_status_msg):
+    def update_training_status(self, topic_prefix, training_status_msg):
         """Enable displaying the step reward and update it."""
-        self.displaying_step_reward = True
-        self.step_reward = training_status_msg.step_reward
-        self.displaying_episode_reward = True
-        self.episode_number = training_status_msg.episode_number
-        self.episode_reward = training_status_msg.episode_reward
-        if training_status_msg.using_population_training:
-            self.displaying_candidate_reward = True
-            self.candidate_number = training_status_msg.candidate_number
-            self.candidate_reward = training_status_msg.candidate_reward
-            self.generation_number = training_status_msg.generation_number
-        self.reward_component_labels = (
-            training_status_msg.reward_component_labels
-        )
-        self.reward_component_values = (
-            training_status_msg.reward_component_values
-        )
+        if topic_prefix in self.scenes.keys():
+            self.scenes[topic_prefix].update_training_status(
+                training_status_msg
+            )
 
     def update(self, current_timestamp):
         """Update the render if enough time has elapsed."""
-        if current_timestamp - self.last_render_time >= self.render_interval:
+        if (current_timestamp - self.last_render_time) >= self.render_interval:
             self.last_render_time = current_timestamp
             width, height = glfw.get_framebuffer_size(self.window)
             viewport = mujoco.MjrRect(0, 0, width, height)
 
-            mujoco.mjv_updateScene(
-                self.model,
-                self.data,
-                self.opt,
-                None,
-                self.cam,
-                mujoco.mjtCatBit.mjCAT_ALL,
-                self.scene
-            )
-
-            mujoco.mjr_render(viewport, self.scene, self.viewer_context)
-
-            self._add_overlays(viewport)
+            self._get_current_scene().update_scene(viewport)
 
             glfw.swap_buffers(self.window)
             glfw.poll_events()

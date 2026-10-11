@@ -1,11 +1,7 @@
 """Simulate a Spiderbot and launch an interactive viewer."""
 
-import math
 import time
-
-import mujoco
-
-import numpy as np
+from functools import partial
 
 import rclpy
 from rclpy.node import Node
@@ -18,12 +14,11 @@ from spiderbot_interfaces.msg import TrainingStatus
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 from spiderbot_interfaces.srv import GetTrainingConfiguration
 
-import spiderbot_utilities as utils
-
 from std_msgs.msg import Int32
 
 from std_srvs.srv import Trigger
 
+from .simulated_spiderbot import SimulatedSpiderbot
 from .simulation_viewer import SimulationViewer
 
 
@@ -36,111 +31,18 @@ class SimulationNode(Node):
 
         self.get_logger().info('Starting spiderbot simulation node')
 
+        target_publish_rate_ps = 60.0
+        self.publish_interval = 1.0 / target_publish_rate_ps
+        self.last_timestamp = time.time()
+
         self.training_mode_enabled = False
         self.num_targets_per_episode = 0
         self.num_episodes_per_candidate = 0
         self.num_candidates_per_generation = 0
 
-        self.spiderbot_description_client = self.create_client(
-            GetSpiderbotDescription,
-            'get_spiderbot_description')
-        while not self.spiderbot_description_client.wait_for_service(
-            timeout_sec=1.0
-        ):
-            self.get_logger().info(
-                'Waiting on get_spec_xml service',
-                once=True)
-        self.spiderbot_description = self._get_spiderbot_description()
-        self.get_logger().info('Spiderbot description received')
-
-        (
-            self.leg_descriptions,
-            self.leg_names,
-            self.segment_lengths_per_leg,
-            self.spec,
-            self.model,
-            self.data,
-            self.body,
-            self.legs
-        ) = utils.convert_spiderbot_description_to_variables(
-            self.spiderbot_description
-        )
-
-        self.target_visible = False
-        self.target_position = None
-        self.target_quaternion = None
-        self.target = self.data.body('target')
-        self.target_z = self.model.body('target').pos[2]
-        target_body_id = self.model.body('target').id
-        self.target_mocap_id = self.model.body_mocapid[
-            target_body_id
-        ]
-        self.target_forward_geom_id = self.model.geom(
-            'target_forward_geom'
-        ).id
-        self.target_backward_geom_id = self.model.geom(
-            'target_backward_geom'
-        ).id
-
-        self.pose_arrow_position = None
-        self.pose_arrow_quaternion = None
-        self.pose_arrow = self.data.body('pose_arrow')
-        self.pose_arrow_z = self.model.body('pose_arrow').pos[2]
-        pose_arrow_body_id = self.model.body('pose_arrow').id
-        self.pose_arrow_mocap_id = self.model.body_mocapid[
-            pose_arrow_body_id
-        ]
-        self.pose_arrow_forward_geom_id = self.model.geom(
-            'pose_arrow_forward_geom'
-        ).id
-        self.pose_arrow_backward_geom_id = self.model.geom(
-            'pose_arrow_backward_geom'
-        ).id
-
-        target_publish_rate_ps = 60.0
-        self.publish_interval = 1.0 / target_publish_rate_ps
-        self.last_timestamp = time.time()
-
-        self.spiderbot_pose_publisher = self.create_publisher(
-            SpiderbotPose,
-            'spiderbot_pose',
-            10
-        )
-
-        self.set_leg_targets_subscription = self.create_subscription(
-            LegTargets,
-            'set_leg_targets',
-            self.set_leg_targets_callback,
-            10
-        )
-
-        self.spiderbot_target_pose_subscription = self.create_subscription(
-            SpiderbotTargetPose,
-            'spiderbot_target_pose',
-            self.spiderbot_target_pose_callback,
-            10
-        )
-
-        self.target_subscription = self.create_subscription(
-            Target,
-            'target',
-            self.target_callback,
-            10
-        )
-
-        self.target_number_subscription = self.create_subscription(
-            Int32,
-            'target_number',
-            self.target_number_callback,
-            10
-        )
-
-        self.training_status_subscription = self.create_subscription(
-            TrainingStatus,
-            'training_status',
-            self.training_status_callback,
-            10
-        )
+        self.simulated_spiderbots = {}
+        self.candidate_topic_prefixes = []
+        self.topic_prefixes = []
 
         self.reset_simulation_service = self.create_service(
             Trigger,
@@ -156,21 +58,45 @@ class SimulationNode(Node):
             timeout_sec=1.0
         ):
             self.get_logger().info(
-                'Waiting on get_training_configuration service',
+                'Waiting on training configuration service',
                 once=True
             )
-        self.get_logger().info('Spiderbot training configuration received')
         self._get_training_configuration()
+        self.get_logger().info('Spiderbot training configuration received')
 
-        self.last_timestamp = time.time()
+        self.spiderbot_description_client = self.create_client(
+            GetSpiderbotDescription,
+            'get_spiderbot_description')
+        while not self.spiderbot_description_client.wait_for_service(
+            timeout_sec=1.0
+        ):
+            self.get_logger().info(
+                'Waiting on spiderbot description service',
+                once=True)
+        self.spiderbot_description = self._get_spiderbot_description()
+        self.get_logger().info('Spiderbot description received')
 
-        self.viewer = SimulationViewer(self.model, self.data)
+        self._create_spiderbot_topics()
+
+        for topic_prefix in self.topic_prefixes:
+            self.simulated_spiderbots[topic_prefix] = SimulatedSpiderbot(
+                topic_prefix,
+                self.spiderbot_description
+            )
+
+        self.viewer = SimulationViewer(
+            self.topic_prefixes,
+            self.simulated_spiderbots,
+            self.train_parallel
+        )
         if self.training_mode_enabled:
             self.viewer.set_training_configuration(
                 self.num_targets_per_episode,
                 self.num_episodes_per_candidate,
                 self.num_candidates_per_generation
             )
+
+        self.last_timestamp = time.time()
 
         self.get_logger().info('Spiderbot simulation node started')
 
@@ -199,129 +125,138 @@ class SimulationNode(Node):
         self.training_mode_enabled = result.training_mode_enabled
         self.num_targets_per_episode = result.num_targets_per_episode
         self.num_episodes_per_candidate = result.num_episodes_per_candidate
+        self.candidate_topic_prefixes = result.candidate_topic_prefixes
+        self.train_parallel = result.train_parallel
         self.num_candidates_per_generation = (
-            result.num_candidates_per_generation
+            len(self.candidate_topic_prefixes)
+        )
+        self.topic_prefixes = (
+            self.candidate_topic_prefixes
+            if self.train_parallel else
+            ['']
         )
 
-    def set_leg_targets_callback(self, msg):
+    def _create_spiderbot_topics(self):
+        """Create the topics for each spiderbot."""
+        self.spiderbot_pose_publishers = {}
+        self.set_leg_targets_subscriptions = {}
+        self.spiderbot_target_pose_subscriptions = {}
+        self.target_subscriptions = {}
+        self.target_number_subscriptions = {}
+        self.training_status_subscriptions = {}
+        for topic_prefix in self.topic_prefixes:
+            self.spiderbot_pose_publishers[topic_prefix] = (
+                self.create_publisher(
+                    SpiderbotPose,
+                    f'{topic_prefix}spiderbot_pose',
+                    10
+                )
+            )
+
+            set_leg_targets_callback_full = (
+                partial(self.set_leg_targets_callback, topic_prefix)
+            )
+            self.set_leg_targets_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    LegTargets,
+                    f'{topic_prefix}set_leg_targets',
+                    set_leg_targets_callback_full,
+                    10
+                )
+            )
+
+            spiderbot_target_pose_callback_full = (
+                partial(self.spiderbot_target_pose_callback, topic_prefix)
+            )
+            self.spiderbot_target_pose_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    SpiderbotTargetPose,
+                    f'{topic_prefix}spiderbot_target_pose',
+                    spiderbot_target_pose_callback_full,
+                    10
+                )
+            )
+
+            target_callback_full = (
+                partial(self.target_callback, topic_prefix)
+            )
+            self.target_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    Target,
+                    f'{topic_prefix}target',
+                    target_callback_full,
+                    10
+                )
+            )
+
+            target_number_callback_full = (
+                partial(self.target_number_callback, topic_prefix)
+            )
+            self.target_number_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    Int32,
+                    f'{topic_prefix}target_number',
+                    target_number_callback_full,
+                    10
+                )
+            )
+
+            training_status_callback_full = (
+                partial(self.training_status_callback, topic_prefix)
+            )
+            self.training_status_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    TrainingStatus,
+                    f'{topic_prefix}training_status',
+                    training_status_callback_full,
+                    10
+                )
+            )
+
+    def set_leg_targets_callback(self, topic_prefix, msg):
         """Move the mocaps to the targets."""
-        leg_target_values = msg.leg_targets
-        if len(leg_target_values) != len(self.leg_names):
-            return  # Break early
-        leg_targets = dict(zip(self.leg_names, leg_target_values))
-        for leg_name in self.leg_names:
-            # Move the mocap to the target point
-            self.legs[leg_name].set_mocap_target_visible(True)
-            self.legs[leg_name].set_mocap_target(
-                utils.convert_vector3_to_list(leg_targets[leg_name]))
+        if topic_prefix in self.simulated_spiderbots.keys():
+            self.simulated_spiderbots[topic_prefix].set_leg_targets(msg)
 
-    def spiderbot_target_pose_callback(self, msg):
+    def spiderbot_target_pose_callback(self, topic_prefix, msg):
         """Update the targets for the actuators."""
-        leg_poses_values = msg.leg_poses
-        if len(leg_poses_values) != len(self.leg_names):
-            return  # Break early
-        leg_poses = dict(zip(self.leg_names, leg_poses_values))
-        if msg.poses_normalized:
-            for leg_name in self.leg_names:
-                leg_pose = leg_poses[leg_name]
-                self.legs[leg_name].set_leg_actions(
-                    leg_pose.coxa_qpos,
-                    leg_pose.femur_qpos,
-                    leg_pose.tibia_qpos
-                )
-        else:
-            for leg_name in self.leg_names:
-                leg_pose = leg_poses[leg_name]
-                self.legs[leg_name].set_leg_target_angles(
-                    leg_pose.coxa_qpos,
-                    leg_pose.femur_qpos,
-                    leg_pose.tibia_qpos
-                )
+        if topic_prefix in self.simulated_spiderbots.keys():
+            self.simulated_spiderbots[topic_prefix].set_target_pose(msg)
 
-    def training_status_callback(self, msg):
+    def target_callback(self, topic_prefix, msg):
+        """Move the target to the location and make it visible."""
+        if topic_prefix in self.simulated_spiderbots.keys():
+            self.simulated_spiderbots[topic_prefix].set_target(msg)
+
+    def target_number_callback(self, topic_prefix, msg):
+        """Update the viewer with the current target number."""
+        self.viewer.update_target_number(topic_prefix, msg.data)
+
+    def training_status_callback(self, topic_prefix, msg):
         """Enable displaying and update the information on the training."""
-        self.viewer.update_training_status(msg)
+        self.viewer.update_training_status(topic_prefix, msg)
 
     def reset_simulation_callback(self, request, response):
         """Reset simulation."""
-        mujoco.mj_resetData(self.model, self.data)
-        # Move the target back to where it should be if necessary
-        if self.target_visible:
-            self.data.mocap_pos[self.target_mocap_id] = (
-                self.target_position
-            )
-            self.data.mocap_quat[self.target_mocap_id] = (
-                self.target_quaternion
-            )
-        mujoco.mj_forward(self.model, self.data)
-        for leg_name in self.leg_names:
-            self.legs[leg_name].reset_leg()
-        self._publish_pose()
+        for spiderbot in self.simulated_spiderbots.values():
+            spiderbot.reset()
+        self._publish_poses()
         response.success = True
         return response
 
-    def target_callback(self, msg):
-        """Move the target to the location and make it visible."""
-        self.target_visible = True
-        alpha = 0.75
-        self.target_position = [
-            msg.target_x,
-            msg.target_y,
-            self.target_z
-        ]
-        half_theta = msg.target_theta / 2.0
-        self.target_quaternion = [
-            np.cos(half_theta), 0.0, 0.0, np.sin(half_theta)
-        ]
-        self.model.geom_rgba[self.target_forward_geom_id, 3] = alpha
-        self.model.geom_rgba[self.target_backward_geom_id, 3] = alpha
-        self.model.geom_rgba[self.pose_arrow_forward_geom_id, 3] = alpha
-        self.model.geom_rgba[self.pose_arrow_backward_geom_id, 3] = alpha
-        self.data.mocap_pos[self.target_mocap_id] = (
-                    self.target_position
-                )
-        self.data.mocap_quat[self.target_mocap_id] = (
-            self.target_quaternion
-        )
-
-    def target_number_callback(self, msg):
-        """Update the viewer with the current target number."""
-        self.viewer.update_target_number(msg.data)
-
-    def _update_pose_arrow(self):
-        """Move the pose arrow to match the Spiderbot pose."""
-        self.pose_arrow_position = [
-            self.body.xpos[0],
-            self.body.xpos[1],
-            self.pose_arrow_z
-        ]
-        self.data.mocap_pos[self.pose_arrow_mocap_id] = (
-                            self.pose_arrow_position
-        )
-
-        qx = self.body.xquat[1]
-        qy = self.body.xquat[2]
-        qz = self.body.xquat[3]
-        qw = self.body.xquat[0]
-        yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
-        half_yaw = yaw * 0.5
-        yaw_quaternion = np.array([
-            np.cos(half_yaw), 0.0, 0.0, np.sin(half_yaw)
-        ])
-        self.pose_arrow_quaternion = yaw_quaternion
-        self.data.mocap_quat[self.pose_arrow_mocap_id] = (
-            self.pose_arrow_quaternion
-        )
-
-    def _publish_pose(self):
+    def _publish_poses(self):
         """Publish the current pose."""
-        spiderbot_pose_msg = utils.construct_pose_msg(
-            self.last_timestamp,
-            self.body,
-            self.leg_names,
-            self.legs
-        )
-        self.spiderbot_pose_publisher.publish(spiderbot_pose_msg)
+        for topic_prefix in self.topic_prefixes:
+            if (
+                topic_prefix in self.simulated_spiderbots.keys() and
+                topic_prefix in self.spiderbot_pose_publishers.keys()
+            ):
+                spiderbot = self.simulated_spiderbots[topic_prefix]
+                self.spiderbot_pose_publishers[topic_prefix].publish(
+                    spiderbot.create_pose_message(
+                        self.last_timestamp
+                    )
+                )
 
     def update(self):
         """Step the physics, publish the pose, and update the render."""
@@ -331,21 +266,21 @@ class SimulationNode(Node):
         current_timestamp = time.time()
 
         # Step the physics
-        mujoco.mj_step(self.model, self.data)
+        for spiderbot in self.simulated_spiderbots.values():
+            spiderbot.step()
 
         # Publish the current pose if enough time has elapsed
         if current_timestamp - self.last_timestamp >= self.publish_interval:
             self.last_timestamp = current_timestamp
-            self._update_pose_arrow()
-            self._publish_pose()
+            self._publish_poses()
 
         # Update the renderer
         self.viewer.update(current_timestamp)
 
-        # Sleep until it is time for the next simulation step
-        time_elapsed = time.time() - current_timestamp
-        time_until_next_step = (
-            self.model.opt.timestep - time_elapsed
-        )
-        if time_until_next_step > 0.0:
-            time.sleep(time_until_next_step)
+        # # Sleep until it is time for the next simulation step
+        # time_elapsed = time.time() - current_timestamp
+        # time_until_next_step = (
+        #     self.model.opt.timestep - time_elapsed
+        # )
+        # if time_until_next_step > 0.0:
+        #     time.sleep(time_until_next_step)

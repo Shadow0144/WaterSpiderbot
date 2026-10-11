@@ -1,5 +1,7 @@
 """Spiderbot locomotion node."""
 
+from functools import partial
+
 import rclpy
 from rclpy.node import Node
 
@@ -60,43 +62,7 @@ class LocomotionNode(Node):
         self.get_logger().info('Spiderbot training configuration received')
         self._get_training_configuration()
 
-        self.spiderbot_target_pose_publisher = self.create_publisher(
-            SpiderbotTargetPose,
-            'spiderbot_target_pose',
-            10
-        )
-
-        self.leg_set_targets_publisher = self.create_publisher(
-            LegTargets,
-            'set_leg_targets',
-            10
-        )
-
-        self.target_reached_publisher = self.create_publisher(
-            Empty,
-            'target_reached',
-            10
-        )
-
-        self.training_episode_terminated_publisher = self.create_publisher(
-            Empty,
-            'training_episode_terminated',
-            10
-        )
-
-        self.spiderbot_pose_subscription = self.create_subscription(
-            SpiderbotPose,
-            'spiderbot_pose',
-            self.spiderbot_pose_callback,
-            10
-        )
-
-        self.target_subscription = self.create_subscription(
-            Target,
-            'target',
-            self.target_callback,
-            10
-        )
+        self._create_spiderbot_topics()
 
         self.start_training_episode_subscriber = self.create_subscription(
             Empty,
@@ -133,44 +99,96 @@ class LocomotionNode(Node):
         self.training_mode_enabled = result.training_mode_enabled
         self.num_targets_per_episode = result.num_targets_per_episode
         self.num_episodes_per_candidate = result.num_episodes_per_candidate
+        self.candidate_topic_prefixes = result.candidate_topic_prefixes
         self.num_candidates_per_generation = (
-            result.num_candidates_per_generation
+            len(self.candidate_topic_prefixes)
         )
+        self.train_parallel = result.train_parallel
+        # If training in parallel, each policy has its own nested namespace
+        # If training in series, there is only the top-level namespace
+        if self.train_parallel:
+            self.topic_prefixes = result.candidate_topic_prefixes
+        else:
+            self.topic_prefixes = ['']
 
-    def spiderbot_pose_callback(self, msg):
-        """Publish a set of leg targets whenever a new pose is received."""
-        if self.locomotion_module is not None:
-            self.locomotion_module.update(msg)
+    def _create_spiderbot_topics(self):
+        """Create all the topics unique to each spiderbot."""
+        self.spiderbot_target_pose_publishers = {}
+        self.leg_set_targets_publishers = {}
+        self.target_reached_publishers = {}
+        self.training_episode_terminated_publishers = {}
+        self.spiderbot_pose_subscriptions = {}
+        self.target_subscriptions = {}
+        for topic_prefix in self.topic_prefixes:
+            self.spiderbot_target_pose_publishers[topic_prefix] = (
+                self.create_publisher(
+                    SpiderbotTargetPose,
+                    f'{topic_prefix}spiderbot_target_pose',
+                    10
+                )
+            )
 
-    def target_location_callback(self, msg):
-        """Set the target for the locomotion module to approach."""
-        if self.locomotion_module is not None:
-            self.locomotion_module.set_target(msg)
+            self.leg_set_targets_publishers[topic_prefix] = (
+                self.create_publisher(
+                    LegTargets,
+                    f'{topic_prefix}set_leg_targets',
+                    10
+                )
+            )
 
-    def publish_angles(self, msg):
-        """Publish target angles for the leg actuators."""
-        self.spiderbot_target_pose_publisher.publish(msg)
+            self.target_reached_publishers[topic_prefix] = (
+                self.create_publisher(
+                    Empty,
+                    f'{topic_prefix}target_reached',
+                    10
+                )
+            )
 
-    def publish_points(self, msg):
-        """Publish target points for the leg to reach for."""
-        self.leg_set_targets_publisher.publish(msg)
+            self.training_episode_terminated_publishers[topic_prefix] = (
+                self.create_publisher(
+                    Empty,
+                    f'{topic_prefix}training_episode_terminated',
+                    10
+                )
+            )
 
-    def publish_target_reached(self):
-        """Publish that the training target was reached."""
-        self.target_reached_publisher.publish(Empty())
+            spiderbot_pose_callback_full = (
+                partial(self.spiderbot_pose_callback, topic_prefix)
+            )
+            self.spiderbot_pose_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    SpiderbotPose,
+                    f'{topic_prefix}spiderbot_pose',
+                    spiderbot_pose_callback_full,
+                    10
+                )
+            )
 
-    def publish_training_episode_terminated(self):
-        """Publish that the training episode was terminated early."""
-        self.training_episode_terminated_publisher.publish(Empty())
-
-    def target_callback(self, msg):
-        """Reset the simuation and has the Spiderbot move to the target."""
-        if self.locomotion_module is not None:
-            self.locomotion_module.set_target(msg)
+            target_callback_full = (
+                partial(self.target_callback, topic_prefix)
+            )
+            self.target_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    Target,
+                    f'{topic_prefix}target',
+                    target_callback_full,
+                    10
+                )
+            )
 
     def start_training_episode_callback(self, msg):
         """Start a new training episode."""
         self.locomotion_module.start_training_episode()
+
+    def spiderbot_pose_callback(self, topic_prefix, msg):
+        """Publish a set of leg targets whenever a new pose is received."""
+        if self.locomotion_module is not None:
+            self.locomotion_module.update(topic_prefix, msg)
+
+    def target_callback(self, topic_prefix, msg):
+        """Reset the simuation and has the Spiderbot move to the target."""
+        if self.locomotion_module is not None:
+            self.locomotion_module.set_target(topic_prefix, msg)
 
     def set_training_mode_enabled_callback(self, request, response):
         """Toggle if training mode is enabled."""
@@ -178,3 +196,21 @@ class LocomotionNode(Node):
         response.success = True
         response.message = 'Success'
         return response
+
+    def publish_angles(self, topic_prefix, msg):
+        """Publish target angles for the leg actuators."""
+        self.spiderbot_target_pose_publishers[topic_prefix].publish(msg)
+
+    def publish_points(self, topic_prefix, msg):
+        """Publish target points for the leg to reach for."""
+        self.leg_set_targets_publishers[topic_prefix].publish(msg)
+
+    def publish_target_reached(self, topic_prefix):
+        """Publish that the training target was reached."""
+        self.target_reached_publishers[topic_prefix].publish(Empty())
+
+    def publish_training_episode_terminated(self, topic_prefix):
+        """Publish that the training episode was terminated early."""
+        self.training_episode_terminated_publishers[topic_prefix].publish(
+            Empty()
+        )

@@ -262,9 +262,9 @@ class HandcraftedPointsModule(LocomotionModule):
             )
         mujoco.mj_step(self.model, self.data)
 
-    def update(self, spiderbot_pose_msg):
+    def update(self, topic_prefix, spiderbot_pose_msg):
         """Walk the spiderbot forward."""
-        super().update(spiderbot_pose_msg)
+        super().update(topic_prefix, spiderbot_pose_msg)
         if self.delta_time > 0.0:
             self._walk_forward()
 
