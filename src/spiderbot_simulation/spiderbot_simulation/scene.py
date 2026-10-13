@@ -71,14 +71,14 @@ class Scene():
         """Toggles if the camera is following the Spiderbot."""
         self.camera_following = not self.camera_following
         if self.camera_following:
-            self.camera.type = (
+            self.cam.type = (
                 mujoco.mjtCamera.mjCAMERA_TRACKING
             )
-            self.camera.trackbodyid = (
+            self.cam.trackbodyid = (
                 self.tracking_body_id
             )
         else:
-            self.camera.type = (
+            self.cam.type = (
                 mujoco.mjtCamera.mjCAMERA_FREE
             )
 
