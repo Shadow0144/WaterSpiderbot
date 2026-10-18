@@ -57,18 +57,39 @@ class Scene():
         self.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
         self.cam.trackbodyid = (self.tracking_body_id)
 
+        self.showing_frames = True
+
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_CAMERA] = True
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
-        self.opt.frame = mujoco.mjtFrame.mjFRAME_SITE
+        self.opt.frame = (
+            mujoco.mjtFrame.mjFRAME_SITE
+            if self.showing_frames else
+            mujoco.mjtFrame.mjFRAME_NONE
+        )
 
     def toggle_translucency(self):
-        """Toggles if the models are translucent."""
+        """Toggle if the models are translucent."""
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = (
             not self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT]
         )
 
+    def toggle_joints_visible(self):
+        """Toggle if the model's joints are visible."""
+        self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = (
+            not self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT]
+        )
+
+    def toggle_frames_visible(self):
+        """Toggle if the model's frames are visible."""
+        self.showing_frames = not self.showing_frames
+        self.opt.frame = (
+            mujoco.mjtFrame.mjFRAME_SITE
+            if self.showing_frames else
+            mujoco.mjtFrame.mjFRAME_NONE
+        )
+
     def toggle_camera_following(self):
-        """Toggles if the camera is following the Spiderbot."""
+        """Toggle if the camera is following the Spiderbot."""
         self.camera_following = not self.camera_following
         if self.camera_following:
             self.cam.type = (

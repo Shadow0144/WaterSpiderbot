@@ -19,10 +19,36 @@ class SimulatedSpiderbot():
         self.description = description
 
         spec = mujoco.MjSpec.from_string(self.description.spec_xml)
+        spec.compiler.meshdir = self.description.mesh_dir
+        spec.compiler.texturedir = self.description.texture_dir
         self.model = spec.compile()
         self.data = mujoco.MjData(self.model)
 
         self.body = self.data.body('cephalothorax')
+
+        self.servo_tendon_actuator_id = self.model.actuator(
+            'servo_tendon_tension'
+        ).id
+
+        self.tendon_joint_id = self.model.joint(
+            'tendon_slide'
+        ).id
+
+        self.tendon_actuator_limits = (
+            self.model.actuator_ctrlrange[self.servo_tendon_actuator_id]
+        )
+
+        self.tendon_actuator_limit_low = self.tendon_actuator_limits[0]
+
+        self.tendon_actuator_limit_high = self.tendon_actuator_limits[1]
+
+        self.tendon_actuator_limit_half_range = 0.5 * (
+            self.tendon_actuator_limit_high - self.tendon_actuator_limit_low
+        )
+
+        self.tendon_joint_qpos_adr = self.model.jnt_qposadr[
+            self.tendon_joint_id
+        ]
 
         # Create the legs and leg descriptions
         self.leg_descriptions = self.description.leg_descriptions
@@ -53,11 +79,8 @@ class SimulatedSpiderbot():
         self.target_mocap_id = self.model.body_mocapid[
             target_body_id
         ]
-        self.target_forward_geom_id = self.model.geom(
-            'target_forward_geom'
-        ).id
-        self.target_backward_geom_id = self.model.geom(
-            'target_backward_geom'
+        self.target_geom_id = self.model.geom(
+            'target_geom'
         ).id
 
         self.pose_arrow_position = None
@@ -68,11 +91,8 @@ class SimulatedSpiderbot():
         self.pose_arrow_mocap_id = self.model.body_mocapid[
             pose_arrow_body_id
         ]
-        self.pose_arrow_forward_geom_id = self.model.geom(
-            'pose_arrow_forward_geom'
-        ).id
-        self.pose_arrow_backward_geom_id = self.model.geom(
-            'pose_arrow_backward_geom'
+        self.pose_arrow_geom_id = self.model.geom(
+            'pose_arrow_geom'
         ).id
 
     def reset(self):
@@ -89,6 +109,10 @@ class SimulatedSpiderbot():
         mujoco.mj_forward(self.model, self.data)
         for leg_name in self.leg_names:
             self.legs[leg_name].reset_leg()
+
+    def scale_action_to_range(self, action, range_low, half_range):
+        """Scale up the action in the range [-1, 1] to the full range."""
+        return (range_low + ((action + 1.0) * half_range))
 
     def set_leg_targets(self, targets_msg):
         """Move the mocaps to the targets."""
@@ -108,8 +132,16 @@ class SimulatedSpiderbot():
         leg_poses_values = target_pose_msg.leg_poses
         if len(leg_poses_values) != len(self.leg_names):
             return  # Break early
+        tendon_tension = self.scale_action_to_range(
+            target_pose_msg.tendon_tension,
+            self.tendon_actuator_limit_low,
+            self.tendon_actuator_limit_half_range
+        )
+        self.data.ctrl[self.servo_tendon_actuator_id] = (
+            tendon_tension
+        )
         leg_poses = dict(zip(self.leg_names, leg_poses_values))
-        if target_pose_msg.poses_normalized:
+        if target_pose_msg.actions_normalized:
             for leg_name in self.leg_names:
                 leg_pose = leg_poses[leg_name]
                 self.legs[leg_name].set_leg_actions(
@@ -129,7 +161,7 @@ class SimulatedSpiderbot():
     def set_target(self, target_msg):
         """Set the target for locomotion."""
         self.target_visible = True
-        alpha = 0.75
+        alpha = 1.0  # 0.75
         self.target_position = [
             target_msg.target_x,
             target_msg.target_y,
@@ -139,10 +171,8 @@ class SimulatedSpiderbot():
         self.target_quaternion = [
             np.cos(half_theta), 0.0, 0.0, np.sin(half_theta)
         ]
-        self.model.geom_rgba[self.target_forward_geom_id, 3] = alpha
-        self.model.geom_rgba[self.target_backward_geom_id, 3] = alpha
-        self.model.geom_rgba[self.pose_arrow_forward_geom_id, 3] = alpha
-        self.model.geom_rgba[self.pose_arrow_backward_geom_id, 3] = alpha
+        self.model.geom_rgba[self.target_geom_id, 3] = alpha
+        self.model.geom_rgba[self.pose_arrow_geom_id, 3] = alpha
         self.data.mocap_pos[self.target_mocap_id] = (
                     self.target_position
                 )
@@ -150,11 +180,16 @@ class SimulatedSpiderbot():
             self.target_quaternion
         )
 
+    def get_tendon_position(self):
+        """Get the tendon position."""
+        return self.data.qpos[self.tendon_joint_qpos_adr]
+
     def create_pose_message(self, last_timestamp):
         """Get the pose as a message."""
         spiderbot_pose_msg = utils.construct_pose_msg(
             last_timestamp,
             self.body,
+            self.get_tendon_position(),
             self.leg_names,
             self.legs
         )

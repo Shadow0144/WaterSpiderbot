@@ -23,7 +23,7 @@ class DeepActorCriticPolicy():
         self.logger = logger
         self.model_weights_filename = model_weights_filename
 
-        self.are_poses_normalized = False
+        self.are_actions_normalized = False
 
         self.device = (
             torch.accelerator.current_accelerator().type
@@ -67,18 +67,20 @@ class DeepActorCriticPolicy():
         #  body_rx, body_ry, body_rz, body_rw,
         #  body_vx, body_vy, body_vz
         #  body_vrp, body_vrr, body_vry,
-        #  foreach leg: # 8
+        #  tendon_tension,
+        #  for each leg: # 8
         #   leg_q1, leg_q2, leg_q3,
         #   leg_vq1, leg_vq2, leg_vq3,
         #   leg_x, leg_y, leg_z,
         #   leg_rx, leg_ry, leg_rz
         # Outputs:
-        # foreach leg: # 8
+        # tendon_tension,
+        # for each leg: # 8
         #  leg_q1, leg_q2, leg_q3
-        self.num_actor_inputs = 3 + 13 + (8 * 12)  # 112
+        self.num_actor_inputs = 3 + 13 + 1 + (8 * 12)  # 113
         self.num_actor_feature_hiddens = 512
         self.num_actor_recurrent_hiddens = 256
-        self.num_actor_outputs = (8 * 3)  # 24
+        self.num_actor_outputs = 1 + (8 * 3)  # 25
 
         self.num_critic_inputs = (
             self.num_actor_recurrent_hiddens
@@ -119,9 +121,9 @@ class DeepActorCriticPolicy():
         """Reset the state."""
         self.target = None
 
-    def get_are_poses_normalized(self):
+    def get_are_actions_normalized(self):
         """Return if the poses are normalized or already scaled."""
-        return self.are_poses_normalized
+        return self.are_actions_normalized
 
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""

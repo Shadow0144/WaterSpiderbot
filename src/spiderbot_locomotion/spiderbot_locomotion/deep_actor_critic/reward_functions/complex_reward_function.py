@@ -35,9 +35,7 @@ class ComplexRewardFunction():
         # Hyperparameters for penalty strengths
         self.stationary_penalty = -100.0
         self.position_progress_reward = 1_000.0
-        self.position_anti_progress_penalty = -100.0
         self.angle_progress_reward = 1_000.0
-        self.angle_anti_progress_penalty = -0.1
         self.tilt_penalty = -1.0
         self.height_penalty = -0.5
         self.angle_speed_penalty = -0.01
@@ -176,28 +174,16 @@ class ComplexRewardFunction():
             )
         too_many_legs_off_ground = max(0, legs_off_ground - 4)
 
-        if current_distance > self.previous_distance:
-            reward_progress = (
-                self.position_anti_progress_penalty *
-                (current_distance - self.previous_distance)
-            )
-        else:
-            reward_progress = (
-                self.position_progress_reward *
-                (self.previous_distance - current_distance)
-            )
+        reward_progress = (
+            self.position_progress_reward *
+            (self.previous_distance - current_distance)
+        )
         self.previous_distance = current_distance
 
-        if current_angular_distance > self.previous_angular_distance:
-            reward_facing = (
-                    self.angle_anti_progress_penalty *
-                    (current_angular_distance - self.previous_angular_distance)
-            )
-        else:
-            reward_facing = (
-                    self.angle_progress_reward *
-                    (self.previous_angular_distance - current_angular_distance)
-            )
+        reward_facing = (
+                self.angle_progress_reward *
+                (self.previous_angular_distance - current_angular_distance)
+        )
         self.previous_angular_distance = current_angular_distance
 
         reward_movement = (

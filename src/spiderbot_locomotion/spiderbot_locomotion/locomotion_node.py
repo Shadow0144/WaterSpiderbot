@@ -197,13 +197,9 @@ class LocomotionNode(Node):
         response.message = 'Success'
         return response
 
-    def publish_angles(self, topic_prefix, msg):
+    def publish_target_pose(self, topic_prefix, msg):
         """Publish target angles for the leg actuators."""
         self.spiderbot_target_pose_publishers[topic_prefix].publish(msg)
-
-    def publish_points(self, topic_prefix, msg):
-        """Publish target points for the leg to reach for."""
-        self.leg_set_targets_publishers[topic_prefix].publish(msg)
 
     def publish_target_reached(self, topic_prefix):
         """Publish that the training target was reached."""

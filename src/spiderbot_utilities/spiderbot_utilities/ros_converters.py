@@ -1,5 +1,7 @@
 """Set of converter functions to translate between ROS types and Python."""
 
+import os
+
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
@@ -92,16 +94,20 @@ def construct_leg_pose_msg(leg, leg_name):
     return leg_pose
 
 
-def construct_pose_msg(timestamp,
-                       body,
-                       leg_names,
-                       legs):
+def construct_pose_msg(
+        timestamp,
+        body,
+        tendon_tension,
+        leg_names,
+        legs
+        ):
     """Construct a SpiderbotPose message."""
     msg = SpiderbotPose()
     msg.timestamp = timestamp
     msg.body_odometry = create_odometry(
         body
     )
+    msg.tendon_tension = tendon_tension
     leg_poses = []
     for leg_name in leg_names:
         leg_poses.append(construct_leg_pose_msg(
@@ -125,14 +131,18 @@ def construct_target_pose_msg_from_legs(timestamp, leg_names, legs):
     return msg
 
 
-def construct_target_pose_msg(timestamp,
-                              poses_normalized,
-                              leg_names,
-                              target_qposes):
+def construct_target_pose_msg(
+        timestamp,
+        actions_normalized,
+        tendon_tension,
+        leg_names,
+        target_qposes
+        ):
     """Construct a SpiderbotTargetPose message from target angles."""
     msg = SpiderbotTargetPose()
     msg.timestamp = timestamp
-    msg.poses_normalized = poses_normalized
+    msg.actions_normalized = actions_normalized
+    msg.tendon_tension = tendon_tension
     leg_poses = []
     for leg_name in leg_names:
         qposes = target_qposes[leg_name]
@@ -147,7 +157,9 @@ def construct_target_pose_msg(timestamp,
     return msg
 
 
-def construct_leg_targets_msg(timestamp, leg_names, target_points):
+def construct_leg_targets_msg(
+        timestamp, leg_names, target_points
+        ):
     """Construct a LegTargets message."""
     msg = LegTargets()
     msg.timestamp = timestamp
@@ -190,6 +202,8 @@ def convert_spiderbot_description_to_variables(spiderbot_description):
     spec = mujoco.MjSpec.from_string(
         spiderbot_description.spec_xml
     )
+    spec.compiler.meshdir = spiderbot_description.mesh_dir
+    spec.compiler.texturedir = spiderbot_description.texture_dir
     model = spec.compile()
     data = mujoco.MjData(model)
 

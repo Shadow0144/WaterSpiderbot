@@ -145,7 +145,7 @@ class SimulationViewer():
             int(mujoco.mjtMouse.mjMOUSE_ZOOM),
             0,
             -0.05 * y_offset,
-            current_scene.camera
+            current_scene.cam
         )
 
     def key_callback(self, window, key, scancode, action, mods):
@@ -165,6 +165,12 @@ class SimulationViewer():
             elif key == glfw.KEY_T:
                 # Toggle translucency
                 current_scene.toggle_translucency()
+            elif key == glfw.KEY_J:
+                # Toggle joint visibility
+                current_scene.toggle_joints_visible()
+            elif key == glfw.KEY_V:
+                # Toggle frame visibility
+                current_scene.toggle_frames_visible()
             elif key == glfw.KEY_F:
                 # Follow camera tracking/following
                 current_scene.toggle_camera_following()

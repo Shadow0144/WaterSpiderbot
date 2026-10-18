@@ -24,8 +24,8 @@ class CanonicalPoseRewardFunction():
 
         # Hyperparameters for ranges
         self.target_speed = 0.02
-        self.nominal_z = 0.4
-        self.nominal_z_range = 0.2
+        self.nominal_z = 0.3
+        self.nominal_z_range = 0.1
 
         # Hyperparameters for penalty strengths
         self.position_progress_reward = 100.0
@@ -33,11 +33,11 @@ class CanonicalPoseRewardFunction():
         self.angle_progress_reward = 100.0
         self.angle_anti_progress_penalty = -10.0
         self.tilt_penalty = -1.0
-        self.height_penalty = -0.5
+        self.height_penalty = -3.5
         self.coxa_divergence_strength = 0.1
         self.femur_divergence_strength = 1.0
         self.tibia_divergence_strength = 1.0
-        self.pose_divergence_penalty = -0.01
+        self.pose_divergence_penalty = -0.001
         self.arrival_reward = 100.0
         self.terminated_early_penalty = -1_000.0
         self.reward_component_labels = [
@@ -75,7 +75,6 @@ class CanonicalPoseRewardFunction():
         """Calculate per-step reward."""
         if (
             self.target is None or
-            self.target_reached or
             self.episode_terminated
         ):
             reward_component_values = [0.0] * len(self.reward_component_labels)
@@ -105,11 +104,9 @@ class CanonicalPoseRewardFunction():
         tilt = (roll**2 + pitch**2)
 
         min_z = self.nominal_z - self.nominal_z_range
-        max_z = self.nominal_z + self.nominal_z_range
+        # No max z
         if position.z < min_z:
             z_distance = min_z - position.z
-        elif position.z > max_z:
-            z_distance = position.z - max_z
         else:
             z_distance = 0.0
 

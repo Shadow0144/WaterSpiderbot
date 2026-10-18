@@ -25,11 +25,11 @@ class SeriesPolicyTrainer(AbstractPolicyTrainer):
 
         self.candidate_index = 0
 
-    def get_are_poses_normalized(self):
+    def get_are_actions_normalized(self):
         """Return if the angles are pre-scaled or require scaling."""
         candidate = self._get_candidate(None)
         if candidate:
-            return candidate.get_are_poses_normalized()
+            return candidate.get_are_actions_normalized()
         else:
             return False
 

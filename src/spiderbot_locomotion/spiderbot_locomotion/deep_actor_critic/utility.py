@@ -28,6 +28,9 @@ def construct_input_vector(target, spiderbot_pose_msg, device):
         body_orientation_vel.y,
         body_orientation_vel.z,
     ]
+    data.extend(
+        [spiderbot_pose_msg.tendon_tension]
+    )
     for leg_pose in spiderbot_pose_msg.leg_poses:
         data.extend(
             [

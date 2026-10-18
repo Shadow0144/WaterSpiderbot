@@ -23,7 +23,7 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         """Initialize the locomotion neural network."""
         super().__init__(logger, model_weights_filename)
 
-        self.are_poses_normalized = True
+        self.are_actions_normalized = True
 
         self.batch_size = 100
         self.buffer_size = 10_000

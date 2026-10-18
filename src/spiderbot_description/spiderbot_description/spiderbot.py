@@ -13,14 +13,32 @@ class Spiderbot:
     def __init__(self):
         """Initialize a Spiderbot."""
         self.visualized = False
-        self.path_to_xml = self._get_spider_model_path()
+        self.path_to_xml = self._get_spider_model_file()
         self._load_model()
 
     def _get_spider_model_path(self):
-        """Get the path to the model file from the share directory."""
+        """Get the path to the model directory from the share directory."""
         share_dir = get_package_share_directory('spiderbot_description')
-        model_path = os.path.join(share_dir, 'models', 'spiderbot_base.xml')
+        model_path = os.path.join(share_dir, 'models')
         return model_path
+
+    def _get_spider_model_mesh_path(self):
+        """Get the path to the mesh directory from the share directory."""
+        mesh_path = os.path.join(self._get_spider_model_path(), 'meshes')
+        return mesh_path
+
+    def _get_spider_model_texture_path(self):
+        """Get the path to the texture directory from the share directory."""
+        texture_path = os.path.join(self._get_spider_model_path(), 'textures')
+        return texture_path
+
+    def _get_spider_model_file(self):
+        """Get the file path to the model file from the share directory."""
+        model_filepath = os.path.join(
+            self._get_spider_model_path(),
+            'spiderbot_base.xml'
+        )
+        return model_filepath
 
     def _load_model(self):
         """
@@ -30,6 +48,10 @@ class Spiderbot:
         and adds the legs, completing the model and data.
         """
         self.spec = mujoco.MjSpec.from_file(self.path_to_xml)
+
+        # Fix the mesh and texture directory paths
+        self.spec.compiler.meshdir = self._get_spider_model_mesh_path()
+        self.spec.compiler.texturedir = self._get_spider_model_texture_path()
 
         # Cephalothorax connects to coxa [then trochanter] then femur
         # [then patella] then tibia [then metatarsus] [then tarsus] then claws
@@ -54,7 +76,7 @@ class Spiderbot:
         # [Metatarsus: 1.0 / 1.05]
         # [Tarsus: 0.4]
         self.segment_lengths_per_leg = []
-        self.base_segment_lengths = [0.0, 0.35, 0.6]
+        self.base_segment_lengths = [0.0, 0.15, 0.6]
         if use_anatomical_lengths:
             self.leg_scales = [1.00, 0.90, 0.75, 1.10]
         else:
@@ -108,7 +130,8 @@ class Spiderbot:
                 poses[i],
                 eulers[i],
                 self.segment_lengths_per_leg[i],
-                i < 4)
+                i < 4
+            )
 
     def _build_leg(self, spec, leg_id,
                    base_rgb, pos, euler,
@@ -116,7 +139,8 @@ class Spiderbot:
         """Build a spider leg."""
         try:
             target = spec.worldbody.add_body(
-                name=f'{leg_id}_target', pos=[0, 0, 0], mocap=True)
+                name=f'{leg_id}_target', pos=[0, 0, 0], mocap=True
+            )
             target.add_geom(
                 type=mujoco.mjtGeom.mjGEOM_SPHERE,
                 size=[0.015],
@@ -133,53 +157,93 @@ class Spiderbot:
                 raise ValueError('Could not find cephalothorax')
 
             if left_side:
-                coxa_axis = [0, 1, 0]
+                coxa_axis = [0, 0, 1]
             else:
-                coxa_axis = [0, -1, 0]
+                coxa_axis = [0, 0, 1]
 
             cephalothorax.add_site(
-                name=f'{leg_id}_leg_base', pos=pos, euler=euler)
+                name=f'{leg_id}_leg_base', pos=pos, euler=euler
+            )
 
             coxa = cephalothorax.add_body(
-                name=f'{leg_id}_coxa', pos=pos, euler=euler)
+                name=f'{leg_id}_coxa', pos=pos, euler=euler
+            )
             coxa.childclass = 'coxa'
             coxa.add_joint(
-                name=f'{leg_id}_cephalothorax_coxa_joint', axis=coxa_axis)
+                name=f'{leg_id}_cephalothorax_coxa_joint', axis=coxa_axis
+            )
             coxa.add_geom(
-                rgba=[base_rgb[0], base_rgb[1], base_rgb[2], 1])
+                rgba=[base_rgb[0], base_rgb[1], base_rgb[2], 1]
+            )
+            coxa.add_site(
+                name=f'{leg_id}_coxa_entry', pos=[0.0, 0.0, 0.0]
+            )
+            coxa.add_site(
+                name=f'{leg_id}_coxa_exit', pos=[0.0, 0.03, 0.0]
+            )
 
             femur = coxa.add_body(
                 name=f'{leg_id}_femur',
-                pos=[0, 0.04, 0], euler=[180, 0, 0])
+                pos=[0, 0.05, 0], euler=[180, 0, 0]
+            )
             femur.childclass = 'femur'
             femur.add_joint(name=f'{leg_id}_coxa_femur_joint')
             femur.add_geom(
                 rgba=[base_rgb[0] + 0.1,
                       base_rgb[1] + 0.1,
                       base_rgb[2], 1],
-                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_lengths[1]]))
+                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_lengths[1]])
+            )
+            femur.add_site(
+                name=f'{leg_id}_femur_flexor',
+                pos=[0.0, 0.015, -segment_lengths[1] * 0.75]
+            )
 
             tibia = femur.add_body(
                 name=f'{leg_id}_tibia',
                 pos=[0, 0, -segment_lengths[1]],
-                euler=[-135, 0, 0])
+                euler=[-135, 0, 0]
+            )
             tibia.childclass = 'tibia'
             tibia.add_joint(name=f'{leg_id}_femur_tibia_joint')
             tibia.add_geom(
                 rgba=[base_rgb[0] + 0.2,
                       base_rgb[1] + 0.2,
                       base_rgb[2], 1],
-                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_lengths[2]]))
+                fromto=([0.0, 0.0, 0.0, 0.0, 0.0, -segment_lengths[2]])
+            )
+            tibia.add_site(
+                name=f'{leg_id}_tibia_flexor',
+                pos=[0.0, -0.01, -segment_lengths[2] * 0.75]
+            )
 
             claw_length = 0.025
             claw = tibia.add_body(
                 name=f'{leg_id}_claw',
-                pos=[0, 0, -segment_lengths[2]])
+                pos=[0, 0, -segment_lengths[2]]
+            )
             claw.add_site(
                 name=f'{leg_id}_claw_tip',
-                pos=[0, 0, -claw_length])
+                pos=[0, 0, -claw_length]
+            )
             claw.childclass = 'claw'
             claw.add_geom()
+
+            tendon_length = 0.25 + segment_lengths[1] + segment_lengths[2]
+
+            tendon = spec.add_tendon(
+                name=f'{leg_id}_tendon',
+                stiffness=20.0,
+                springlength=[tendon_length, tendon_length],
+                damping=0.2
+            )
+
+            tendon.wrap_site('tendon_tension_site')
+            tendon.wrap_site('body_anchor_site')
+            tendon.wrap_site(f'{leg_id}_coxa_entry')
+            tendon.wrap_site(f'{leg_id}_coxa_exit')
+            tendon.wrap_site(f'{leg_id}_femur_flexor')
+            tendon.wrap_site(f'{leg_id}_tibia_flexor')
 
         except KeyError:
             print(f'Key error: {leg_id}')

@@ -35,7 +35,7 @@ class DeepActorCriticModule(LocomotionModule):
 
         self.episode_terminated = False
 
-        self.are_poses_normalized = True
+        self.are_actions_normalized = True
         if self.train_parallel:
             self.policy_trainer = (
                 ParallelPolicyTrainer(
@@ -55,8 +55,8 @@ class DeepActorCriticModule(LocomotionModule):
                 )
             )
 
-        self.are_poses_normalized = (
-                self.policy_trainer.get_are_poses_normalized()
+        self.are_actions_normalized = (
+                self.policy_trainer.get_are_actions_normalized()
         )
 
         self.policy_trainer.load_population_checkpoint()
@@ -64,7 +64,7 @@ class DeepActorCriticModule(LocomotionModule):
         # If not training, then just use the policy directly
         # The policy trainer can handle loading the policy first though
         if not self.training:
-            self.policy = self.policy_trainers[''].policy
+            self.policy = self.policy_trainer.get_policy('spiderbot')
 
     def update(self, topic_prefix, spiderbot_pose_msg):
         """Walk the spiderbot towards its target."""
@@ -78,20 +78,20 @@ class DeepActorCriticModule(LocomotionModule):
             return
 
         if not self.training:
-            angles = self.policy.select_action(
+            action_t = self.policy.select_action(
                 spiderbot_pose_msg
             )
-            if angles is not None:
-                self.publish_angles(angles)
+            if action_t is not None:
+                self.publish_target_pose(action_t)
         else:
-            angles, training_status = self.train_step(
+            action_t, training_status = self.train_step(
                 topic_prefix,
                 spiderbot_pose_msg
             )
-            if angles is not None:
-                self.publish_angles(
+            if action_t is not None:
+                self.publish_target_pose(
                     topic_prefix,
-                    angles
+                    action_t
                 )
             if training_status is not None:
                 self.publish_training_status(
@@ -137,21 +137,25 @@ class DeepActorCriticModule(LocomotionModule):
 
         return action_t, training_status
 
-    def publish_angles(self, topic_prefix, target_angles):
-        """Publish target angles for the leg actuators."""
-        target_angles_per_leg = {}
+    def publish_target_pose(self, topic_prefix, action_t):
+        """Publish target action_t for the leg actuators."""
+        if action_t is None:
+            return
+        tendon_tension = float(action_t[0])
+        target_action_t_per_leg = {}
         for i, leg_name in enumerate(self.leg_names):
-            index = i * 3
-            target_angles_per_leg[leg_name] = (
-                [float(x) for x in target_angles[index:index+3]]
+            index = (i * 3) + 1
+            target_action_t_per_leg[leg_name] = (
+                [float(x) for x in action_t[index:index+3]]
             )
         msg = utils.construct_target_pose_msg(
                     time.time(),
-                    self.are_poses_normalized,
+                    self.are_actions_normalized,
+                    tendon_tension,
                     self.leg_names,
-                    target_angles_per_leg
+                    target_action_t_per_leg
                 )
-        self.locomotion_node.publish_angles(topic_prefix, msg)
+        self.locomotion_node.publish_target_pose(topic_prefix, msg)
 
     def publish_training_status(self, topic_prefix, training_status):
         """Publish information on the training step."""

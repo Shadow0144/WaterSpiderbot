@@ -1,3 +1,5 @@
 ---
 LegDescription[] leg_descriptions
+string mesh_dir
+string texture_dir
 string spec_xml

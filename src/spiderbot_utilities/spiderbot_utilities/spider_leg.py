@@ -36,20 +36,20 @@ class SpiderLeg:
         for joint_id in self.leg_joint_ids:
             self.joint_limits[joint_id] = self.model.jnt_range[joint_id]
 
-        coxa_joint_dof = self.model.jnt_dofadr[coxa_joint_id]
-        femur_joint_dof = self.model.jnt_dofadr[femur_joint_id]
-        tibia_joint_dof = self.model.jnt_dofadr[tibia_joint_id]
+        coxa_joint_dofadr = self.model.jnt_dofadr[coxa_joint_id]
+        femur_joint_dofadr = self.model.jnt_dofadr[femur_joint_id]
+        tibia_joint_dofadr = self.model.jnt_dofadr[tibia_joint_id]
 
-        coxa_joint_qpos = self.model.jnt_qposadr[coxa_joint_id]
-        femur_joint_qpos = self.model.jnt_qposadr[femur_joint_id]
-        tibia_joint_qpos = self.model.jnt_qposadr[tibia_joint_id]
+        coxa_joint_qposadr = self.model.jnt_qposadr[coxa_joint_id]
+        femur_joint_qposadr = self.model.jnt_qposadr[femur_joint_id]
+        tibia_joint_qposadr = self.model.jnt_qposadr[tibia_joint_id]
 
-        self.leg_dof_adrs = [coxa_joint_dof,
-                             femur_joint_dof,
-                             tibia_joint_dof]
-        self.leg_qpos_adrs = [coxa_joint_qpos,
-                              femur_joint_qpos,
-                              tibia_joint_qpos]
+        self.leg_dof_adrs = [coxa_joint_dofadr,
+                             femur_joint_dofadr,
+                             tibia_joint_dofadr]
+        self.leg_qpos_adrs = [coxa_joint_qposadr,
+                              femur_joint_qposadr,
+                              tibia_joint_qposadr]
 
         self.coxa_actuator_limits = np.radians(
             self.model.actuator_ctrlrange[self.servo_coxa_actuator_id]
@@ -104,8 +104,8 @@ class SpiderLeg:
         self.q_target = self.data.qpos[self.leg_qpos_adrs].copy()
         self.q_cmd_filtered = self.q_target.copy()
 
-    def scale_action_to_radians(self, action, range_low, half_range):
-        """Scale up the action in the range [-1, 1] to the target angle."""
+    def scale_action_to_range(self, action, range_low, half_range):
+        """Scale up the action in the range [-1, 1] to the full range."""
         return (range_low + ((action + 1.0) * half_range))
 
     def set_coxa_target_angle(self, target_angle):
@@ -134,17 +134,17 @@ class SpiderLeg:
                         femur_action,
                         tibia_action):
         """Actions are in the range [-1, 1] and need to be scaled up."""
-        coxa_target_angle = self.scale_action_to_radians(
+        coxa_target_angle = self.scale_action_to_range(
             coxa_action,
             self.coxa_actuator_limit_low,
             self.coxa_actuator_limit_half_range
         )
-        femur_target_angle = self.scale_action_to_radians(
+        femur_target_angle = self.scale_action_to_range(
             femur_action,
             self.femur_actuator_limit_low,
             self.femur_actuator_limit_half_range
         )
-        tibia_target_angle = self.scale_action_to_radians(
+        tibia_target_angle = self.scale_action_to_range(
             tibia_action,
             self.tibia_actuator_limit_low,
             self.tibia_actuator_limit_half_range
@@ -190,7 +190,7 @@ class SpiderLeg:
         """Toggle if the targets are visible."""
         if self.mocap_target_visible != visible:
             self.mocap_target_visible = visible
-            alpha = 0.75 if visible else 0.0
+            alpha = 1.0 if visible else 0.0  # 0.75 if visible else 0.0
             self.model.geom_rgba[self.target_geom_id, 3] = alpha
 
     def set_mocap_target(self, mocap_target_local):

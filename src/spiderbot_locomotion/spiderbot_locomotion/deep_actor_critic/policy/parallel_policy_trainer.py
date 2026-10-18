@@ -24,11 +24,11 @@ class ParallelPolicyTrainer(AbstractPolicyTrainer):
             autosave_checkpoints
         )
 
-    def get_are_poses_normalized(self):
+    def get_are_actions_normalized(self):
         """Return if the angles are pre-scaled or require scaling."""
         normalized = False
         for candidate in self.candidates.values():
-            normalized &= candidate.get_are_poses_normalized()
+            normalized &= candidate.get_are_actions_normalized()
         return normalized
 
     def _get_candidate(self, topic_prefix):

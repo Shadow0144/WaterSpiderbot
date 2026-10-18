@@ -64,7 +64,7 @@ class AbstractPolicyTrainer(ABC):
         return candidate_filename
 
     @abstractmethod
-    def get_are_poses_normalized(self):
+    def get_are_actions_normalized(self):
         """Return if the angles are pre-scaled or require scaling."""
         pass
 
@@ -86,7 +86,7 @@ class AbstractPolicyTrainer(ABC):
             )
             self.logger.info('Saved population')
         except RuntimeError as e:
-            self.logger.warn(f'Failed to save population: {e}')
+            self.logger.warning(f'Failed to save population: {e}')
 
     def load_population_checkpoint(self):
         """Load a population training state."""
@@ -123,7 +123,7 @@ class AbstractPolicyTrainer(ABC):
 
             self.logger.info('Loaded population')
         except (RuntimeError, FileNotFoundError):
-            self.logger.warn('Failed to load population')
+            self.logger.warning('Failed to load population')
 
     def delete_population_checkpoint(self):
         """Delete a population checkpoint file."""
@@ -137,6 +137,10 @@ class AbstractPolicyTrainer(ABC):
     def _get_candidate(self, topic_prefix):
         """Get the current candidate if there is one."""
         pass
+
+    def get_policy(self, topic_prefix):
+        """Get the current policy."""
+        return self._get_candidate(topic_prefix).policy
 
     def set_target(self, topic_prefix, target):
         """Set the target for the policy to approach."""

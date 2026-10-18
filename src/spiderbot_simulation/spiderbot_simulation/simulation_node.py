@@ -1,6 +1,7 @@
 """Simulate a Spiderbot and launch an interactive viewer."""
 
 import time
+import os
 from functools import partial
 
 import mujoco
@@ -79,6 +80,8 @@ class SimulationNode(Node):
         self.get_logger().info('Spiderbot description received')
 
         spec = mujoco.MjSpec.from_string(self.spiderbot_description.spec_xml)
+        spec.compiler.meshdir = self.spiderbot_description.mesh_dir
+        spec.compiler.texturedir = self.spiderbot_description.texture_dir
         model = spec.compile()
         self.timestep = model.opt.timestep
 

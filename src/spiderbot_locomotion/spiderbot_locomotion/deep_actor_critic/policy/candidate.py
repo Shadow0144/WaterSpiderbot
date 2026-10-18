@@ -33,10 +33,10 @@ class Candidate:
             )
         self.candidate_number = candidate_number
 
-    def get_are_poses_normalized(self):
+    def get_are_actions_normalized(self):
         """Return if the angles are pre-scaled or require scaling."""
         if self.policy:
-            return self.policy.get_are_poses_normalized()
+            return self.policy.get_are_actions_normalized()
         else:
             return False
 
@@ -46,7 +46,7 @@ class Candidate:
             if self.policy:
                 self.policy.save_weights(filename_override)
         except RuntimeError as e:
-            self.logger.warn(f'Failed to save population: {e}')
+            self.logger.warning(f'Failed to save population: {e}')
 
     def load_weights(self, filename_override=None):
         """Load the model weights."""
@@ -54,7 +54,7 @@ class Candidate:
             if self.policy:
                 self.policy.load_weights(filename_override)
         except (RuntimeError, FileNotFoundError):
-            self.logger.warn('Failed to load weights')
+            self.logger.warning('Failed to load weights')
 
     def delete_weights(self):
         """Delete the model weights file."""
@@ -62,7 +62,7 @@ class Candidate:
             if self.policy:
                 self.policy.delete_saved_weights()
         except (RuntimeError, FileNotFoundError):
-            self.logger.warn('Failed to delete weights')
+            self.logger.warning('Failed to delete weights')
 
     def start_new_training_episode(self):
         """Start another training episode."""

@@ -42,5 +42,7 @@ class DescriptionNode(Node):
             )
             leg_descriptions.append(leg_description)
         response.leg_descriptions = leg_descriptions
+        response.mesh_dir = self.spider._get_spider_model_mesh_path()
+        response.texture_dir = self.spider._get_spider_model_texture_path()
         response.spec_xml = self.spider.spec.to_xml()
         return response

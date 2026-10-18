@@ -16,7 +16,11 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'models'),
-         glob(os.path.join('models', '*')))
+         [f for f in glob('models/*') if os.path.isfile(f)]),
+        (os.path.join('share', package_name, 'models', 'meshes'),
+         [f for f in glob('models/meshes/*') if os.path.isfile(f)]),
+        (os.path.join('share', package_name, 'models', 'textures'),
+         [f for f in glob('models/textures/*') if os.path.isfile(f)]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
