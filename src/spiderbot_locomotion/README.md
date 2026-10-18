@@ -2,8 +2,6 @@
 
 Provides target pose angles for the Spiderbot to help it locomote to target locations/orientations.
 
-All of the locomotion nodes are mutually exclusive. The deep_actor_critic_locomotion_node is the recommended node to start for providing locomotion as the other nodes simply attempt to move the Spiderbot forward without regard for a target.
-
 ## Nodes
 
 The locomotion nodes all share the following properties:
@@ -47,21 +45,3 @@ Inherits the locomotion node interfaces
 - Services:
  * reset_learned_weights -> Trigger
   Resets the learned weights by deleting all the learned weight files and starting over
-
-### simple_sin_locomotion_node
-
-Uses a simple set of two phase-shifted sin functions to move the actuators of the legs through a set of target angles
-
-Inherits the locomotion node interfaces
-
-### handcrafted_angles_locomotion_node
-
-Uses two phase-shifted set of four states for each leg to move the Spiderbot forward where each state sets a target set of actuator angles and it interpolates between the last phase and the current phase
-
-Inherits the locomotion node interfaces
-
-### handcrafted_points_locomotion_node
-
-Uses two phase-shifted set of four states for each leg to move the Spiderbot forward where each state sets a target set of coordinates for the leg's claw to reach towards and it interpolates between the last phase and the current phase
-
-Inherits the locomotion node interfaces
