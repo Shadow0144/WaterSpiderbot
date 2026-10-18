@@ -94,6 +94,7 @@ class SimulationNode(Node):
             )
 
         self.viewer = SimulationViewer(
+            self.get_logger(),
             self.topic_prefixes,
             self.simulated_spiderbots,
             self.train_parallel

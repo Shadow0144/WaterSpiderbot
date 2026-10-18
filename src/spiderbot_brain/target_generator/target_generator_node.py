@@ -310,11 +310,19 @@ class TargetGeneratorNode(Node):
         self.target_number_publishers[topic_prefix].publish(
             target_number_message
         )
-        self.get_logger().info(
-            f'Setting training target '
-            f'({target_num}/{self.num_targets_per_episodes}): '
-            f'{[f"{item:.6f}" for item in target]}'
-        )
+        if topic_prefix:
+            self.get_logger().info(
+                f'[{topic_prefix}] '
+                f'Setting training target '
+                f'({target_num}/{self.num_targets_per_episodes}): '
+                f'{[f"{item:.6f}" for item in target]}'
+            )
+        else:
+            self.get_logger().info(
+                f'Setting training target '
+                f'({target_num}/{self.num_targets_per_episodes}): '
+                f'{[f"{item:.6f}" for item in target]}'
+            )
 
     def _get_delta_time_from_timestamp(self, spiderbot_pose_msg):
         """Get the change in time between messages."""

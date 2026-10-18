@@ -2,6 +2,7 @@
 
 import mujoco
 
+from .camera_overlay import CameraOverlay
 from .scene_overlay import SceneOverlay
 
 
@@ -10,11 +11,14 @@ class Scene():
 
     def __init__(
             self,
+            viewer_config,
+            viewport,
             topic_prefix,
             simulated_spiderbot,
             train_parallel
     ):
         """Initialize the scene."""
+        self.viewport = viewport
         self.topic_prefix = topic_prefix
         self.simulated_spiderbot = simulated_spiderbot
         self.train_parallel = train_parallel
@@ -22,10 +26,12 @@ class Scene():
         self.model = simulated_spiderbot.model
         self.data = simulated_spiderbot.data
 
-        self.scene_overlay = SceneOverlay(
-            self.topic_prefix,
-            self.train_parallel
-        )
+        self.camera_following = True
+
+        self.default_azimuth = 180
+        self.default_elevation = -30
+        self.default_distance = 3.0
+        self.default_lookat = [0, 0, 0.25]
 
         self.cam = mujoco.MjvCamera()
         self.opt = mujoco.MjvOption()
@@ -43,50 +49,89 @@ class Scene():
             self.cam
         )
 
-        self.camera_following = True
         self.tracking_body_id = (
             self.model.body('cephalothorax').id
         )
 
-        self.default_azimuth = 180
-        self.default_elevation = -30
-        self.default_distance = 3.0
-        self.default_lookat = [0, 0, 0.25]
-
-        self.reset_camera()
+        self.reset_camera_transforms()
         self.cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
         self.cam.trackbodyid = (self.tracking_body_id)
 
-        self.showing_frames = True
-
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_CAMERA] = True
-        self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = True
+        self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = (
+            viewer_config['translucency']
+        )
+        self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = (
+            viewer_config['joints_visible']
+        )
         self.opt.frame = (
             mujoco.mjtFrame.mjFRAME_SITE
-            if self.showing_frames else
+            if viewer_config['frames_visible'] else
             mujoco.mjtFrame.mjFRAME_NONE
         )
+        self.showing_camera_views = (
+            viewer_config['camera_views_visible']
+        )
 
-    def toggle_translucency(self):
+        self.scene_overlay = SceneOverlay(
+            self.viewer_context,
+            self.viewport,
+            self.topic_prefix,
+            self.train_parallel
+        )
+
+        left_cam_viewport = mujoco.MjrRect(
+            left=20,
+            bottom=20,
+            width=240,
+            height=180
+        )
+        self.left_cam_overlay = CameraOverlay(
+            self.model,
+            self.data,
+            self.viewer_context,
+            left_cam_viewport,
+            'Left',
+            'l_eye'
+        )
+        right_cam_viewport = mujoco.MjrRect(
+            left=270,
+            bottom=20,
+            width=240,
+            height=180
+        )
+        self.right_cam_overlay = CameraOverlay(
+            self.model,
+            self.data,
+            self.viewer_context,
+            right_cam_viewport,
+            'Right',
+            'r_eye'
+        )
+
+    def set_translucency(self, translucent):
         """Toggle if the models are translucent."""
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT] = (
-            not self.opt.flags[mujoco.mjtVisFlag.mjVIS_TRANSPARENT]
+            translucent
         )
 
-    def toggle_joints_visible(self):
+    def set_joints_visible(self, joints_visible):
         """Toggle if the model's joints are visible."""
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT] = (
-            not self.opt.flags[mujoco.mjtVisFlag.mjVIS_JOINT]
+            joints_visible
         )
 
-    def toggle_frames_visible(self):
+    def set_frames_visible(self, frames_visible):
         """Toggle if the model's frames are visible."""
-        self.showing_frames = not self.showing_frames
         self.opt.frame = (
             mujoco.mjtFrame.mjFRAME_SITE
-            if self.showing_frames else
+            if frames_visible else
             mujoco.mjtFrame.mjFRAME_NONE
         )
+
+    def set_camera_views_visible(self, camera_views_visible):
+        """Toggle if the camera overlays are visible."""
+        self.showing_camera_views = camera_views_visible
 
     def toggle_camera_following(self):
         """Toggle if the camera is following the Spiderbot."""
@@ -103,7 +148,7 @@ class Scene():
                 mujoco.mjtCamera.mjCAMERA_FREE
             )
 
-    def reset_camera(self):
+    def reset_camera_transforms(self):
         """Reset the camera's position and orientation."""
         self.cam.azimuth = self.default_azimuth
         self.cam.elevation = self.default_elevation
@@ -135,17 +180,7 @@ class Scene():
             training_status_msg
         )
 
-    def _add_overlays(
-            self,
-            viewport
-            ):
-        """Add the overlay to the scene render."""
-        self.scene_overlay.add_overlays(
-            self.viewer_context,
-            viewport
-        )
-
-    def update_scene(self, viewport):
+    def update_scene(self, viewer_config):
         """Update and render the scene."""
         mujoco.mjv_updateScene(
             self.model,
@@ -158,9 +193,13 @@ class Scene():
         )
 
         mujoco.mjr_render(
-            viewport,
+            self.viewport,
             self.scene,
             self.viewer_context
         )
 
-        self._add_overlays(viewport)
+        if self.showing_camera_views:
+            self.left_cam_overlay.add_overlay()
+            self.right_cam_overlay.add_overlay()
+
+        self.scene_overlay.add_overlays(viewer_config)

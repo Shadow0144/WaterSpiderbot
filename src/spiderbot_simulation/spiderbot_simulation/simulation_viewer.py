@@ -4,7 +4,11 @@ import time
 
 import glfw
 
+import json
+
 import mujoco
+
+from pathlib import Path
 
 from .scene import Scene
 
@@ -14,11 +18,13 @@ class SimulationViewer():
 
     def __init__(
             self,
+            logger,
             topic_prefixes,
             simulated_spiderbots,
             train_parallel
             ):
         """Initialize the window and viewer."""
+        self.logger = logger
         self.topic_prefixes = topic_prefixes
         self.simulated_spiderbots = simulated_spiderbots
         self.train_parallel = train_parallel
@@ -45,11 +51,18 @@ class SimulationViewer():
         glfw.make_context_current(self.window)
         glfw.swap_interval(0)
 
+        self.config_path = Path('viewer_config.json')
+        self._load_viewer_config()
+
+        width, height = glfw.get_framebuffer_size(self.window)
+        viewport = mujoco.MjrRect(0, 0, width, height)
         self.num_scenes = len(self.topic_prefixes)
         self.scenes = {}
         for topic_prefix in self.topic_prefixes:
             if topic_prefix in self.simulated_spiderbots.keys():
                 self.scenes[topic_prefix] = Scene(
+                    self.viewer_config,
+                    viewport,
                     topic_prefix,
                     self.simulated_spiderbots[topic_prefix],
                     self.train_parallel
@@ -75,6 +88,29 @@ class SimulationViewer():
     def is_running(self):
         """Return True if the window is not ready to close."""
         return not glfw.window_should_close(self.window)
+
+    def _save_viewer_config(self):
+        """Save the configuration to the JSON config file."""
+        with open(self.config_path, 'w') as config_file:
+            json.dump(self.viewer_config, config_file)
+
+    def _load_viewer_config(self):
+        """Load the configuration from the JSON config file."""
+        self.viewer_config = {
+            'translucency': False,
+            'joints_visible': False,
+            'frames_visible': False,
+            'camera_views_visible': False
+        }
+
+        if not self.config_path.exists():
+            return
+
+        try:
+            with open(self.config_path) as config_file:
+                self.viewer_config = json.load(config_file)
+        except (json.JSONDecodeError, IOError) as e:
+            self.logger.error(f'{e}')
 
     def mouse_move_callback(self, window, xpos, ypos):
         """Handle mouse move actions in the window."""
@@ -150,7 +186,6 @@ class SimulationViewer():
 
     def key_callback(self, window, key, scancode, action, mods):
         """Handle key events in the window."""
-        current_scene = self._get_current_scene()
         if action == glfw.PRESS:
             if key == glfw.KEY_LEFT:
                 # Decrease the scene index
@@ -164,19 +199,52 @@ class SimulationViewer():
                 )
             elif key == glfw.KEY_T:
                 # Toggle translucency
-                current_scene.toggle_translucency()
+                self.viewer_config['translucency'] = (
+                    not self.viewer_config['translucency']
+                )
+                for scene in self.scenes.values():
+                    scene.set_translucency(
+                        self.viewer_config['translucency']
+                    )
+                self._save_viewer_config()
             elif key == glfw.KEY_J:
                 # Toggle joint visibility
-                current_scene.toggle_joints_visible()
+                self.viewer_config['joints_visible'] = (
+                    not self.viewer_config['joints_visible']
+                )
+                for scene in self.scenes.values():
+                    scene.set_joints_visible(
+                        self.viewer_config['joints_visible']
+                    )
+                self._save_viewer_config()
             elif key == glfw.KEY_V:
                 # Toggle frame visibility
-                current_scene.toggle_frames_visible()
+                self.viewer_config['frames_visible'] = (
+                    not self.viewer_config['frames_visible']
+                )
+                for scene in self.scenes.values():
+                    scene.set_frames_visible(
+                        self.viewer_config['frames_visible']
+                    )
+                self._save_viewer_config()
+            elif key == glfw.KEY_C:
+                # Toggle camera view visibility
+                self.viewer_config['camera_views_visible'] = (
+                    not self.viewer_config['camera_views_visible']
+                )
+                for scene in self.scenes.values():
+                    scene.set_camera_views_visible(
+                        self.viewer_config['camera_views_visible']
+                    )
+                self._save_viewer_config()
             elif key == glfw.KEY_F:
                 # Follow camera tracking/following
+                current_scene = self._get_current_scene()
                 current_scene.toggle_camera_following()
             elif key == glfw.KEY_R:
-                # Reset the camera
-                current_scene.reset_camera()
+                # Reset the camera transforms
+                current_scene = self._get_current_scene()
+                current_scene.reset_camera_transforms()
 
     def _get_current_scene(self):
         """Shorthand for getting the current scene."""
@@ -212,10 +280,8 @@ class SimulationViewer():
         """Update the render if enough time has elapsed."""
         if (current_timestamp - self.last_render_time) >= self.render_interval:
             self.last_render_time = current_timestamp
-            width, height = glfw.get_framebuffer_size(self.window)
-            viewport = mujoco.MjrRect(0, 0, width, height)
 
-            self._get_current_scene().update_scene(viewport)
+            self._get_current_scene().update_scene(self.viewer_config)
 
             glfw.swap_buffers(self.window)
             glfw.poll_events()

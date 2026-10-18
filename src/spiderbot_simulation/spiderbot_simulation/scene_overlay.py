@@ -8,10 +8,14 @@ class SceneOverlay():
 
     def __init__(
             self,
+            viewer_context,
+            viewport,
             topic_prefix,
             train_parallel
             ):
         """Initialize the overlay."""
+        self.viewer_context = viewer_context
+        self.viewport = viewport
         self.topic_prefix = topic_prefix
         self.train_parallel = train_parallel
 
@@ -72,12 +76,45 @@ class SceneOverlay():
             training_status_msg.reward_component_values
         )
 
-    def add_overlays(
-            self,
-            viewer_context,
-            viewport
-            ):
-        """Add the training overlays to the viewport."""
+    def add_overlays(self, viewer_config):
+        """Add the viewer settings and training overlays to the viewport."""
+        keybinds = {
+            '[<-] Previous Candidate': '',
+            '[->] Next Candidate': '',
+            '[f] Toggle Camera Following': '',
+            '[r] Reset Camera Tranforms': '',
+            '[c] Camera Views Visible:': (
+                'Enabled'
+                if viewer_config['camera_views_visible'] else
+                'Disabled'
+            ),
+            '[j] Joints Visible:': (
+                'Enabled'
+                if viewer_config['joints_visible'] else
+                'Disabled'
+            ),
+            '[v] Frames Visible:': (
+                'Enabled'
+                if viewer_config['frames_visible'] else
+                'Disabled'
+            ),
+            '[t] Translucency:': (
+                'Enabled'
+                if viewer_config['translucency'] else
+                'Disabled'
+            ),
+        }
+        mujoco.mjr_overlay(
+            mujoco.mjtFont.mjFONT_NORMAL,
+            mujoco.mjtGridPos.mjGRID_BOTTOMRIGHT,
+            self.viewport,
+            '\n'.join(keybinds.keys()),
+            '\n'.join(
+                [f'{setting}' for setting in keybinds.values()]
+            ),
+            self.viewer_context
+        )
+
         left_labels = []
         left_values = []
 
@@ -119,31 +156,31 @@ class SceneOverlay():
             mujoco.mjr_overlay(
                 mujoco.mjtFont.mjFONT_NORMAL,
                 mujoco.mjtGridPos.mjGRID_TOPLEFT,
-                viewport,
+                self.viewport,
                 '\n'.join(left_labels),
                 '\n'.join(left_values),
-                viewer_context
+                self.viewer_context
             )
 
         if self.reward_component_labels and self.reward_component_values:
             mujoco.mjr_overlay(
                 mujoco.mjtFont.mjFONT_NORMAL,
                 mujoco.mjtGridPos.mjGRID_TOPRIGHT,
-                viewport,
+                self.viewport,
                 '\n'.join(self.reward_component_labels),
                 '\n'.join(
                     [f'{component_value:.3f}' for component_value in
                         self.reward_component_values]
                 ),
-                viewer_context
+                self.viewer_context
             )
 
         if self.train_parallel:
             mujoco.mjr_overlay(
                 mujoco.mjtFont.mjFONT_NORMAL,
                 mujoco.mjtGridPos.mjGRID_TOP,
-                viewport,
+                self.viewport,
                 self.topic_prefix,
                 None,
-                viewer_context
+                self.viewer_context
             )

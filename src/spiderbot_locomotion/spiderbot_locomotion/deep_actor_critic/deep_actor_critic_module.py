@@ -120,17 +120,32 @@ class DeepActorCriticModule(LocomotionModule):
         )
 
         if training_status.target_reached:
-            self.locomotion_node.get_logger().info(
-                'Target reached',
-                throttle_duration_sec=1.0
-            )
+            if topic_prefix:
+                self.locomotion_node.get_logger().info(
+                    f'[{topic_prefix}] '
+                    'Target reached',
+                    throttle_duration_sec=1.0
+                )
+            else:
+                self.locomotion_node.get_logger().info(
+                    'Target reached',
+                    throttle_duration_sec=1.0
+                )
             self.locomotion_node.publish_target_reached(topic_prefix)
 
         self.episode_terminated = training_status.episode_terminated
         if self.episode_terminated:
-            self.locomotion_node.get_logger().info(
-                'Training episode terminated'
-            )
+            if topic_prefix:
+                self.locomotion_node.get_logger().info(
+                    f'[{topic_prefix}] '
+                    'Training episode terminated',
+                    throttle_duration_sec=1.0
+                )
+            else:
+                self.locomotion_node.get_logger().info(
+                    'Training episode terminated',
+                    throttle_duration_sec=1.0
+                )
             self.locomotion_node.publish_training_episode_terminated(
                 topic_prefix
             )
