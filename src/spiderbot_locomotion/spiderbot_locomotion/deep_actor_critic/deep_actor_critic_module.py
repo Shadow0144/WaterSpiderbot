@@ -82,7 +82,10 @@ class DeepActorCriticModule(LocomotionModule):
                 spiderbot_pose_msg
             )
             if action_t is not None:
-                self.publish_target_pose(action_t)
+                self.publish_target_pose(
+                    topic_prefix,
+                    action_t
+                )
         else:
             action_t, training_status = self.train_step(
                 topic_prefix,

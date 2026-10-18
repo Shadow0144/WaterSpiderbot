@@ -1,0 +1,4 @@
+---
+string mesh_dir
+string texture_dir
+string spec_xml

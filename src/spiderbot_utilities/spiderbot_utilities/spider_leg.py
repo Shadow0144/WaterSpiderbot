@@ -10,7 +10,13 @@ from .converters import rpy_to_matrix
 class SpiderLeg:
     """Common class for a spider leg."""
 
-    def __init__(self, leg_id, segment_lengths, model, data):
+    def __init__(
+            self,
+            leg_id,
+            segment_lengths,
+            model,
+            data,
+            topic_prefix=''):
         """Initialize a spider leg."""
         self.leg_id = leg_id
         self.segment_lengths = segment_lengths
@@ -18,18 +24,18 @@ class SpiderLeg:
         self.data = data
 
         self.servo_coxa_actuator_id = self.model.actuator(
-            'servo_' + self.leg_id + '_coxa_pitch').id
+            f'{topic_prefix}servo_' + self.leg_id + '_coxa_pitch').id
         self.servo_femur_actuator_id = self.model.actuator(
-            'servo_' + self.leg_id + '_femur_pitch').id
+            f'{topic_prefix}servo_' + self.leg_id + '_femur_pitch').id
         self.servo_tibia_actuator_id = self.model.actuator(
-            'servo_' + self.leg_id + '_tibia_pitch').id
+            f'{topic_prefix}servo_' + self.leg_id + '_tibia_pitch').id
 
         coxa_joint_id = self.model.joint(
-            f'{self.leg_id}_cephalothorax_coxa_joint').id
+            f'{topic_prefix}{self.leg_id}_cephalothorax_coxa_joint').id
         femur_joint_id = self.model.joint(
-            f'{self.leg_id}_coxa_femur_joint').id
+            f'{topic_prefix}{self.leg_id}_coxa_femur_joint').id
         tibia_joint_id = self.model.joint(
-            f'{self.leg_id}_femur_tibia_joint').id
+            f'{topic_prefix}{self.leg_id}_femur_tibia_joint').id
         self.leg_joint_ids = [coxa_joint_id, femur_joint_id, tibia_joint_id]
 
         self.joint_limits = {}
@@ -83,12 +89,20 @@ class SpiderLeg:
             self.tibia_actuator_limit_high - self.tibia_actuator_limit_low
         )
 
-        self.coxa_body_id = self.model.body(f'{self.leg_id}_coxa').id
+        self.coxa_body_id = self.model.body(
+            f'{topic_prefix}{self.leg_id}_coxa'
+        ).id
 
-        self.leg_base_site_id = self.model.site(f'{self.leg_id}_leg_base').id
-        self.claw_tip_site_id = self.model.site(f'{self.leg_id}_claw_tip').id
+        self.leg_base_site_id = self.model.site(
+            f'{topic_prefix}{self.leg_id}_leg_base'
+        ).id
+        self.claw_tip_site_id = self.model.site(
+            f'{topic_prefix}{self.leg_id}_claw_tip'
+        ).id
 
-        target_mocap_body_id = self.model.body(f'{self.leg_id}_target').id
+        target_mocap_body_id = self.model.body(
+            f'{topic_prefix}{self.leg_id}_target'
+        ).id
         self.target_geom_id = self.model.body_geomadr[target_mocap_body_id]
         self.target_mocap_id = self.model.body_mocapid[target_mocap_body_id]
 

@@ -1,7 +1,6 @@
 """Simulate a Spiderbot and launch an interactive viewer."""
 
 import time
-import os
 from functools import partial
 
 import mujoco
@@ -16,6 +15,7 @@ from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.msg import TrainingStatus
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 from spiderbot_interfaces.srv import GetTrainingConfiguration
+from spiderbot_interfaces.srv import GetWorldDescription
 
 from std_msgs.msg import Int32
 
@@ -67,6 +67,18 @@ class SimulationNode(Node):
         self._get_training_configuration()
         self.get_logger().info('Spiderbot training configuration received')
 
+        self.world_description_client = self.create_client(
+            GetWorldDescription,
+            'get_world_description')
+        while not self.world_description_client.wait_for_service(
+            timeout_sec=1.0
+        ):
+            self.get_logger().info(
+                'Waiting on world description service',
+                once=True)
+        self.world_description = self._get_world_description()
+        self.get_logger().info('World description received')
+
         self.spiderbot_description_client = self.create_client(
             GetSpiderbotDescription,
             'get_spiderbot_description')
@@ -90,6 +102,7 @@ class SimulationNode(Node):
         for topic_prefix in self.topic_prefixes:
             self.simulated_spiderbots[topic_prefix] = SimulatedSpiderbot(
                 topic_prefix,
+                self.world_description,
                 self.spiderbot_description
             )
 
@@ -118,6 +131,13 @@ class SimulationNode(Node):
     def is_running(self):
         """Return if the node is running or if it's ready to shut down."""
         return self.viewer.is_running()
+
+    def _get_world_description(self):
+        """Get the spec xml from the description."""
+        request = GetWorldDescription.Request()
+        future = self.world_description_client.call_async(request)
+        rclpy.spin_until_future_complete(self, future)
+        return future.result()
 
     def _get_spiderbot_description(self):
         """Get the spec xml from the description."""

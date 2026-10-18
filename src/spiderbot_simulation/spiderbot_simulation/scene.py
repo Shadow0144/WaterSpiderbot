@@ -26,6 +26,9 @@ class Scene():
         self.model = simulated_spiderbot.model
         self.data = simulated_spiderbot.data
 
+        if not self.topic_prefix:
+            self.topic_prefix = '/'
+
         self.camera_following = True
 
         self.default_azimuth = 180
@@ -50,7 +53,7 @@ class Scene():
         )
 
         self.tracking_body_id = (
-            self.model.body('cephalothorax').id
+            self.model.body(f'{self.topic_prefix}cephalothorax').id
         )
 
         self.reset_camera_transforms()
@@ -92,7 +95,7 @@ class Scene():
             self.viewer_context,
             left_cam_viewport,
             'Left',
-            'l_eye'
+            f'{self.topic_prefix}l_eye'
         )
         right_cam_viewport = mujoco.MjrRect(
             left=270,
@@ -106,7 +109,7 @@ class Scene():
             self.viewer_context,
             right_cam_viewport,
             'Right',
-            'r_eye'
+            f'{self.topic_prefix}r_eye'
         )
 
     def set_translucency(self, translucent):

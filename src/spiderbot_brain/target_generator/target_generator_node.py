@@ -37,7 +37,7 @@ class TargetGeneratorNode(Node):
         self.num_targets_per_episodes = 30
         self.num_episodes_per_candidate = 10
         self.num_candidates_per_generation = 3
-        self.train_parallel = True
+        self.train_parallel = False
 
         self.candidate_topic_prefixes = []
         for c in range(self.num_candidates_per_generation):

@@ -26,3 +26,6 @@ Provides the ROS 2 message, service, and action interface definitions.
 
 - GetTrainingConfiguration
  Asks a node from the Spiderbot brain package to provide if the Spiderbot is in training mode and if so, the current training configuration
+
+- GetWorldDescription
+ Asks the description node to provide a description of a setting for the Spiderbot to navigate

@@ -11,27 +11,47 @@ from spiderbot_utilities import SpiderLeg
 
 
 class SimulatedSpiderbot():
-    """Simulated Spiderbot."""
+    """Simulated Spiderbot in a simulated world."""
 
-    def __init__(self, topic_prefix, description):
+    def __init__(
+            self,
+            topic_prefix,
+            world_description,
+            spiderbot_description):
         """Initialize the Spiderbot."""
         self.topic_prefix = topic_prefix
-        self.description = description
+        self.world_description = world_description
+        self.spiderbot_description = spiderbot_description
 
-        spec = mujoco.MjSpec.from_string(self.description.spec_xml)
-        spec.compiler.meshdir = self.description.mesh_dir
-        spec.compiler.texturedir = self.description.texture_dir
-        self.model = spec.compile()
+        if not self.topic_prefix:
+            self.topic_prefix = '/'
+
+        world_spec = mujoco.MjSpec.from_string(
+            self.world_description.spec_xml
+        )
+        spiderbot_spec = mujoco.MjSpec.from_string(
+            self.spiderbot_description.spec_xml
+        )
+        attachment_frame = world_spec.worldbody.add_frame()
+        world_spec.attach(
+            spiderbot_spec,
+            frame=attachment_frame,
+            prefix=self.topic_prefix
+        )
+
+        world_spec.compiler.meshdir = self.world_description.mesh_dir
+        world_spec.compiler.texturedir = self.world_description.texture_dir
+        self.model = world_spec.compile()
         self.data = mujoco.MjData(self.model)
 
-        self.body = self.data.body('cephalothorax')
+        self.body = self.data.body(f'{self.topic_prefix}cephalothorax')
 
         self.servo_tendon_actuator_id = self.model.actuator(
-            'servo_tendon_tension'
+            f'{self.topic_prefix}servo_tendon_tension'
         ).id
 
         self.tendon_joint_id = self.model.joint(
-            'tendon_slide'
+            f'{self.topic_prefix}tendon_slide'
         ).id
 
         self.tendon_actuator_limits = (
@@ -51,7 +71,7 @@ class SimulatedSpiderbot():
         ]
 
         # Create the legs and leg descriptions
-        self.leg_descriptions = self.description.leg_descriptions
+        self.leg_descriptions = self.spiderbot_description.leg_descriptions
         self.leg_names = [
             leg_description.leg_name
             for leg_description in self.leg_descriptions
@@ -67,32 +87,37 @@ class SimulatedSpiderbot():
                 leg_name,
                 self.segment_lengths_per_leg[leg_name],
                 self.model,
-                self.data
+                self.data,
+                self.topic_prefix
             )
 
         self.target_visible = False
         self.target_position = None
         self.target_quaternion = None
-        self.target = self.data.body('target')
-        self.target_z = self.model.body('target').pos[2]
-        target_body_id = self.model.body('target').id
+        self.target = self.data.body(f'{self.topic_prefix}target')
+        self.target_z = self.model.body(f'{self.topic_prefix}target').pos[2]
+        target_body_id = self.model.body(f'{self.topic_prefix}target').id
         self.target_mocap_id = self.model.body_mocapid[
             target_body_id
         ]
         self.target_geom_id = self.model.geom(
-            'target_geom'
+            f'{self.topic_prefix}target_geom'
         ).id
 
         self.pose_arrow_position = None
         self.pose_arrow_quaternion = None
-        self.pose_arrow = self.data.body('pose_arrow')
-        self.pose_arrow_z = self.model.body('pose_arrow').pos[2]
-        pose_arrow_body_id = self.model.body('pose_arrow').id
+        self.pose_arrow = self.data.body(f'{self.topic_prefix}pose_arrow')
+        self.pose_arrow_z = self.model.body(
+            f'{self.topic_prefix}pose_arrow'
+        ).pos[2]
+        pose_arrow_body_id = self.model.body(
+            f'{self.topic_prefix}pose_arrow'
+        ).id
         self.pose_arrow_mocap_id = self.model.body_mocapid[
             pose_arrow_body_id
         ]
         self.pose_arrow_geom_id = self.model.geom(
-            'pose_arrow_geom'
+            f'{self.topic_prefix}pose_arrow_geom'
         ).id
 
     def reset(self):

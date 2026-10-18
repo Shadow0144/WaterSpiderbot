@@ -13,29 +13,32 @@ class Spiderbot:
     def __init__(self):
         """Initialize a Spiderbot."""
         self.visualized = False
-        self.path_to_xml = self._get_spider_model_file()
         self._load_model()
 
-    def _get_spider_model_path(self):
+    def get_texture_path(self):
+        """Get the path to the texture directory from the share directory."""
+        texture_path = os.path.join(self._get_model_path(), 'textures')
+        return texture_path
+
+    def get_mesh_path(self):
+        """Get the path to the mesh directory from the share directory."""
+        mesh_path = os.path.join(self._get_model_path(), 'meshes')
+        return mesh_path
+
+    def get_spec_xml(self):
+        """Get the spec xml."""
+        return self.spec.to_xml()
+
+    def _get_model_path(self):
         """Get the path to the model directory from the share directory."""
         share_dir = get_package_share_directory('spiderbot_description')
         model_path = os.path.join(share_dir, 'models')
         return model_path
 
-    def _get_spider_model_mesh_path(self):
-        """Get the path to the mesh directory from the share directory."""
-        mesh_path = os.path.join(self._get_spider_model_path(), 'meshes')
-        return mesh_path
-
-    def _get_spider_model_texture_path(self):
-        """Get the path to the texture directory from the share directory."""
-        texture_path = os.path.join(self._get_spider_model_path(), 'textures')
-        return texture_path
-
-    def _get_spider_model_file(self):
-        """Get the file path to the model file from the share directory."""
+    def _get_spiderbot_model_file(self):
+        """Get the file path to the Spiderbot model file."""
         model_filepath = os.path.join(
-            self._get_spider_model_path(),
+            self._get_model_path(),
             'spiderbot_base.xml'
         )
         return model_filepath
@@ -47,15 +50,17 @@ class Spiderbot:
         Loads the Spiderbot partial description from a file
         and adds the legs, completing the model and data.
         """
-        self.spec = mujoco.MjSpec.from_file(self.path_to_xml)
+        self.spiderbot_xml = self._get_spiderbot_model_file()
 
-        # Fix the mesh and texture directory paths
-        self.spec.compiler.meshdir = self._get_spider_model_mesh_path()
-        self.spec.compiler.texturedir = self._get_spider_model_texture_path()
+        self.spec = mujoco.MjSpec.from_file(self.spiderbot_xml)
 
         # Cephalothorax connects to coxa [then trochanter] then femur
         # [then patella] then tibia [then metatarsus] [then tarsus] then claws
         self._create_legs(self.spec)
+
+        # Fix the mesh and texture directory paths
+        self.spec.compiler.meshdir = self.get_mesh_path()
+        self.spec.compiler.texturedir = self.get_texture_path()
 
         self.model = self.spec.compile()
         self.data = mujoco.MjData(self.model)
