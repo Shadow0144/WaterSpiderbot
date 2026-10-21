@@ -40,6 +40,9 @@ class SceneOverlay():
         self.reward_component_labels = None
         self.reward_component_values = None
 
+        self.target_reached = False
+        self.episode_terminated = False
+
     def set_training_configuration(
             self,
             num_targets_per_episode,
@@ -72,9 +75,15 @@ class SceneOverlay():
         self.reward_component_labels = (
             training_status_msg.reward_component_labels
         )
+        component_values = training_status_msg.reward_component_values
+        # Convert to strings with 3 decimal places
         self.reward_component_values = (
-            training_status_msg.reward_component_values
+            [f'{component_value:.3f}'
+             for component_value in
+             component_values]
         )
+        self.target_reached = training_status_msg.target_reached
+        self.episode_terminated = training_status_msg.episode_terminated
 
     def add_overlays(self, viewer_config):
         """Add the viewer settings and training overlays to the viewport."""
@@ -163,15 +172,20 @@ class SceneOverlay():
             )
 
         if self.reward_component_labels and self.reward_component_values:
+            reward_component_labels = self.reward_component_labels.copy()
+            reward_component_values = self.reward_component_values.copy()
+
+            reward_component_labels.append('Target reached:')
+            reward_component_values.append(f'{self.target_reached}')
+            reward_component_labels.append('Episode terminated:')
+            reward_component_values.append(f'{self.episode_terminated}')
+
             mujoco.mjr_overlay(
                 mujoco.mjtFont.mjFONT_NORMAL,
                 mujoco.mjtGridPos.mjGRID_TOPRIGHT,
                 self.viewport,
-                '\n'.join(self.reward_component_labels),
-                '\n'.join(
-                    [f'{component_value:.3f}' for component_value in
-                        self.reward_component_values]
-                ),
+                '\n'.join(reward_component_labels),
+                '\n'.join(reward_component_values),
                 self.viewer_context
             )
 

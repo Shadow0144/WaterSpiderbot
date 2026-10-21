@@ -42,6 +42,7 @@ class ParallelPolicyTrainer(AbstractPolicyTrainer):
         """Start another training episode or move to the next candidate."""
         self.episode_number += 1
         self.episode_reward = 0.0
+        self.episode_terminated = False
 
         if self.episode_number > self.num_episodes_per_candidate:
             self._generate_next_generation()

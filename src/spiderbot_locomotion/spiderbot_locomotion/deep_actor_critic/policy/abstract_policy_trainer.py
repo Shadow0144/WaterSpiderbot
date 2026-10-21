@@ -27,7 +27,7 @@ class AbstractPolicyTrainer(ABC):
         self.use_soft_actor_critics_policy = use_soft_actor_critics_policy
 
         self.checkpoint_file_manager = CheckpointFileManager()
-        self.parent_filename = 'parent_weights.pt'
+        self.model_weights_filename = 'model_weights.pt'
 
         self.episode_number = 0
         self.candidate_index = 0
@@ -154,34 +154,37 @@ class AbstractPolicyTrainer(ABC):
         if not candidate:
             return None, None
 
-        action_t, reward_information = (
+        action_t, training_status = (
             candidate.train_step(spiderbot_pose_msg, delta_time)
         )
 
+        if action_t is None or training_status is None:
+            return None, None
+
         # Add the reward to the episode
-        self.episode_reward += reward_information.step_reward
-        reward_information.episode_number = self.episode_number
-        reward_information.episode_reward = self.episode_reward
+        self.episode_reward += training_status.step_reward
+        training_status.episode_number = self.episode_number
+        training_status.episode_reward = self.episode_reward
 
         # Add the reward to the candidate
         candidate_reward = 0.0
         candidate.candidate_reward += (
-            reward_information.step_reward
+            training_status.step_reward
         )
         candidate_reward = candidate.candidate_reward
 
         # Fill in more of the reward information object
-        reward_information.candidate_reward = candidate_reward
-        reward_information.num_episodes_per_candidate = (
+        training_status.candidate_reward = candidate_reward
+        training_status.num_episodes_per_candidate = (
             self.num_episodes_per_candidate
         )
-        reward_information.candidate_number = candidate.candidate_number
-        reward_information.num_candidates_per_generation = (
+        training_status.candidate_number = candidate.candidate_number
+        training_status.num_candidates_per_generation = (
             self.num_candidates_per_generation
         )
-        reward_information.generation_number = self.generation_number
+        training_status.generation_number = self.generation_number
 
-        return action_t, reward_information
+        return action_t, training_status
 
     @abstractmethod
     def start_new_training_episode(self):
@@ -206,9 +209,13 @@ class AbstractPolicyTrainer(ABC):
 
         if best_candidate:
             self.logger.info(
-                f'Starting new generation from {best_candidate.filename}'
+                f'Starting new generation from '
+                f'{best_candidate.topic_prefix} '
+                f'[{best_candidate.filename}]'
             )
-            best_candidate.save_weights(filename_override=self.parent_filename)
+            best_candidate.save_weights(
+                filename_override=self.model_weights_filename
+            )
 
             # Delete the old candidate files
             for candidate in self.candidates.values():
@@ -216,4 +223,6 @@ class AbstractPolicyTrainer(ABC):
 
             self._generate_candidates()
             for candidate in self.candidates.values():
-                candidate.load_weights(filename_override=self.parent_filename)
+                candidate.load_weights(
+                    filename_override=self.model_weights_filename
+                )

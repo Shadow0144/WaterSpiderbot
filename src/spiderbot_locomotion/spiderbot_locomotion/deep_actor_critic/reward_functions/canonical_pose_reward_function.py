@@ -39,7 +39,7 @@ class CanonicalPoseRewardFunction():
         self.tibia_divergence_strength = 1.0
         self.pose_divergence_penalty = -0.001
         self.arrival_reward = 100.0
-        self.terminated_early_penalty = -1_000.0
+        self.terminated_early_penalty = -10_000.0
         self.reward_component_labels = [
             'Progress',
             'Facing',
@@ -50,7 +50,7 @@ class CanonicalPoseRewardFunction():
         ]
 
         # Terminate early conditions
-        self.max_tilt = 0.8
+        self.max_tilt = 1.0
         self.min_height = 0.0
 
     def set_target(self, target):

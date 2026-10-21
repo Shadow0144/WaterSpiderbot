@@ -50,7 +50,7 @@ class DeepActorCriticLocomotionNode(LocomotionNode):
         if self.training_mode_enabled:
             start_training_request = SetBool.Request()
             start_training_request.data = True
-            self.enable_training_client.call_async(start_training_request)
+            self.start_training_client.call_async(start_training_request)
 
     def publish_training_status(self, topic_prefix, training_status):
         """Publish information on the training and the reward."""

@@ -41,7 +41,7 @@ class ComplexRewardFunction():
         self.angle_speed_penalty = -0.01
         self.feet_raised_penalty = -0.01
         self.feet_too_high_penalty = -0.02
-        self.terminated_early_penalty = -10.0
+        self.terminated_early_penalty = -10_000.0
         self.arrival_reward = 30.0
         self.reward_component_labels = [
             'Progress',

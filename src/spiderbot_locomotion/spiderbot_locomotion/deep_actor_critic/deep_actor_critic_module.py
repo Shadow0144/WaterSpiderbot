@@ -33,8 +33,6 @@ class DeepActorCriticModule(LocomotionModule):
             self.training and self.num_episodes_per_candidate > 1
         )
 
-        self.episode_terminated = False
-
         self.are_actions_normalized = True
         if self.train_parallel:
             self.policy_trainer = (
@@ -69,13 +67,6 @@ class DeepActorCriticModule(LocomotionModule):
     def update(self, topic_prefix, spiderbot_pose_msg):
         """Walk the spiderbot towards its target."""
         super().update(topic_prefix, spiderbot_pose_msg)
-        # if self.delta_time <= 0.0:
-        #     # Wait at least one step before doing anything
-        #     return
-
-        if self.episode_terminated:
-            # Wait until a new episode starts
-            return
 
         if not self.training:
             action_t = self.policy.select_action(
@@ -136,8 +127,7 @@ class DeepActorCriticModule(LocomotionModule):
                 )
             self.locomotion_node.publish_target_reached(topic_prefix)
 
-        self.episode_terminated = training_status.episode_terminated
-        if self.episode_terminated:
+        if training_status.episode_terminated:
             if topic_prefix:
                 self.locomotion_node.get_logger().info(
                     f'[{topic_prefix}] '
@@ -200,7 +190,6 @@ class DeepActorCriticModule(LocomotionModule):
 
     def reset(self):
         """Reset the neural network."""
-        self.episode_terminated = False
         self.policy_trainer.start_new_training_episode()
         super().reset()
 

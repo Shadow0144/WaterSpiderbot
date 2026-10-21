@@ -37,7 +37,7 @@ class TargetGeneratorNode(Node):
         self.num_targets_per_episodes = 30
         self.num_episodes_per_candidate = 10
         self.num_candidates_per_generation = 3
-        self.train_parallel = False
+        self.train_parallel = True
 
         self.candidate_topic_prefixes = []
         for c in range(self.num_candidates_per_generation):
@@ -55,7 +55,8 @@ class TargetGeneratorNode(Node):
         self.rotation_jitter_half_range = math.pi / 32.0
         self.create_new_target_on_reaching = False
 
-        self.waiting_for_simulation_reset = True
+        self.waiting_for_simulation_reply = True
+        self.waiting_for_locomotion_reply = True
         self.time_left_to_reach_target_s = 0.0
         self.num_targets_remaining = 0
 
@@ -74,22 +75,21 @@ class TargetGeneratorNode(Node):
 
         self._create_spiderbot_topics()
 
-        self.start_training_episode_publisher = self.create_publisher(
-            Empty,
-            'start_training_episode',
-            10
-        )
-
         self.get_training_configuration_service = self.create_service(
             GetTrainingConfiguration,
             'get_training_configuration',
             self.get_training_configuration_callback
         )
 
-        self.enable_training_service = self.create_service(
+        self.start_training_service = self.create_service(
             SetBool,
-            'enable_training',
-            self.enable_training_callback
+            'start_training',
+            self.start_training_callback
+        )
+
+        self.start_training_episode_client = self.create_client(
+            Trigger,
+            'start_training_episode'
         )
 
         self.reset_simulation_client = self.create_client(
@@ -191,9 +191,14 @@ class TargetGeneratorNode(Node):
         )
 
         # Return early if the training has not started
-        #  (i.e. the locomotion node is not ready)
-        # or the simulation has been requested to reset but has not finished
-        if not self.training_started or self.waiting_for_simulation_reset:
+        #  (i.e. the locomotion node has not requested a start yet)
+        # or the simulation or locomotion nodes have been
+        # requested to start a new episode but have not finished
+        if (
+            not self.training_started or
+            self.waiting_for_simulation_reply or
+            self.waiting_for_locomotion_reply
+        ):
             return
 
         # Get the time between the last poses and
@@ -216,16 +221,33 @@ class TargetGeneratorNode(Node):
             self.num_targets_remaining = 0
             self._generate_targets()
 
+    def _start_new_episode(self):
+        """Reset the simulation and locomotion nodes and start an episode."""
+        self.new_episode = True
+        self.waiting_for_simulation_reply = True
+        self.waiting_for_locomotion_reply = True
+        sim_request = Trigger.Request()
+        sim_future = self.reset_simulation_client.call_async(sim_request)
+        sim_future.add_done_callback(self.reset_simulation_callback)
+        loco_request = Trigger.Request()
+        loco_future = self.start_training_episode_client.call_async(
+            loco_request
+        )
+        loco_future.add_done_callback(self.start_training_episode_callback)
+        self.num_targets_remaining = self.num_targets_per_episodes
+
     def _generate_targets(self):
         """Create a training target near the Spiderbot and publish it."""
+        if (
+            self.waiting_for_simulation_reply or
+            self.waiting_for_locomotion_reply
+        ):
+            # Continue to wait until both the simulation
+            # and the locomotion nodes are ready
+            return
+
         if self.num_targets_remaining <= 0:
-            request = Trigger.Request()
-            future = self.reset_simulation_client.call_async(request)
-            future.add_done_callback(self.reset_simulation_callback)
-            self.start_training_episode_publisher.publish(Empty())
-            self.num_targets_remaining = self.num_targets_per_episodes
-            self.waiting_for_simulation_reset = True
-            self.new_episode = True
+            self._start_new_episode()
         else:
             self.num_targets_remaining -= 1
 
@@ -283,16 +305,21 @@ class TargetGeneratorNode(Node):
         response.train_parallel = self.train_parallel
         return response
 
-    def enable_training_callback(self, request, response):
+    def start_training_callback(self, request, response):
         """Enable the training when the locomotion node is up and ready."""
         self.training_started = request.data
-        self._generate_targets()
+        self._start_new_episode()
         response.success = True
         return response
 
     def reset_simulation_callback(self, future):
         """Publish a new training target for the new episode."""
-        self.waiting_for_simulation_reset = False
+        self.waiting_for_simulation_reply = False
+        self._generate_targets()
+
+    def start_training_episode_callback(self, future):
+        """Publish a new training target for the new episode."""
+        self.waiting_for_locomotion_reply = False
         self._generate_targets()
 
     def _set_target(self, topic_prefix, target):

@@ -15,6 +15,7 @@ from spiderbot_interfaces.srv import GetTrainingConfiguration
 from std_msgs.msg import Empty
 
 from std_srvs.srv import SetBool
+from std_srvs.srv import Trigger
 
 
 class LocomotionNode(Node):
@@ -64,16 +65,15 @@ class LocomotionNode(Node):
 
         self._create_spiderbot_topics()
 
-        self.start_training_episode_subscriber = self.create_subscription(
-            Empty,
+        self.start_training_episode_service = self.create_service(
+            Trigger,
             'start_training_episode',
-            self.start_training_episode_callback,
-            10
+            self.start_training_episode_callback
         )
 
-        self.enable_training_client = self.create_client(
+        self.start_training_client = self.create_client(
             SetBool,
-            'enable_training'
+            'start_training'
         )
 
         self.get_logger().info('Spiderbot locomotion node started')
@@ -176,9 +176,11 @@ class LocomotionNode(Node):
                 )
             )
 
-    def start_training_episode_callback(self, msg):
+    def start_training_episode_callback(self, request, response):
         """Start a new training episode."""
         self.locomotion_module.start_training_episode()
+        response.success = True
+        return response
 
     def spiderbot_pose_callback(self, topic_prefix, msg):
         """Publish a set of leg targets whenever a new pose is received."""
@@ -189,13 +191,6 @@ class LocomotionNode(Node):
         """Reset the simuation and has the Spiderbot move to the target."""
         if self.locomotion_module is not None:
             self.locomotion_module.set_target(topic_prefix, msg)
-
-    def set_training_mode_enabled_callback(self, request, response):
-        """Toggle if training mode is enabled."""
-        self.locomotion_module.set_training_mode_enabled(request.data)
-        response.success = True
-        response.message = 'Success'
-        return response
 
     def publish_target_pose(self, topic_prefix, msg):
         """Publish target angles for the leg actuators."""

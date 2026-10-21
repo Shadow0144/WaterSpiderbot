@@ -32,6 +32,7 @@ class Candidate:
                 self.filename
             )
         self.candidate_number = candidate_number
+        self.episode_terminated = False
 
     def get_are_actions_normalized(self):
         """Return if the angles are pre-scaled or require scaling."""
@@ -68,6 +69,7 @@ class Candidate:
         """Start another training episode."""
         if self.policy:
             self.policy.start_new_training_episode()
+        self.episode_terminated = False
 
     def set_target(self, target):
         """Set the target for the policy to approach."""
@@ -76,7 +78,12 @@ class Candidate:
 
     def train_step(self, spiderbot_pose_msg, delta_time):
         """Perform a single training step."""
-        if self.policy:
-            return self.policy.train_step(spiderbot_pose_msg, delta_time)
+        if self.policy and not self.episode_terminated:
+            action_t, training_status = self.policy.train_step(
+                spiderbot_pose_msg,
+                delta_time
+            )
+            self.episode_terminated = training_status.episode_terminated
+            return action_t, training_status
         else:
-            return None, 0.0
+            return None, None
