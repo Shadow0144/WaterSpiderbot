@@ -1,6 +1,5 @@
-"""Set of converter functions to translate between ROS types and Python."""
+"""Converter functions to translate between ROS types and Python."""
 
-import os
 
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Quaternion
@@ -9,8 +8,6 @@ from geometry_msgs.msg import Vector3
 import mujoco
 
 from nav_msgs.msg import Odometry
-
-from sensor_msgs.msg import JointState
 
 from spiderbot_interfaces.msg import LegPose
 from spiderbot_interfaces.msg import LegTargets
@@ -33,14 +30,6 @@ def convert_list_to_vector3(to_convert):
 def convert_vector3_to_list(to_convert):
     """Convert a geometry_msg Vector3 to a Python list."""
     return [to_convert.x, to_convert.y, to_convert.z]
-
-
-def create_joint_state(name, qpose):
-    """Construct a JointStateObject."""
-    joint_state = JointState()
-    joint_state.name = name
-    joint_state.position = qpose
-    return joint_state
 
 
 def create_odometry(body):
@@ -99,7 +88,8 @@ def construct_pose_msg(
         body,
         tendon_tension,
         leg_names,
-        legs
+        legs,
+        torque
         ):
     """Construct a SpiderbotPose message."""
     msg = SpiderbotPose()
@@ -114,6 +104,7 @@ def construct_pose_msg(
             legs[leg_name], leg_name
         ))
     msg.leg_poses = leg_poses
+    msg.torque = torque
     return msg
 
 
