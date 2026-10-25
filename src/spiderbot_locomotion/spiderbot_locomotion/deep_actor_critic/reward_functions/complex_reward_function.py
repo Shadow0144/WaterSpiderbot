@@ -74,10 +74,12 @@ class ComplexRewardFunction():
         self.target_reached = False
         self.episode_terminated = False
 
-    def compute_step_reward(self,
-                            training_status,
-                            spiderbot_pose,
-                            delta_time):
+    def compute_step_reward(
+            self,
+            training_status,
+            spiderbot_pose,
+            delta_time
+            ):
         """Calculate per-step reward."""
         if (
             self.target is None or

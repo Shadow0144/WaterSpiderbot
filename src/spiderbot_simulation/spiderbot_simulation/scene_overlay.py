@@ -91,7 +91,7 @@ class SceneOverlay():
             '[<-] Previous Candidate': '',
             '[->] Next Candidate': '',
             '[f] Toggle Camera Following': '',
-            '[r] Reset Camera Tranforms': '',
+            '[r] Reset Camera Transforms': '',
             '[c] Camera Views Visible:': (
                 'Enabled'
                 if viewer_config['camera_views_visible'] else
