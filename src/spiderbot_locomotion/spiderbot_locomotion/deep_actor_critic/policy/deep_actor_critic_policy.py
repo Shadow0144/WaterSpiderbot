@@ -72,12 +72,13 @@ class DeepActorCriticPolicy():
         #   leg_q1, leg_q2, leg_q3,
         #   leg_vq1, leg_vq2, leg_vq3,
         #   leg_x, leg_y, leg_z,
-        #   leg_rx, leg_ry, leg_rz
+        #   leg_rx, leg_ry, leg_rz,
+        #  torque
         # Outputs:
         # tendon_tension,
         # for each leg: # 8
         #  leg_q1, leg_q2, leg_q3
-        self.num_actor_inputs = 3 + 13 + 1 + (8 * 12)  # 113
+        self.num_actor_inputs = 3 + 13 + 1 + (8 * 12) + 1  # 114
         self.num_actor_feature_hiddens = 512
         self.num_actor_recurrent_hiddens = 256
         self.num_actor_outputs = 1 + (8 * 3)  # 25
@@ -372,6 +373,16 @@ class DeepActorCriticPolicy():
         critic_loss = self.loss_function(critic_value_t, target_value)
         self.critic_optimizers[0].zero_grad()
         critic_loss.backward()
+
+        for name, parameter in self.critics[0].named_parameters():
+            if parameter.grad is not None and (
+                torch.isnan(parameter.grad).any() or
+                torch.isinf(parameter.grad).any()
+            ):
+                raise ValueError(
+                    f'NaN/Inf detected in DeepCritic backward pass: {name}'
+                )
+
         nn.utils.clip_grad_norm_(self.critics[0].parameters(), max_norm=1.0)
         self.critic_optimizers[0].step()
 
@@ -382,5 +393,15 @@ class DeepActorCriticPolicy():
         ).mean()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
+
+        for name, parameter in self.actor.named_parameters():
+            if parameter.grad is not None and (
+                torch.isnan(parameter.grad).any() or
+                torch.isinf(parameter.grad).any()
+            ):
+                raise ValueError(
+                    f'NaN/Inf detected in DeepActor backward pass: {name}'
+                )
+
         nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_optimizer.step()

@@ -200,6 +200,20 @@ class SpiderLeg:
         mat = self.data.site_xmat[self.claw_tip_site_id].reshape(3, 3)
         return matrix_to_rpy(mat)
 
+    def get_torque(self):
+        """Get the estimated torque of the actuators."""
+        coxa_torque = abs(
+            self.data.actuator_force[self.servo_coxa_actuator_id]
+        )
+        femur_torque = abs(
+            self.data.actuator_force[self.servo_femur_actuator_id]
+        )
+        tibia_torque = abs(
+            self.data.actuator_force[self.servo_tibia_actuator_id]
+        )
+        total_torque = sum([coxa_torque, femur_torque, tibia_torque])
+        return total_torque
+
     def set_mocap_target_visible(self, visible):
         """Toggle if the targets are visible."""
         if self.mocap_target_visible != visible:

@@ -24,20 +24,19 @@ class CanonicalPoseRewardFunction():
 
         # Hyperparameters for ranges
         self.target_speed = 0.02
-        self.nominal_z = 0.3
+        self.nominal_z = 0.35
         self.nominal_z_range = 0.1
 
         # Hyperparameters for penalty strengths
-        self.position_progress_reward = 100.0
-        self.position_anti_progress_penalty = -10.0
-        self.angle_progress_reward = 100.0
-        self.angle_anti_progress_penalty = -10.0
-        self.tilt_penalty = -1.0
-        self.height_penalty = -3.5
+        self.position_progress_reward = 1_000.0
+        self.angle_progress_reward = 10.0
+        self.tilt_penalty = -10.0
+        self.height_penalty = -10.0
         self.coxa_divergence_strength = 0.1
         self.femur_divergence_strength = 1.0
         self.tibia_divergence_strength = 1.0
         self.pose_divergence_penalty = -0.001
+        self.torque_penalty = -0.001
         self.arrival_reward = 100.0
         self.terminated_early_penalty = -10_000.0
         self.reward_component_labels = [
@@ -46,6 +45,7 @@ class CanonicalPoseRewardFunction():
             'Tilt',
             'Height',
             'Pose',
+            'Torque',
             'Arrival',
         ]
 
@@ -68,10 +68,12 @@ class CanonicalPoseRewardFunction():
         self.target_reached = False
         self.episode_terminated = False
 
-    def compute_step_reward(self,
-                            training_status,
-                            spiderbot_pose,
-                            delta_time):
+    def compute_step_reward(
+            self,
+            training_status,
+            spiderbot_pose,
+            delta_time
+            ):
         """Calculate per-step reward."""
         if (
             self.target is None or
@@ -122,30 +124,18 @@ class CanonicalPoseRewardFunction():
         if self.previous_angular_distance is None:
             self.previous_angular_distance = current_angular_distance
 
-        if current_distance > self.previous_distance:
-            reward_progress = (
-                self.position_anti_progress_penalty *
-                (current_distance - self.previous_distance)
-            )
-        else:
-            reward_progress = (
-                self.position_progress_reward *
-                (self.previous_distance - current_distance)
-            )
+        reward_progress = (
+            self.position_progress_reward *
+            (self.previous_distance - current_distance)
+        )
         self.previous_x = position.x
         self.previous_y = position.y
         self.previous_distance = current_distance
 
-        if current_angular_distance > self.previous_angular_distance:
-            reward_facing = (
-                    self.angle_anti_progress_penalty *
-                    (current_angular_distance - self.previous_angular_distance)
-            )
-        else:
-            reward_facing = (
-                    self.angle_progress_reward *
-                    (self.previous_angular_distance - current_angular_distance)
-            )
+        reward_facing = (
+                self.angle_progress_reward *
+                (self.previous_angular_distance - current_angular_distance)
+        )
         self.previous_angular_distance = current_angular_distance
 
         reward_tilt = (
@@ -165,6 +155,8 @@ class CanonicalPoseRewardFunction():
             )
         qpose_divergence *= qpose_divergence  # Square it
         reward_pose = qpose_divergence * self.pose_divergence_penalty
+
+        reward_torque = spiderbot_pose.torque * self.torque_penalty
 
         reward_arrival = 0.0
         if (
@@ -191,6 +183,7 @@ class CanonicalPoseRewardFunction():
             reward_height +
             reward_arrival +
             reward_pose +
+            reward_torque +
             reward_terminated
         )
 
@@ -200,6 +193,7 @@ class CanonicalPoseRewardFunction():
             reward_tilt,
             reward_height,
             reward_pose,
+            reward_torque,
             reward_arrival,
         ]
 

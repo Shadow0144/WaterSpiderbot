@@ -286,6 +286,16 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             critic_losses = self.loss_function(critic_values_t, target_values)
             critic_optimizer.zero_grad()
             critic_losses.backward()
+
+            for name, parameter in critic.named_parameters():
+                if parameter.grad is not None and (
+                    torch.isnan(parameter.grad).any() or
+                    torch.isinf(parameter.grad).any()
+                ):
+                    raise ValueError(
+                        f'NaN/Inf detected in DeepCritic backward pass: {name}'
+                    )
+
             nn.utils.clip_grad_norm_(critic.parameters(), max_norm=1.0)
             critic_optimizer.step()
 
@@ -321,6 +331,16 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         ).mean()
         self.actor_optimizer.zero_grad()
         actor_losses.backward()
+
+        for name, parameter in self.actor.named_parameters():
+            if parameter.grad is not None and (
+                torch.isnan(parameter.grad).any() or
+                torch.isinf(parameter.grad).any()
+            ):
+                raise ValueError(
+                    f'NaN/Inf detected in DeepActor backward pass: {name}'
+                )
+
         nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_optimizer.step()
 

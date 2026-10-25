@@ -205,18 +205,26 @@ class SimulatedSpiderbot():
             self.target_quaternion
         )
 
-    def get_tendon_position(self):
+    def _get_tendon_position(self):
         """Get the tendon position."""
         return self.data.qpos[self.tendon_joint_qpos_adr]
+
+    def _get_torque(self):
+        """Get the torque of the actuators."""
+        total_torque = 0.0
+        for leg_name in self.leg_names:
+            total_torque += self.legs[leg_name].get_torque()
+        return total_torque
 
     def create_pose_message(self, last_timestamp):
         """Get the pose as a message."""
         spiderbot_pose_msg = utils.construct_pose_msg(
             last_timestamp,
             self.body,
-            self.get_tendon_position(),
+            self._get_tendon_position(),
             self.leg_names,
-            self.legs
+            self.legs,
+            self._get_torque()
         )
         return spiderbot_pose_msg
 

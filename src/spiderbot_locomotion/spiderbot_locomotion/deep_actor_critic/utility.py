@@ -29,7 +29,9 @@ def construct_input_vector(target, spiderbot_pose_msg, device):
         body_orientation_vel.z,
     ]
     data.extend(
-        [spiderbot_pose_msg.tendon_tension]
+        [
+            spiderbot_pose_msg.tendon_tension,
+        ]
     )
     for leg_pose in spiderbot_pose_msg.leg_poses:
         data.extend(
@@ -48,6 +50,11 @@ def construct_input_vector(target, spiderbot_pose_msg, device):
                 leg_pose.claw_yaw,
             ]
         )
+    data.extend(
+        [
+            spiderbot_pose_msg.torque,
+        ]
+    )
     data = torch.tensor(data, dtype=torch.float32, device=device)
     data = data.unsqueeze(0)
     return data

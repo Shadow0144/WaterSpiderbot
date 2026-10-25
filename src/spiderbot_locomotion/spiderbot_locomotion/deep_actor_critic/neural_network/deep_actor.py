@@ -45,6 +45,17 @@ class DeepActor(nn.Module):
         mean_t = self.actor_mean(features_t)
         log_std_t = torch.clamp(self.actor_log_std, min=-20, max=2)
         std_t = torch.exp(log_std_t)
+
+        if torch.isnan(mean_t).any() or torch.isinf(mean_t).any():
+            raise ValueError(
+                f'NaN/Inf detected in DeepActor forward pass mean_t: {mean_t}'
+            )
+
+        if torch.isnan(std_t).any() or torch.isinf(std_t).any():
+            raise ValueError(
+                f'NaN/Inf detected in DeepActor forward pass mean_t: {mean_t}'
+            )
+
         action_distribution_t = Normal(mean_t, std_t)
 
         return action_distribution_t
