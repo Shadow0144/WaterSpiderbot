@@ -8,9 +8,9 @@ from rclpy.node import Node
 
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import Target
+from spiderbot_interfaces.msg import TrainingStatus
 from spiderbot_interfaces.srv import GetTrainingConfiguration
 
-from std_msgs.msg import Empty
 from std_msgs.msg import Int32
 
 from std_srvs.srv import SetBool
@@ -53,7 +53,7 @@ class TargetGeneratorNode(Node):
         self.rotation_half_range = math.pi / 16.0
         self.direction_jitter_half_range = math.pi / 16.0
         self.rotation_jitter_half_range = math.pi / 32.0
-        self.create_new_target_on_reaching = False
+        self.create_new_target_on_reaching = not self.train_parallel and False
 
         self.waiting_for_simulation_reply = True
         self.waiting_for_locomotion_reply = True
@@ -116,9 +116,7 @@ class TargetGeneratorNode(Node):
         self.target_publishers = {}
         self.target_number_publishers = {}
         self.spiderbot_pose_subscriptions = {}
-        self.target_reached_subscriptions = {}
-        self.training_episode_terminated_subscriptions = {}
-
+        self.training_status_subscriptions = {}
         for topic_prefix in self.topic_prefixes:
             self.target_publishers[topic_prefix] = (
                 self.create_publisher(
@@ -136,6 +134,18 @@ class TargetGeneratorNode(Node):
                 )
             )
 
+            training_status_callback_full = (
+                partial(self.training_status_callback, topic_prefix)
+            )
+            self.training_status_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    TrainingStatus,
+                    f'{topic_prefix}training_status',
+                    training_status_callback_full,
+                    10
+                )
+            )
+
             spiderbot_pose_callback_full = (
                 partial(self.spiderbot_pose_callback, topic_prefix)
             )
@@ -144,32 +154,6 @@ class TargetGeneratorNode(Node):
                     SpiderbotPose,
                     f'{topic_prefix}spiderbot_pose',
                     spiderbot_pose_callback_full,
-                    10
-                )
-            )
-
-            target_reached_callback_full = (
-                partial(self.target_reached_callback, topic_prefix)
-            )
-            self.target_reached_subscription = (
-                self.create_subscription(
-                    Empty,
-                    f'{topic_prefix}target_reached',
-                    target_reached_callback_full,
-                    10
-                )
-            )
-
-            training_episode_terminated_callback_full = (
-                partial(
-                    self.training_episode_terminated_callback, topic_prefix
-                )
-            )
-            self.training_episode_terminated_subscription = (
-                self.create_subscription(
-                    Empty,
-                    f'{topic_prefix}training_episode_terminated',
-                    training_episode_terminated_callback_full,
                     10
                 )
             )
@@ -208,16 +192,16 @@ class TargetGeneratorNode(Node):
         if self.time_left_to_reach_target_s <= 0.0:
             self._generate_targets()
 
-    def target_reached_callback(self, topic_prefix, msg):
-        """Handle when the Spiderbot reaches the training target."""
-        if self.create_new_target_on_reaching:
+    def training_status_callback(self, topic_prefix, msg):
+        """Handle updates of the training status."""
+        # If it's enabled and a Spiderbot has reached a target,
+        # generate new ones
+        if self.create_new_target_on_reaching and msg.target_reached:
             self._generate_targets()
-
-    def training_episode_terminated_callback(self, topic_prefix, msg):
-        """Handle when the Spiderbot terminates the training episode."""
-        # Set the number of targets remaining to 0 to trigger a simulation
+        # If we are training in series and the episode has terminated,
+        # set the number of targets remaining to 0 to trigger a simulation
         # reset when generating the next target
-        if not self.train_parallel:
+        if not self.train_parallel and msg.episode_terminated:
             self.num_targets_remaining = 0
             self._generate_targets()
 

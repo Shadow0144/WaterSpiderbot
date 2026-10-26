@@ -12,6 +12,7 @@ from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 from spiderbot_interfaces.srv import GetTrainingConfiguration
 
+from std_msgs.msg import Bool
 from std_msgs.msg import Empty
 
 from std_srvs.srv import SetBool
@@ -138,7 +139,7 @@ class LocomotionNode(Node):
 
             self.target_reached_publishers[topic_prefix] = (
                 self.create_publisher(
-                    Empty,
+                    Bool,
                     f'{topic_prefix}target_reached',
                     10
                 )
@@ -196,12 +197,15 @@ class LocomotionNode(Node):
         """Publish target angles for the leg actuators."""
         self.spiderbot_target_pose_publishers[topic_prefix].publish(msg)
 
-    def publish_target_reached(self, topic_prefix):
-        """Publish that the training target was reached."""
-        self.target_reached_publishers[topic_prefix].publish(Empty())
+    def publish_target_reached(self, topic_prefix, target_reached):
+        """Publish if the training target was reached."""
+        msg = Bool()
+        msg.data = target_reached
+        self.target_reached_publishers[topic_prefix].publish(msg)
 
     def publish_training_episode_terminated(self, topic_prefix):
         """Publish that the training episode was terminated early."""
+        msg = Empty()
         self.training_episode_terminated_publishers[topic_prefix].publish(
-            Empty()
+            msg
         )

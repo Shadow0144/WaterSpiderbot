@@ -125,7 +125,10 @@ class DeepActorCriticModule(LocomotionModule):
                     'Target reached',
                     throttle_duration_sec=1.0
                 )
-            self.locomotion_node.publish_target_reached(topic_prefix)
+        self.locomotion_node.publish_target_reached(
+            topic_prefix,
+            training_status.target_reached
+        )
 
         if training_status.episode_terminated:
             if topic_prefix:

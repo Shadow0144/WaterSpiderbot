@@ -11,6 +11,8 @@ The locomotion nodes all share the following properties:
   Publishes the set of target angles for the actuators of the Spiderbot
  * set_leg_targets -> LegTargets
   Publishes targets the leg claws at attempting to reach, used by the simulation to draw mocap bodies for visualization when leg targets are used
+ * training_status -> TrainingStatus
+  Publishes training information such as the current and total rewards, the components of the reward function and the values, if the Spiderbot is at the locomotion target, and if the training episode has been terminated
 
 - Subscriptions:
  * spiderbot_pose -> SpiderbotPose
