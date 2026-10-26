@@ -35,6 +35,7 @@ class CanonicalPoseRewardFunction():
         self.coxa_divergence_strength = 0.1
         self.femur_divergence_strength = 1.0
         self.tibia_divergence_strength = 1.0
+        self.tarsus_divergence_strength = 1.0
         self.pose_divergence_penalty = -0.001
         self.torque_penalty = -0.001
         self.arrival_reward = 100.0
@@ -151,7 +152,8 @@ class CanonicalPoseRewardFunction():
             qpose_divergence += (
                 (self.coxa_divergence_strength * abs(leg_pose.coxa_qpos)) +
                 (self.femur_divergence_strength * abs(leg_pose.femur_qpos)) +
-                (self.tibia_divergence_strength * abs(leg_pose.tibia_qpos))
+                (self.tibia_divergence_strength * abs(leg_pose.tibia_qpos)) +
+                (self.tarsus_divergence_strength * abs(leg_pose.tarsus_qpos))
             )
         qpose_divergence *= qpose_divergence  # Square it
         reward_pose = qpose_divergence * self.pose_divergence_penalty

@@ -29,6 +29,8 @@ class SpiderLeg:
             f'{topic_prefix}servo_' + self.leg_id + '_femur_pitch').id
         self.servo_tibia_actuator_id = self.model.actuator(
             f'{topic_prefix}servo_' + self.leg_id + '_tibia_pitch').id
+        self.servo_tarsus_actuator_id = self.model.actuator(
+            f'{topic_prefix}servo_' + self.leg_id + '_tarsus_pitch').id
 
         coxa_joint_id = self.model.joint(
             f'{topic_prefix}{self.leg_id}_cephalothorax_coxa_joint').id
@@ -36,7 +38,11 @@ class SpiderLeg:
             f'{topic_prefix}{self.leg_id}_coxa_femur_joint').id
         tibia_joint_id = self.model.joint(
             f'{topic_prefix}{self.leg_id}_femur_tibia_joint').id
-        self.leg_joint_ids = [coxa_joint_id, femur_joint_id, tibia_joint_id]
+        tarsus_joint_id = self.model.joint(
+            f'{topic_prefix}{self.leg_id}_tibia_tarsus_joint').id
+        self.leg_joint_ids = [
+            coxa_joint_id, femur_joint_id, tibia_joint_id, tarsus_joint_id
+        ]
 
         self.joint_limits = {}
         for joint_id in self.leg_joint_ids:
@@ -45,17 +51,25 @@ class SpiderLeg:
         coxa_joint_dofadr = self.model.jnt_dofadr[coxa_joint_id]
         femur_joint_dofadr = self.model.jnt_dofadr[femur_joint_id]
         tibia_joint_dofadr = self.model.jnt_dofadr[tibia_joint_id]
+        tarsus_joint_dofadr = self.model.jnt_dofadr[tarsus_joint_id]
 
         coxa_joint_qposadr = self.model.jnt_qposadr[coxa_joint_id]
         femur_joint_qposadr = self.model.jnt_qposadr[femur_joint_id]
         tibia_joint_qposadr = self.model.jnt_qposadr[tibia_joint_id]
+        tarsus_joint_qposadr = self.model.jnt_qposadr[tarsus_joint_id]
 
-        self.leg_dof_adrs = [coxa_joint_dofadr,
-                             femur_joint_dofadr,
-                             tibia_joint_dofadr]
-        self.leg_qpos_adrs = [coxa_joint_qposadr,
-                              femur_joint_qposadr,
-                              tibia_joint_qposadr]
+        self.leg_dof_adrs = [
+            coxa_joint_dofadr,
+            femur_joint_dofadr,
+            tibia_joint_dofadr,
+            tarsus_joint_dofadr
+        ]
+        self.leg_qpos_adrs = [
+            coxa_joint_qposadr,
+            femur_joint_qposadr,
+            tibia_joint_qposadr,
+            tarsus_joint_qposadr
+        ]
 
         self.coxa_actuator_limits = np.radians(
             self.model.actuator_ctrlrange[self.servo_coxa_actuator_id]
@@ -66,18 +80,26 @@ class SpiderLeg:
         self.tibia_actuator_limits = np.radians(
             self.model.actuator_ctrlrange[self.servo_tibia_actuator_id]
         )
+        self.tarsus_actuator_limits = np.radians(
+            self.model.actuator_ctrlrange[self.servo_tarsus_actuator_id]
+        )
 
-        self.leg_actuator_limits = [self.coxa_actuator_limits,
-                                    self.femur_actuator_limits,
-                                    self.tibia_actuator_limits]
+        self.leg_actuator_limits = [
+            self.coxa_actuator_limits,
+            self.femur_actuator_limits,
+            self.tibia_actuator_limits,
+            self.tarsus_actuator_limits
+        ]
 
         self.coxa_actuator_limit_low = self.coxa_actuator_limits[0]
         self.femur_actuator_limit_low = self.femur_actuator_limits[0]
         self.tibia_actuator_limit_low = self.tibia_actuator_limits[0]
+        self.tarsus_actuator_limit_low = self.tarsus_actuator_limits[0]
 
         self.coxa_actuator_limit_high = self.coxa_actuator_limits[1]
         self.femur_actuator_limit_high = self.femur_actuator_limits[1]
         self.tibia_actuator_limit_high = self.tibia_actuator_limits[1]
+        self.tarsus_actuator_limit_high = self.tarsus_actuator_limits[1]
 
         self.coxa_actuator_limit_half_range = 0.5 * (
             self.coxa_actuator_limit_high - self.coxa_actuator_limit_low
@@ -87,6 +109,9 @@ class SpiderLeg:
         )
         self.tibia_actuator_limit_half_range = 0.5 * (
             self.tibia_actuator_limit_high - self.tibia_actuator_limit_low
+        )
+        self.tarsus_actuator_limit_half_range = 0.5 * (
+            self.tarsus_actuator_limit_high - self.tarsus_actuator_limit_low
         )
 
         self.coxa_body_id = self.model.body(
@@ -134,19 +159,30 @@ class SpiderLeg:
         """Set the target angle for the tibia joint."""
         self.data.ctrl[self.servo_tibia_actuator_id] = target_angle
 
-    def set_leg_target_angles(self,
-                              coxa_target_angle,
-                              femur_target_angle,
-                              tibia_target_angle):
+    def set_tarsus_target_angle(self, target_angle):
+        """Set the target angle for the tarsus joint."""
+        self.data.ctrl[self.servo_tarsus_actuator_id] = target_angle
+
+    def set_leg_target_angles(
+            self,
+            coxa_target_angle,
+            femur_target_angle,
+            tibia_target_angle,
+            tarsus_target_angle
+            ):
         """Set the target angles for the leg joints."""
         self.set_coxa_target_angle(coxa_target_angle)
         self.set_femur_target_angle(femur_target_angle)
         self.set_tibia_target_angle(tibia_target_angle)
+        self.set_tarsus_target_angle(tarsus_target_angle)
 
-    def set_leg_actions(self,
-                        coxa_action,
-                        femur_action,
-                        tibia_action):
+    def set_leg_actions(
+            self,
+            coxa_action,
+            femur_action,
+            tibia_action,
+            tarsus_action
+            ):
         """Actions are in the range [-1, 1] and need to be scaled up."""
         coxa_target_angle = self.scale_action_to_range(
             coxa_action,
@@ -163,10 +199,16 @@ class SpiderLeg:
             self.tibia_actuator_limit_low,
             self.tibia_actuator_limit_half_range
         )
+        tarsus_target_angle = self.scale_action_to_range(
+            tarsus_action,
+            self.tarsus_actuator_limit_low,
+            self.tarsus_actuator_limit_half_range
+        )
         self.set_leg_target_angles(
             coxa_target_angle,
             femur_target_angle,
-            tibia_target_angle
+            tibia_target_angle,
+            tarsus_target_angle
         )
 
     def get_qposes(self):
@@ -211,7 +253,15 @@ class SpiderLeg:
         tibia_torque = abs(
             self.data.actuator_force[self.servo_tibia_actuator_id]
         )
-        total_torque = sum([coxa_torque, femur_torque, tibia_torque])
+        tarsus_torque = abs(
+            self.data.actuator_force[self.servo_tarsus_actuator_id]
+        )
+        total_torque = sum([
+            coxa_torque,
+            femur_torque,
+            tibia_torque,
+            tarsus_torque
+        ])
         return total_torque
 
     def set_mocap_target_visible(self, visible):
@@ -235,11 +285,13 @@ class SpiderLeg:
     # relative is if the the target is relative to the leg base or not
     # max_ik_iterations is the maximum number of iterations to do while
     # solving the ik
-    def move_claw_to_cartesian(self,
-                               target_xyz,
-                               target_rpy=None,
-                               relative=True,
-                               max_ik_iterations=5):
+    def move_claw_to_cartesian(
+            self,
+            target_xyz,
+            target_rpy=None,
+            relative=True,
+            max_ik_iterations=5
+            ):
         """Move the tip of a leg to a point in Cartesian space."""
         # q_target = q_current + J^-1_p(x_target - x_current)
         # J is the Jacobian
@@ -283,15 +335,20 @@ class SpiderLeg:
             mujoco.mj_kinematics(self.model, self.data)
 
             current_xyz = self.data.site(
-                self.claw_tip_site_id).xpos.copy()
+                self.claw_tip_site_id
+            ).xpos.copy()
             current_rpy = self.data.site(
-                self.claw_tip_site_id).xmat.reshape(3, 3)
+                self.claw_tip_site_id
+            ).xmat.reshape(3, 3)
 
             # Get the Jacobian and then filter for the actuators we care about
-            mujoco.mj_jacSite(self.model,
-                              self.data,
-                              jac_p, jac_r,
-                              self.claw_tip_site_id)
+            mujoco.mj_jacSite(
+                self.model,
+                self.data,
+                jac_p,
+                jac_r,
+                self.claw_tip_site_id
+            )
             j_p = jac_p[:, self.leg_dof_adrs]
             j_r = jac_r[:, self.leg_dof_adrs]
 
@@ -331,10 +388,14 @@ class SpiderLeg:
                 weight_rot = 0.0
 
             # Stack the vectors
-            j_full = np.vstack([weight_pos * j_p,
-                                weight_rot * j_r])
-            delta_full = np.hstack([weight_pos * delta_xyz,
-                                    weight_rot * delta_r])
+            j_full = np.vstack(
+                [weight_pos * j_p,
+                 weight_rot * j_r]
+            )
+            delta_full = np.hstack(
+                [weight_pos * delta_xyz,
+                 weight_rot * delta_r]
+            )
 
             # Boost damping factor when determinant is too small
             jt_j = j_full.T @ j_full
@@ -350,8 +411,10 @@ class SpiderLeg:
                 # Pull joints towards middle of joint limits
                 mid_limits = np.array([
                     0.5 *
-                    (self.joint_limits[joint_id][0] +
-                     self.joint_limits[joint_id][1])
+                    (
+                        self.joint_limits[joint_id][0] +
+                        self.joint_limits[joint_id][1]
+                    )
                     for joint_id in self.leg_joint_ids
                 ])
                 null_space_bias = 0.01 * (mid_limits - q_sol)
@@ -366,9 +429,11 @@ class SpiderLeg:
 
             # Clamp solution to joint limits
             for i, joint_id in enumerate(self.leg_joint_ids):
-                q_sol[i] = np.clip(q_sol[i],
-                                   self.joint_limits[joint_id][0],
-                                   self.joint_limits[joint_id][1])
+                q_sol[i] = np.clip(
+                    q_sol[i],
+                    self.joint_limits[joint_id][0],
+                    self.joint_limits[joint_id][1]
+                )
 
         # Restore the legs after the calculations
         self.data.qpos[self.leg_qpos_adrs] = q_original
@@ -384,7 +449,8 @@ class SpiderLeg:
         self.set_leg_targets(
             self.q_cmd_filtered[0],
             self.q_cmd_filtered[1],
-            self.q_cmd_filtered[2])
+            self.q_cmd_filtered[2]
+        )
 
     def reset_leg(self):
         """Reset the leg to its initial state."""

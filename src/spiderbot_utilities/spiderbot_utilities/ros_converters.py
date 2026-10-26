@@ -71,9 +71,11 @@ def construct_leg_pose_msg(leg, leg_name):
     leg_pose.coxa_qpos = qposes[0]
     leg_pose.femur_qpos = qposes[1]
     leg_pose.tibia_qpos = qposes[2]
+    leg_pose.tarsus_qpos = qposes[3]
     leg_pose.coxa_qvel = qvels[0]
     leg_pose.femur_qvel = qvels[1]
     leg_pose.tibia_qvel = qvels[2]
+    leg_pose.tarsus_qvel = qvels[3]
     leg_pose.claw_x = xyz[0]
     leg_pose.claw_y = xyz[1]
     leg_pose.claw_z = xyz[2]
@@ -143,6 +145,7 @@ def construct_target_pose_msg(
         leg_pose.coxa_qpos = qposes[0]
         leg_pose.femur_qpos = qposes[1]
         leg_pose.tibia_qpos = qposes[2]
+        leg_pose.tarsus_qpos = qposes[3]
         leg_poses.append(leg_pose)
     msg.leg_poses = leg_poses
     return msg

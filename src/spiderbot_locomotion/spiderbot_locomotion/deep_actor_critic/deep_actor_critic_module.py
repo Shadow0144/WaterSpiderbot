@@ -151,10 +151,11 @@ class DeepActorCriticModule(LocomotionModule):
             return
         tendon_tension = float(action_t[0])
         target_action_t_per_leg = {}
+        num_segments = 4
         for i, leg_name in enumerate(self.leg_names):
-            index = (i * 3) + 1
+            index = (i * num_segments) + 1
             target_action_t_per_leg[leg_name] = (
-                [float(x) for x in action_t[index:index+3]]
+                [float(x) for x in action_t[index:(index + num_segments)]]
             )
         msg = utils.construct_target_pose_msg(
                     time.time(),

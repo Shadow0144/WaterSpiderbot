@@ -69,19 +69,19 @@ class DeepActorCriticPolicy():
         #  body_vrp, body_vrr, body_vry,
         #  tendon_tension,
         #  for each leg: # 8
-        #   leg_q1, leg_q2, leg_q3,
-        #   leg_vq1, leg_vq2, leg_vq3,
-        #   leg_x, leg_y, leg_z,
-        #   leg_rx, leg_ry, leg_rz,
+        #   leg_q1, leg_q2, leg_q3, leg_q3,
+        #   leg_vq1, leg_vq2, leg_vq3, leg_vq3,
+        #   claw_x, claw_y, claw_z,
+        #   claw_rx, claw_ry, claw_rz,
         #  torque
         # Outputs:
         # tendon_tension,
         # for each leg: # 8
-        #  leg_q1, leg_q2, leg_q3
-        self.num_actor_inputs = 3 + 13 + 1 + (8 * 12) + 1  # 114
+        #  leg_q1, leg_q2, leg_q3, leg_q4
+        self.num_actor_inputs = 3 + 13 + 1 + (8 * 14) + 1  # 130
         self.num_actor_feature_hiddens = 512
         self.num_actor_recurrent_hiddens = 256
-        self.num_actor_outputs = 1 + (8 * 3)  # 25
+        self.num_actor_outputs = 1 + (8 * 4)  # 33
 
         self.num_critic_inputs = (
             self.num_actor_recurrent_hiddens

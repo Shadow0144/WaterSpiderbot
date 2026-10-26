@@ -172,7 +172,8 @@ class SimulatedSpiderbot():
                 self.legs[leg_name].set_leg_actions(
                     leg_pose.coxa_qpos,
                     leg_pose.femur_qpos,
-                    leg_pose.tibia_qpos
+                    leg_pose.tibia_qpos,
+                    leg_pose.tarsus_qpos
                 )
         else:
             for leg_name in self.leg_names:
@@ -180,7 +181,8 @@ class SimulatedSpiderbot():
                 self.legs[leg_name].set_leg_target_angles(
                     leg_pose.coxa_qpos,
                     leg_pose.femur_qpos,
-                    leg_pose.tibia_qpos
+                    leg_pose.tibia_qpos,
+                    leg_pose.tarsus_qpos
                 )
 
     def set_target(self, target_msg):
