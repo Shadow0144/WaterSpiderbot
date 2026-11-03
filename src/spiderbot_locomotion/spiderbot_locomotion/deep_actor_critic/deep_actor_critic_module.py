@@ -4,6 +4,8 @@ import time
 
 import spiderbot_utilities as utils
 
+from .policy.deep_actor_critic_policy import DeepActorCriticPolicy
+from .policy.deep_soft_actor_critics_policy import DeepSoftActorCriticsPolicy
 from .policy.parallel_policy_trainer import ParallelPolicyTrainer
 from .policy.series_policy_trainer import SeriesPolicyTrainer
 from ..locomotion_module import LocomotionModule
@@ -34,35 +36,44 @@ class DeepActorCriticModule(LocomotionModule):
         )
 
         self.are_actions_normalized = True
-        if self.train_parallel:
-            self.policy_trainer = (
-                ParallelPolicyTrainer(
-                    self.locomotion_node.get_logger(),
-                    self.candidate_topic_prefixes,
-                    self.num_episodes_per_candidate,
-                    use_soft_actor_critics_policy
+        if self.training:
+            if self.train_parallel:
+                self.policy_trainer = (
+                    ParallelPolicyTrainer(
+                        self.locomotion_node.get_logger(),
+                        self.candidate_topic_prefixes,
+                        self.num_episodes_per_candidate,
+                        use_soft_actor_critics_policy
+                    )
                 )
+            else:
+                self.policy_trainer = (
+                    SeriesPolicyTrainer(
+                        self.locomotion_node.get_logger(),
+                        self.candidate_topic_prefixes,
+                        self.num_episodes_per_candidate,
+                        use_soft_actor_critics_policy
+                    )
+                )
+            self.policy_trainer.load_population_checkpoint()
+            self.are_actions_normalized = (
+                    self.policy_trainer.get_are_actions_normalized()
             )
         else:
-            self.policy_trainer = (
-                SeriesPolicyTrainer(
+            if use_soft_actor_critics_policy:
+                self.policy = DeepSoftActorCriticsPolicy(
                     self.locomotion_node.get_logger(),
-                    self.candidate_topic_prefixes,
-                    self.num_episodes_per_candidate,
-                    use_soft_actor_critics_policy
+                    'model_weights.pt'
                 )
+            else:
+                self.policy = DeepActorCriticPolicy(
+                    self.locomotion_node.get_logger(),
+                    'model_weights.pt'
+                )
+            self.policy.load_weights()
+            self.are_actions_normalized = (
+                    self.policy.get_are_actions_normalized()
             )
-
-        self.are_actions_normalized = (
-                self.policy_trainer.get_are_actions_normalized()
-        )
-
-        self.policy_trainer.load_population_checkpoint()
-
-        # If not training, then just use the policy directly
-        # The policy trainer can handle loading the policy first though
-        if not self.training:
-            self.policy = self.policy_trainer.get_policy('spiderbot')
 
     def update(self, topic_prefix, spiderbot_pose_msg):
         """Walk the spiderbot towards its target."""
@@ -186,7 +197,10 @@ class DeepActorCriticModule(LocomotionModule):
             target_y,
             target_theta
         ]
-        self.policy_trainer.set_target(topic_prefix, target)
+        if self.training:
+            self.policy_trainer.set_target(topic_prefix, target)
+        else:
+            self.policy.set_target(target)
 
     def start_training_episode(self):
         """Start a new training episode."""
