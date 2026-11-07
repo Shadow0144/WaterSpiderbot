@@ -58,18 +58,12 @@ class DeepSoftActorCriticsPolicy():
         # Target information
         self.target = None
 
-        # Previous state information
-        self.transition_t = None
-
         self.are_actions_normalized = True
 
         self.batch_size = 100
         self.buffer_size = 10_000
         self.training_observations = deque(maxlen=self.buffer_size)
-
-        self.previous_state_t = None
-        self.previous_action_t = None
-        self.previous_log_probability_t = None
+        self.current_training_observation = None
 
         # The frames queue is a buffer (of size k) of past observations
         # to concatenate into a state
@@ -170,6 +164,7 @@ class DeepSoftActorCriticsPolicy():
 
     def _reset_frame_queue(self):
         """Zero out all the observed frames in the buffer."""
+        self.current_training_observation = None
         self.frames.clear()
         empty_observation = torch.zeros(
             (1, self.num_actor_inputs),
@@ -181,8 +176,8 @@ class DeepSoftActorCriticsPolicy():
 
     def start_new_training_episode(self):
         """Reset the internal state variables for the episode."""
+        self.current_training_observation = None
         self._reset_frame_queue()
-        self.transition_t = None
         self.reward_function.start_new_training_episode()
 
     def _construct_state(self, spiderbot_pose_msg):
@@ -326,11 +321,7 @@ class DeepSoftActorCriticsPolicy():
 
         state_t = self._construct_state(spiderbot_pose)
 
-        if (
-            self.previous_state_t is not None and
-            self.previous_action_t is not None and
-            self.previous_log_probability_t is not None
-        ):
+        if self.current_training_observation is not None:
             # If there was a previous state,
             # calculate the reward and train the actor-critic
             self.reward_function.compute_step_reward(
@@ -339,15 +330,16 @@ class DeepSoftActorCriticsPolicy():
                 delta_time
             )
 
-            training_observation = TrainingObservation(
-                state_t=self.previous_state_t,
-                action_t=self.previous_action_t,
-                log_probability_t=self.previous_log_probability_t,
-                state_tp1=state_t,
-                reward_t=training_status.step_reward,
-                episode_terminated=training_status.episode_terminated
+            # Update the observation with the new state and reward
+            # and append it to the list of observations
+            self.current_training_observation.update(
+                state_t,
+                training_status.step_reward,
+                training_status.episode_terminated
             )
-            self.training_observations.append(training_observation)
+            self.training_observations.append(
+                self.current_training_observation
+            )
 
             if len(self.training_observations) >= self.buffer_size:
                 self._train_actor_critic_step()
@@ -358,9 +350,11 @@ class DeepSoftActorCriticsPolicy():
             )
         )
 
-        self.previous_state_t = state_t
-        self.previous_action_t = action_t
-        self.previous_log_probability_t = log_probability_t
+        self.current_training_observation = TrainingObservation(
+            state_t,
+            action_t,
+            log_probability_t
+        )
 
         return action_t_np, training_status
 
