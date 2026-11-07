@@ -31,6 +31,8 @@ Provides the training targets and times.
 - Clients:
  * reset_simulation -> Trigger
   Resets the simulation between training episodes
+ * start_training -> Trigger
+  Fired when the locomotion node is ready to begin training and starts the training process
 
 ### teleop_node
 

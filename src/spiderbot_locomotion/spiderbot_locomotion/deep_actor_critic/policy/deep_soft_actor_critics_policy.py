@@ -7,27 +7,69 @@ from collections import deque
 import torch
 from torch import nn
 
-from .deep_actor_critic_policy import DeepActorCriticPolicy
+from .training_observation import TrainingObservation
+from ..file_managers.model_weights_file_manager import ModelWeightsFileManager
 from ..neural_network.deep_actor import DeepActor
 from ..neural_network.deep_critic import DeepCritic
-from ..neural_network.step_transition import StepTransition
-from ..neural_network.step_transition import TrainingObservation
+from ..reward_functions.canonical_pose_reward_function import (
+    CanonicalPoseRewardFunction
+)
+from ..reward_functions.complex_reward_function import ComplexRewardFunction
 from ..reward_functions.training_status import TrainingStatus
 from ..utility import construct_input_vector
 
 
-class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
+class DeepSoftActorCriticsPolicy():
     """Provides an action based on the current state."""
 
-    def __init__(self, logger, model_weights_filename):
+    def __init__(
+            self,
+            logger,
+            model_weights_filename
+            ):
         """Initialize the locomotion neural network."""
-        super().__init__(logger, model_weights_filename)
+        self.logger = logger
+        self.model_weights_filename = model_weights_filename
+
+        self.device = (
+            torch.accelerator.current_accelerator().type
+            if torch.accelerator.is_available() else
+            'cpu'
+        )
+
+        self._determine_layer_sizes()
+        self._create_actor()
+        self._create_critics()
+        self.loss_function = nn.MSELoss()
+
+        self.model_weights_file_manager = ModelWeightsFileManager(
+            model_weights_filename
+        )
+
+        use_canonical_pose = True
+        if not use_canonical_pose:
+            self.reward_function = ComplexRewardFunction(self.logger)
+        else:
+            self.reward_function = CanonicalPoseRewardFunction(self.logger)
+
+        # Reward horizon scaling
+        self.gamma = 0.99
+
+        # Target information
+        self.target = None
+
+        # Previous state information
+        self.transition_t = None
 
         self.are_actions_normalized = True
 
         self.batch_size = 100
         self.buffer_size = 10_000
         self.training_observations = deque(maxlen=self.buffer_size)
+
+        self.previous_state_t = None
+        self.previous_action_t = None
+        self.previous_log_probability_t = None
 
         # The frames queue is a buffer (of size k) of past observations
         # to concatenate into a state
@@ -45,12 +87,37 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
 
     def _determine_layer_sizes(self):
         """Set all the layer sizes."""
-        super()._determine_layer_sizes()
+        # Inputs:
+        #  target_x, target_y, target_theta,
+        #  body_x, body_y, body_z,
+        #  body_rx, body_ry, body_rz, body_rw,
+        #  body_vx, body_vy, body_vz
+        #  body_vrp, body_vrr, body_vry,
+        #  tendon_tension,
+        #  for each leg: # 8
+        #   leg_q1, leg_q2, leg_q3, leg_q3,
+        #   leg_vq1, leg_vq2, leg_vq3, leg_vq3,
+        #   claw_x, claw_y, claw_z,
+        #   claw_rx, claw_ry, claw_rz,
+        #  torque
+        # Outputs:
+        # tendon_tension,
+        # for each leg: # 8
+        #  leg_q1, leg_q2, leg_q3, leg_q4
+
         self.num_frames_k = 10  # Number of frames in each state
+
+        self.num_actor_inputs = 3 + 13 + 1 + (8 * 14) + 1  # 130
         self.num_actor_inputs_k = self.num_actor_inputs * self.num_frames_k
+        self.num_actor_feature_hiddens = 512
+        self.num_actor_recurrent_hiddens = 256
+        self.num_actor_outputs = 1 + (8 * 4)  # 33
+
         self.num_critic_inputs = (
             self.num_actor_inputs_k + self.num_actor_outputs
         )
+        self.num_critic_hiddens = 256
+        self.num_critic_outputs = 1
 
     def _create_actor(self):
         """Create the Actor and its optimizer."""
@@ -92,6 +159,15 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
                 lr=1e-4)
         ]
 
+    def reset(self):
+        """Reset the state."""
+        self.target = None
+        self.reward_function.set_target(None)
+
+    def get_are_actions_normalized(self):
+        """Return if the poses are normalized or already scaled."""
+        return self.are_actions_normalized
+
     def _reset_frame_queue(self):
         """Zero out all the observed frames in the buffer."""
         self.frames.clear()
@@ -119,6 +195,74 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
         self.frames.append(frame_t)
         state_t = torch.cat(list(self.frames), dim=-1)
         return state_t
+
+    def save_weights(self, filename_override=None):
+        """Save the learned weights to a file."""
+        filename = (
+            filename_override
+            if filename_override else
+            self.model_weights_filename
+        )
+        self.logger.info(f'Saving weights: {filename}')
+        try:
+            self.model_weights_file_manager.save_model_weights(
+                self.actor,
+                self.actor_optimizer,
+                self.critics,
+                self.critic_optimizers,
+                filename_override
+            )
+            self.logger.info(f'Saved weights: {filename}')
+        except RuntimeError as e:
+            self.logger.warning(f'Failed to save weights: {e}')
+
+    def load_weights(self, filename_override=None):
+        """Load the learned weights from a file."""
+        try:
+            filename = (
+                filename_override
+                if filename_override else
+                self.model_weights_filename
+            )
+            self.logger.info(f'Loading weights: {filename}')
+            if self.model_weights_file_manager.get_model_weights_exists():
+                self.model_weights_file_manager.load_model_weights(
+                    self.actor,
+                    self.actor_optimizer,
+                    self.critics,
+                    self.critic_optimizers,
+                    self.device,
+                    filename_override
+                )
+                self.logger.info(
+                    f'Loaded weights: {filename}'
+                )
+                self.start_new_training_episode()
+            else:
+                self.logger.warning(
+                    f'Weights file {filename} not found'
+                )
+        except RuntimeError as e:
+            self.logger.warning(f'Failed to load weights: {e}')
+
+    def delete_saved_weights(self):
+        """Delete the saved weights file."""
+        if self.model_weights_file_manager.get_model_weights_exists():
+            self.model_weights_file_manager.delete_model_weights()
+            self.logger.info(f'Deleted weights: {self.model_weights_filename}')
+
+    def reset_learned_weights(self):
+        """Backup the current weights and start with new random weights."""
+        self.model_weights_file_manager.reset_model_weights()
+        # Create new actors and critics and optimizers with random weights
+        self._create_actor()
+        self._create_critics()
+        self.start_new_training_episode()
+
+    def set_target(self, target):
+        """Update the target."""
+        self.target = target
+        self.reward_function.set_target(self.target)
 
     def select_action(self, spiderbot_pose_msg, deterministic=False):
         """Select the next action."""
@@ -158,15 +302,10 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             action_t
         ).sum(dim=-1)
 
-        transition_t = StepTransition(
-            state_t,
-            action_t,
-            log_probability_t
-        )
-
         return (
             action_t_np,
-            transition_t
+            action_t,
+            log_probability_t
         )
 
     def train_step(self,
@@ -187,7 +326,11 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
 
         state_t = self._construct_state(spiderbot_pose)
 
-        if self.transition_t is not None:
+        if (
+            self.previous_state_t is not None and
+            self.previous_action_t is not None and
+            self.previous_log_probability_t is not None
+        ):
             # If there was a previous state,
             # calculate the reward and train the actor-critic
             self.reward_function.compute_step_reward(
@@ -197,9 +340,9 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             )
 
             training_observation = TrainingObservation(
-                state_t=self.transition_t.state_t,
-                action_t=self.transition_t.action_t,
-                log_probability_t=self.transition_t.log_probability_t,
+                state_t=self.previous_state_t,
+                action_t=self.previous_action_t,
+                log_probability_t=self.previous_log_probability_t,
                 state_tp1=state_t,
                 reward_t=training_status.step_reward,
                 episode_terminated=training_status.episode_terminated
@@ -209,13 +352,17 @@ class DeepSoftActorCriticsPolicy(DeepActorCriticPolicy):
             if len(self.training_observations) >= self.buffer_size:
                 self._train_actor_critic_step()
 
-        action_t, self.transition_t = (
+        action_t_np, action_t, log_probability_t = (
             self._select_action_stochastic(
                 state_t
             )
         )
 
-        return action_t, training_status
+        self.previous_state_t = state_t
+        self.previous_action_t = action_t
+        self.previous_log_probability_t = log_probability_t
+
+        return action_t_np, training_status
 
     def _train_actor_critic_step(self):
         """Perform a batch of Soft Actor-Critic updates."""

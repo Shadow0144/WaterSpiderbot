@@ -13,7 +13,6 @@ from spiderbot_interfaces.srv import GetTrainingConfiguration
 
 from std_msgs.msg import Int32
 
-from std_srvs.srv import SetBool
 from std_srvs.srv import Trigger
 
 
@@ -82,7 +81,7 @@ class TargetGeneratorNode(Node):
         )
 
         self.start_training_service = self.create_service(
-            SetBool,
+            Trigger,
             'start_training',
             self.start_training_callback
         )
@@ -291,7 +290,7 @@ class TargetGeneratorNode(Node):
 
     def start_training_callback(self, request, response):
         """Enable the training when the locomotion node is up and ready."""
-        self.training_started = request.data
+        self.training_started = True
         self._start_new_episode()
         response.success = True
         return response

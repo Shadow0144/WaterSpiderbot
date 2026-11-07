@@ -31,14 +31,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'simple_sin_locomotion_node = '
-            'spiderbot_locomotion.simple_sin.main:main',
-            'handcrafted_angles_locomotion_node = '
-            'spiderbot_locomotion.handcrafted_angles.main:main',
-            'handcrafted_points_locomotion_node = '
-            'spiderbot_locomotion.handcrafted_points.main:main',
-            'deep_actor_critic_locomotion_node = '
-            'spiderbot_locomotion.deep_actor_critic.main:main',
+            'locomotion_node = spiderbot_locomotion.main:main',
         ],
     },
 )

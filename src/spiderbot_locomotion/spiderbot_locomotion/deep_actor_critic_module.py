@@ -4,14 +4,14 @@ import time
 
 import spiderbot_utilities as utils
 
-from .policy.deep_actor_critic_policy import DeepActorCriticPolicy
-from .policy.deep_soft_actor_critics_policy import DeepSoftActorCriticsPolicy
-from .policy.parallel_policy_trainer import ParallelPolicyTrainer
-from .policy.series_policy_trainer import SeriesPolicyTrainer
-from ..locomotion_module import LocomotionModule
+from .deep_actor_critic.parallel_policy_trainer import ParallelPolicyTrainer
+from .deep_actor_critic.policy.deep_soft_actor_critics_policy import (
+    DeepSoftActorCriticsPolicy
+)
+from .deep_actor_critic.series_policy_trainer import SeriesPolicyTrainer
 
 
-class DeepActorCriticModule(LocomotionModule):
+class DeepActorCriticModule():
     """A locomotion module using a Deep Neural Network Actor-Critic policy."""
 
     def __init__(
@@ -21,10 +21,31 @@ class DeepActorCriticModule(LocomotionModule):
             training_mode_enabled,
             num_episodes_per_candidate,
             candidate_topic_prefixes,
-            train_parallel,
-            use_soft_actor_critics_policy=True):
+            train_parallel
+    ):
         """Initialize the locomotion module."""
-        super().__init__(locomotion_node, spiderbot_description)
+        self.locomotion_node = locomotion_node
+        self.spiderbot_description = spiderbot_description
+        (
+            self.leg_descriptions,
+            self.leg_names,
+            self.segment_lengths_per_leg,
+            self.spec,
+            self.model,
+            self.data,
+            self.body,
+            self.legs
+        ) = utils.convert_spiderbot_description_to_variables(
+            self.spiderbot_description
+        )
+
+        self.logger = self.locomotion_node.get_logger()
+
+        self.last_timestamp = -1.0
+
+        self.target = None
+
+        self.is_resetting = False
 
         self.training = training_mode_enabled
         self.num_episodes_per_candidate = num_episodes_per_candidate
@@ -40,19 +61,17 @@ class DeepActorCriticModule(LocomotionModule):
             if self.train_parallel:
                 self.policy_trainer = (
                     ParallelPolicyTrainer(
-                        self.locomotion_node.get_logger(),
+                        self.logger,
                         self.candidate_topic_prefixes,
-                        self.num_episodes_per_candidate,
-                        use_soft_actor_critics_policy
+                        self.num_episodes_per_candidate
                     )
                 )
             else:
                 self.policy_trainer = (
                     SeriesPolicyTrainer(
-                        self.locomotion_node.get_logger(),
+                        self.logger,
                         self.candidate_topic_prefixes,
-                        self.num_episodes_per_candidate,
-                        use_soft_actor_critics_policy
+                        self.num_episodes_per_candidate
                     )
                 )
             self.policy_trainer.load_population_checkpoint()
@@ -60,24 +79,32 @@ class DeepActorCriticModule(LocomotionModule):
                     self.policy_trainer.get_are_actions_normalized()
             )
         else:
-            if use_soft_actor_critics_policy:
-                self.policy = DeepSoftActorCriticsPolicy(
-                    self.locomotion_node.get_logger(),
-                    'model_weights.pt'
-                )
-            else:
-                self.policy = DeepActorCriticPolicy(
-                    self.locomotion_node.get_logger(),
-                    'model_weights.pt'
-                )
+            self.policy = DeepSoftActorCriticsPolicy(
+                self.logger,
+                'model_weights.pt'
+            )
             self.policy.load_weights()
             self.are_actions_normalized = (
                     self.policy.get_are_actions_normalized()
             )
 
+    def set_training_mode_enabled(self, training_mode_enabled):
+        """Toggle if training mode is enabled."""
+        self.training_mode_enabled = training_mode_enabled
+
+    def _update_delta_time(self, spiderbot_pose_msg):
+        """Get the change in time between messages."""
+        timestamp = spiderbot_pose_msg.timestamp
+        if self.last_timestamp < 0.0:
+            self.last_timestamp = timestamp
+            self.delta_time = 0.0
+        else:
+            self.delta_time = timestamp - self.last_timestamp
+            self.last_timestamp = timestamp
+
     def update(self, topic_prefix, spiderbot_pose_msg):
         """Walk the spiderbot towards its target."""
-        super().update(topic_prefix, spiderbot_pose_msg)
+        self._update_delta_time(spiderbot_pose_msg)
 
         if not self.training:
             action_t = self.policy.select_action(
@@ -126,13 +153,13 @@ class DeepActorCriticModule(LocomotionModule):
 
         if training_status.target_reached:
             if topic_prefix:
-                self.locomotion_node.get_logger().info(
+                self.logger.info(
                     f'[{topic_prefix}] '
                     'Target reached',
                     throttle_duration_sec=1.0
                 )
             else:
-                self.locomotion_node.get_logger().info(
+                self.logger.info(
                     'Target reached',
                     throttle_duration_sec=1.0
                 )
@@ -143,13 +170,13 @@ class DeepActorCriticModule(LocomotionModule):
 
         if training_status.episode_terminated:
             if topic_prefix:
-                self.locomotion_node.get_logger().info(
+                self.logger.info(
                     f'[{topic_prefix}] '
                     'Training episode terminated',
                     throttle_duration_sec=1.0
                 )
             else:
-                self.locomotion_node.get_logger().info(
+                self.logger.info(
                     'Training episode terminated',
                     throttle_duration_sec=1.0
                 )
@@ -209,7 +236,7 @@ class DeepActorCriticModule(LocomotionModule):
     def reset(self):
         """Reset the neural network."""
         self.policy_trainer.start_new_training_episode()
-        super().reset()
+        self.is_resetting = False
 
     def reset_learned_weights(self):
         """Back up the current weights and start with new random weights."""

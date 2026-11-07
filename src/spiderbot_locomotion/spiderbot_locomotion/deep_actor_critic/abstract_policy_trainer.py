@@ -3,8 +3,8 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from .candidate import Candidate
-from ..file_managers.checkpoint_file_manager import CheckpointFileManager
+from .file_managers.checkpoint_file_manager import CheckpointFileManager
+from .policy.candidate import Candidate
 
 
 class AbstractPolicyTrainer(ABC):
@@ -15,7 +15,6 @@ class AbstractPolicyTrainer(ABC):
             logger,
             candidate_topic_prefixes,
             num_episodes_per_candidate,
-            use_soft_actor_critics_policy,
             autosave_checkpoints=True
             ):
         """Initialize the class."""
@@ -24,7 +23,6 @@ class AbstractPolicyTrainer(ABC):
         self.num_episodes_per_candidate = num_episodes_per_candidate
         self.num_candidates_per_generation = len(self.candidate_topic_prefixes)
         self.autosave_checkpoints = autosave_checkpoints
-        self.use_soft_actor_critics_policy = use_soft_actor_critics_policy
 
         self.checkpoint_file_manager = CheckpointFileManager()
         self.model_weights_filename = 'model_weights.pt'
@@ -49,7 +47,6 @@ class AbstractPolicyTrainer(ABC):
                     topic_prefix,
                     self._create_candidate_filename(topic_prefix),
                     0.0,
-                    self.use_soft_actor_critics_policy,
                     (index + 1)
                     )
                 )

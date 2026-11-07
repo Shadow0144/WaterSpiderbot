@@ -1,6 +1,5 @@
 """Training candidate."""
 
-from .deep_actor_critic_policy import DeepActorCriticPolicy
 from .deep_soft_actor_critics_policy import DeepSoftActorCriticsPolicy
 
 
@@ -13,7 +12,6 @@ class Candidate:
             topic_prefix,
             filename,
             candidate_reward,
-            use_soft_actor_critics_policy,
             candidate_number
             ):
         """Initialize internal state."""
@@ -21,16 +19,10 @@ class Candidate:
         self.topic_prefix = topic_prefix
         self.filename = filename
         self.candidate_reward = candidate_reward
-        if use_soft_actor_critics_policy:
-            self.policy = DeepSoftActorCriticsPolicy(
-                self.logger,
-                self.filename
-            )
-        else:
-            self.policy = DeepActorCriticPolicy(
-                self.logger,
-                self.filename
-            )
+        self.policy = DeepSoftActorCriticsPolicy(
+            self.logger,
+            self.filename
+        )
         self.candidate_number = candidate_number
         self.episode_terminated = False
 

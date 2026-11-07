@@ -1,14 +1,12 @@
 """Viewer for rendering a Spiderbot simulation."""
 
+import json
 import time
+from pathlib import Path
 
 import glfw
 
-import json
-
 import mujoco
-
-from pathlib import Path
 
 from .scene import Scene
 

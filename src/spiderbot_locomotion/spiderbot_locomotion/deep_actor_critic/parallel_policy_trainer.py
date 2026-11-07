@@ -12,7 +12,6 @@ class ParallelPolicyTrainer(AbstractPolicyTrainer):
             logger,
             candidate_topic_prefixes,
             num_episodes_per_candidate,
-            use_soft_actor_critics_policy,
             autosave_checkpoints=True
             ):
         """Initialize the class."""
@@ -20,7 +19,6 @@ class ParallelPolicyTrainer(AbstractPolicyTrainer):
             logger,
             candidate_topic_prefixes,
             num_episodes_per_candidate,
-            use_soft_actor_critics_policy,
             autosave_checkpoints
         )
 

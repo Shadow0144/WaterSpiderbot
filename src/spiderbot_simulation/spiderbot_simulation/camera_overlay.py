@@ -31,7 +31,7 @@ class CameraOverlay():
             mujoco.mjtObj.mjOBJ_CAMERA,
             self.camera_id
         )
-        
+
         self.opt = mujoco.MjvOption()
 
     def add_overlay(self):
