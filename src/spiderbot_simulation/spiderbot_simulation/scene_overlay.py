@@ -87,9 +87,14 @@ class SceneOverlay():
 
     def add_overlays(self, viewer_config):
         """Add the viewer settings and training overlays to the viewport."""
-        keybinds = {
-            '[<-] Previous Candidate': '',
-            '[->] Next Candidate': '',
+        if self.train_parallel:
+            keybinds = {
+                '[<-] Previous Candidate': '',
+                '[->] Next Candidate': '',
+            }
+        else:
+            keybinds = {}
+        keybinds.update({
             '[f] Toggle Camera Following': '',
             '[r] Reset Camera Transforms': '',
             '[c] Camera Views Visible:': (
@@ -112,7 +117,7 @@ class SceneOverlay():
                 if viewer_config['translucency'] else
                 'Disabled'
             ),
-        }
+        })
         mujoco.mjr_overlay(
             mujoco.mjtFont.mjFONT_NORMAL,
             mujoco.mjtGridPos.mjGRID_BOTTOMRIGHT,
