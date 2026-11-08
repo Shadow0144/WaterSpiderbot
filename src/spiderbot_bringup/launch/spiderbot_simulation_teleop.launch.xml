@@ -5,6 +5,5 @@
     <node pkg="spiderbot_locomotion" exec="locomotion_node">
         <param name="training_mode_enabled" value="false"/>
     </node>
-    <node pkg="spiderbot_planning" exec="planning_node"/>
     <node pkg="spiderbot_simulation" exec="simulation_node"/>
 </launch>
