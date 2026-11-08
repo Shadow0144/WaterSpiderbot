@@ -41,15 +41,16 @@ colcon build --symlink-install && source install/setup.bash
 - Hardware: Provides an interface for interacting with the physical hardware of a real Spiderbot, providing the status and signals of the different hardware and pushing commands to the actuators etc.
 - Interfaces: Defines the ROS2 interfaces (messages, services, etc.)
 - Locomotion: Provides functionality to move or rotate the Spiderbot based on its target location and direction and its current pose
-- Planning: Provides functionality for path-planning and obstacle-avoidance
 - Simulation: Provides a simulation of the Spiderbot for testing the Spiderbot in a controlled environment
 - Utility: Provides various shared utility functionality to the other packages
 
 ## Nodes
 
 ### `spiderbot_brain`
-* `brain_node`
- * Sets training targets for the locomotion node
+* `target_generator_node`
+ * Sets training targets for the locomotion node and controls when to reset training episodes
+* `teleop_node`
+ * Allows the user to control the Spiderbot with keyboard or controller keys
 ---
 ### `spiderbot_cartography`
 * `cartography_node`
@@ -64,18 +65,8 @@ colcon build --symlink-install && source install/setup.bash
  * WIP
 ---
 ### `spiderbot_locomotion`
-* `deep_actor_critic_locomotion_node`
+* `locomotion_node`
  * Uses a deep-learning neural network and actor-critic reinforcement learning pattern to attempt to locomote the Spiderbot to a target location and orientation
-* `handcrafted_angles_locomotion_node`
- * Uses a series of hand-crafted target angles for each actuator to make the Spiderbot move forward
-* `handcrafted_points_locomotion_node`
-* Uses a series of hand-crafted target points to move the claws to to make the Spiderbot move forward
-* `simple_sin_locomotion_node`
-* Uses two phase-shifted sin functions to move the legs in a simple pattern to make the Spiderbot move forward
----
-### `spiderbot_planning`
-* `planning_node`
- * WIP
 ---
 ### `spiderbot_simulation`
 * `simulation_node`
