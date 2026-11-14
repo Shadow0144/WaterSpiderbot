@@ -59,6 +59,24 @@ class ModelWeightsFileManager():
 
         torch.save(checkpoint, full_filename)
 
+    def load_pretrained_model_weights(
+            self,
+            actor,
+            actor_optimizer,
+            critics,
+            critic_optimizers,
+            device
+            ):
+        """Load the pretrained model weights from a file."""
+        self.load_model_weights(
+            actor,
+            actor_optimizer,
+            critics,
+            critic_optimizers,
+            device,
+            '../pretrained_model_weights/model_weights.pt'
+        )
+
     def load_model_weights(
             self,
             actor,
@@ -68,7 +86,7 @@ class ModelWeightsFileManager():
             device,
             filename_override=None
             ):
-        """Load the learned weights from a file."""
+        """Load learned model weights from a file."""
         filename = (
             filename_override
             if filename_override else

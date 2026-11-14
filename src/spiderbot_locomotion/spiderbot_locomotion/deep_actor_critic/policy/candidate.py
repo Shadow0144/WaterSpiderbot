@@ -21,7 +21,8 @@ class Candidate:
         self.candidate_reward = candidate_reward
         self.policy = DeepSoftActorCriticsPolicy(
             self.logger,
-            self.filename
+            self.filename,
+            False
         )
         self.candidate_number = candidate_number
         self.episode_terminated = False
@@ -33,29 +34,37 @@ class Candidate:
         else:
             return False
 
-    def save_weights(self, filename_override=None):
+    def get_model_weights_file_exists(self):
+        """Return if the weight file exists for this candidate."""
+        try:
+            if self.policy:
+                return self.policy.get_model_weights_file_exists()
+        except RuntimeError as e:
+            self.logger.error(f'Failed to check model weights file: {e}')
+
+    def save_model_weights(self, filename_override=None):
         """Save the model weights."""
         try:
             if self.policy:
-                self.policy.save_weights(filename_override)
+                self.policy.save_model_weights(filename_override)
         except RuntimeError as e:
-            self.logger.warning(f'Failed to save population: {e}')
+            self.logger.error(f'Failed to save model weights: {e}')
 
-    def load_weights(self, filename_override=None):
+    def load_model_weights(self, filename_override=None):
         """Load the model weights."""
         try:
             if self.policy:
-                self.policy.load_weights(filename_override)
-        except (RuntimeError, FileNotFoundError):
-            self.logger.warning('Failed to load weights')
+                self.policy.load_model_weights(filename_override)
+        except (RuntimeError, FileNotFoundError) as e:
+            self.logger.error(f'Failed to load model weights: {e}')
 
-    def delete_weights(self):
+    def delete_model_weights(self):
         """Delete the model weights file."""
         try:
             if self.policy:
                 self.policy.delete_saved_weights()
-        except (RuntimeError, FileNotFoundError):
-            self.logger.warning('Failed to delete weights')
+        except (RuntimeError, FileNotFoundError) as e:
+            self.logger.error(f'Failed to delete model weights: {e}')
 
     def start_new_training_episode(self):
         """Start another training episode."""

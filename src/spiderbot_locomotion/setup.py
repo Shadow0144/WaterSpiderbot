@@ -16,7 +16,9 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'model_weights'),
-         glob(os.path.join('model_weights', '*')))
+         glob(os.path.join('model_weights', '*'))),
+        (os.path.join('share', package_name, 'pretrained_model_weights'),
+         glob(os.path.join('pretrained_model_weights', '*')))
     ],
     install_requires=['setuptools'],
     zip_safe=True,

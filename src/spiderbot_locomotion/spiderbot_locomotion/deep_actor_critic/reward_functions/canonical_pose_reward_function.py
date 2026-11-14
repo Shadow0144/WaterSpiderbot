@@ -161,6 +161,7 @@ class CanonicalPoseRewardFunction():
         reward_torque = spiderbot_pose.torque * self.torque_penalty
 
         reward_arrival = 0.0
+        self.target_reached = False
         if (
             current_distance < self.distance_convergence and
             current_angular_distance < self.angle_convergence

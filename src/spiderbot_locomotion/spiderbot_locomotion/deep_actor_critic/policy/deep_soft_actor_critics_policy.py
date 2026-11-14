@@ -25,11 +25,13 @@ class DeepSoftActorCriticsPolicy():
     def __init__(
             self,
             logger,
-            model_weights_filename
+            model_weights_filename,
+            force_use_pretrained_weights
             ):
         """Initialize the locomotion neural network."""
         self.logger = logger
         self.model_weights_filename = model_weights_filename
+        self.force_use_pretrained_weights = force_use_pretrained_weights
 
         self.device = (
             torch.accelerator.current_accelerator().type
@@ -99,7 +101,7 @@ class DeepSoftActorCriticsPolicy():
         # for each leg: # 8
         #  leg_q1, leg_q2, leg_q3, leg_q4
 
-        self.num_frames_k = 10  # Number of frames in each state
+        self.num_frames_k = 100  # Number of frames in each state
 
         self.num_actor_inputs = 3 + 13 + 1 + (8 * 14) + 1  # 130
         self.num_actor_inputs_k = self.num_actor_inputs * self.num_frames_k
@@ -123,6 +125,7 @@ class DeepSoftActorCriticsPolicy():
         self.actor_optimizer = torch.optim.Adam(
             self.actor.parameters(),
             lr=1e-4)
+        self.actor.eval()
 
     def _create_critics(self):
         """Create the Critic(s), Target Critic(s), and their optimizer(s)."""
@@ -191,7 +194,11 @@ class DeepSoftActorCriticsPolicy():
         state_t = torch.cat(list(self.frames), dim=-1)
         return state_t
 
-    def save_weights(self, filename_override=None):
+    def get_model_weights_file_exists(self):
+        """Return if the model weights file exists."""
+        return self.model_weights_file_manager.get_model_weights_exists()
+
+    def save_model_weights(self, filename_override=None):
         """Save the learned weights to a file."""
         filename = (
             filename_override
@@ -211,16 +218,37 @@ class DeepSoftActorCriticsPolicy():
         except RuntimeError as e:
             self.logger.warning(f'Failed to save weights: {e}')
 
-    def load_weights(self, filename_override=None):
+    def load_model_weights(self, filename_override=None):
         """Load the learned weights from a file."""
         try:
-            filename = (
-                filename_override
-                if filename_override else
-                self.model_weights_filename
+            # If the force flag is set or there are no trained model weights,
+            # use the provided pretrained weights
+            load_pretrained = (
+                self.force_use_pretrained_weights or
+                not self.model_weights_file_manager.get_model_weights_exists()
             )
-            self.logger.info(f'Loading weights: {filename}')
-            if self.model_weights_file_manager.get_model_weights_exists():
+
+            # If the pretrained weights should be loaded
+            # and there's no filename override,
+            # load the pretrained weights;
+            # otherwise, load the filename override weights
+            # or the training weights
+            if load_pretrained and filename_override is None:
+                self.logger.info('Loading pretrained weights')
+                self.model_weights_file_manager.load_pretrained_model_weights(
+                    self.actor,
+                    self.actor_optimizer,
+                    self.critics,
+                    self.critic_optimizers,
+                    self.device
+                )
+            else:
+                filename = (
+                    filename_override
+                    if filename_override else
+                    self.model_weights_filename
+                )
+                self.logger.info(f'Loading weights: {filename}')
                 self.model_weights_file_manager.load_model_weights(
                     self.actor,
                     self.actor_optimizer,
@@ -233,10 +261,6 @@ class DeepSoftActorCriticsPolicy():
                     f'Loaded weights: {filename}'
                 )
                 self.start_new_training_episode()
-            else:
-                self.logger.warning(
-                    f'Weights file {filename} not found'
-                )
         except RuntimeError as e:
             self.logger.warning(f'Failed to load weights: {e}')
 
@@ -267,28 +291,25 @@ class DeepSoftActorCriticsPolicy():
         state_t = self._construct_state(spiderbot_pose_msg)
 
         if deterministic:
-            action_t = self._select_action_deterministic(state_t)
+            action_t_np = self._select_action_deterministic(state_t)
         else:
-            action_t, _ = self._select_action_stochastic(state_t)
+            action_t_np, _, _ = self._select_action_stochastic(state_t)
 
-        return action_t
+        return action_t_np
 
     def _select_action_deterministic(self, state_t):
-        """Step execution for deployment."""
-        self.actor.eval()
+        """Select an action deterministically."""
+        action_t_np = None
         with torch.no_grad():
             action_distribution_t = self.actor(state_t)
-            action_t = action_distribution_t.mean
+            action_t = action_distribution_t.mode
             bounded_action_t = torch.tanh(action_t)
             action_t_np = bounded_action_t.squeeze(0).cpu().numpy()
-            return action_t_np
+        return action_t_np
 
     def _select_action_stochastic(self, state_t):
-        """Step execution for training."""
-        self.actor.train()
-
+        """Select an action stochastically."""
         action_distribution_t = self.actor(state_t)
-
         action_t = action_distribution_t.sample()
         bounded_action_t = torch.tanh(action_t)
         action_t_np = bounded_action_t.squeeze(0).detach().cpu().numpy()
@@ -344,6 +365,7 @@ class DeepSoftActorCriticsPolicy():
             if len(self.training_observations) >= self.buffer_size:
                 self._train_actor_critic_step()
 
+        self.actor.train()
         action_t_np, action_t, log_probability_t = (
             self._select_action_stochastic(
                 state_t

@@ -73,7 +73,7 @@ class AbstractPolicyTrainer(ABC):
         """Save the current state of the population training."""
         self.logger.info('Saving population')
         for candidate in self.candidates.values():
-            candidate.save_weights()
+            candidate.save_model_weights()
         try:
             self.checkpoint_file_manager.save_population_checkpoint(
                 self.candidates.values(),
@@ -116,7 +116,8 @@ class AbstractPolicyTrainer(ABC):
             for c, candidate in enumerate(self.candidates.values()):
                 candidate.filename = candidate_filenames[c]
                 candidate.candidate_reward = candidate_rewards[c]
-                candidate.load_weights()
+                if candidate.get_model_weights_file_exists():
+                    candidate.load_model_weights()
 
             self.logger.info('Loaded population')
         except (RuntimeError, FileNotFoundError):
@@ -128,7 +129,7 @@ class AbstractPolicyTrainer(ABC):
             self.checkpoint_file_manager.delete_population_checkpoint()
             self.logger.info('Deleted population checkpoint')
             for candidate in self.candidates.values():
-                candidate.delete_weights()
+                candidate.delete_model_weights()
 
     @abstractmethod
     def _get_candidate(self, topic_prefix):
@@ -210,16 +211,16 @@ class AbstractPolicyTrainer(ABC):
                 f'{best_candidate.topic_prefix} '
                 f'[{best_candidate.filename}]'
             )
-            best_candidate.save_weights(
+            best_candidate.save_model_weights(
                 filename_override=self.model_weights_filename
             )
 
             # Delete the old candidate files
             for candidate in self.candidates.values():
-                candidate.delete_weights()
+                candidate.delete_model_weights()
 
             self._generate_candidates()
             for candidate in self.candidates.values():
-                candidate.load_weights(
+                candidate.load_model_weights(
                     filename_override=self.model_weights_filename
                 )

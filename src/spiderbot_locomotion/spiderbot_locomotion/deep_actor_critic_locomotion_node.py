@@ -32,6 +32,11 @@ class DeepActorCriticLocomotionNode(Node):
             'Starting spiderbot locomotion node'
         )
 
+        self.declare_parameter('force_use_pretrained_weights', False)
+        self.force_use_pretrained_weights = self.get_parameter(
+            'force_use_pretrained_weights'
+        ).get_parameter_value().bool_value
+
         self.locomotion_module = None
         self.training_mode_enabled = False
         self.num_targets_per_episode = 0
@@ -84,6 +89,7 @@ class DeepActorCriticLocomotionNode(Node):
             self,
             self.spiderbot_description,
             self.training_mode_enabled,
+            self.force_use_pretrained_weights,
             self.num_episodes_per_candidate,
             self.candidate_topic_prefixes,
             self.train_parallel

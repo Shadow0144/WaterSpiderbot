@@ -19,6 +19,7 @@ class DeepActorCriticModule():
             locomotion_node,
             spiderbot_description,
             training_mode_enabled,
+            force_use_pretrained_weights,
             num_episodes_per_candidate,
             candidate_topic_prefixes,
             train_parallel
@@ -48,6 +49,7 @@ class DeepActorCriticModule():
         self.is_resetting = False
 
         self.training = training_mode_enabled
+        self.force_use_pretrained_weights = force_use_pretrained_weights
         self.num_episodes_per_candidate = num_episodes_per_candidate
         self.candidate_topic_prefixes = candidate_topic_prefixes
         self.num_candidates_per_generation = len(self.candidate_topic_prefixes)
@@ -81,11 +83,12 @@ class DeepActorCriticModule():
         else:
             self.policy = DeepSoftActorCriticsPolicy(
                 self.logger,
-                'model_weights.pt'
+                'model_weights.pt',
+                self.force_use_pretrained_weights
             )
             self.policy.load_weights()
             self.are_actions_normalized = (
-                    self.policy.get_are_actions_normalized()
+                self.policy.get_are_actions_normalized()
             )
 
     def set_training_mode_enabled(self, training_mode_enabled):
