@@ -18,15 +18,15 @@ from std_msgs.msg import Empty
 
 from std_srvs.srv import Trigger
 
-from .deep_actor_critic_module import DeepActorCriticModule
+from .locomotion_module import LocomotionModule
 
 
-class DeepActorCriticLocomotionNode(Node):
+class LocomotionNode(Node):
     """Spiderbot locomotion using a deep learning actor-critic."""
 
     def __init__(self):
         """Initialize and run a Spiderbot locomotor."""
-        super().__init__('deep_actor_critic_locomotion_node')
+        super().__init__('locomotion_node')
 
         self.get_logger().info(
             'Starting spiderbot locomotion node'
@@ -85,7 +85,7 @@ class DeepActorCriticLocomotionNode(Node):
         )
 
         # Set the module after getting the description
-        self.locomotion_module = DeepActorCriticModule(
+        self.locomotion_module = LocomotionModule(
             self,
             self.spiderbot_description,
             self.training_mode_enabled,

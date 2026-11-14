@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.executors import ExternalShutdownException
 
-from .deep_actor_critic_locomotion_node import DeepActorCriticLocomotionNode
+from .locomotion_node import LocomotionNode
 
 
 def main(args=None):
@@ -11,7 +11,7 @@ def main(args=None):
     rclpy.init(args=args)
     locomotion_node = None
     try:
-        locomotion_node = DeepActorCriticLocomotionNode()
+        locomotion_node = LocomotionNode()
         while rclpy.ok() and locomotion_node.is_running():
             rclpy.spin_once(locomotion_node, timeout_sec=0)
     except (KeyboardInterrupt, ExternalShutdownException):

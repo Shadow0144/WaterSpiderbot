@@ -11,7 +11,7 @@ from .deep_actor_critic.policy.deep_soft_actor_critics_policy import (
 from .deep_actor_critic.series_policy_trainer import SeriesPolicyTrainer
 
 
-class DeepActorCriticModule():
+class LocomotionModule():
     """A locomotion module using a Deep Neural Network Actor-Critic policy."""
 
     def __init__(
