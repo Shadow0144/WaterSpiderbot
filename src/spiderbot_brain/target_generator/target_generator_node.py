@@ -32,7 +32,7 @@ class TargetGeneratorNode(Node):
         self.training_started = False
 
         # Training parameters
-        self.time_to_reach_target_s = 10.0
+        self.time_to_reach_target_s = 30.0
         self.num_targets_per_episodes = 30
         self.num_episodes_per_candidate = 10
         self.num_candidates_per_generation = 3

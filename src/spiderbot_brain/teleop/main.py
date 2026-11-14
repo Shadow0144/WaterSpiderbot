@@ -13,7 +13,7 @@ def main(args=None):
     teleop_node = None
     try:
         teleop_node = TeleopNode()
-        while rclpy.ok():
+        while rclpy.ok() and teleop_node.get_is_running():
             rclpy.spin_once(teleop_node, timeout_sec=0)
             teleop_node.update()
     except (KeyboardInterrupt, ExternalShutdownException):
