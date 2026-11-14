@@ -2,8 +2,6 @@
     <node pkg="spiderbot_brain" exec="teleop_node"/>
     <node pkg="spiderbot_cartography" exec="cartography_node"/>
     <node pkg="spiderbot_description" exec="description_node"/>
-    <node pkg="spiderbot_locomotion" exec="locomotion_node">
-        <param name="training_mode_enabled" value="false"/>
-    </node>
+    <node pkg="spiderbot_locomotion" exec="locomotion_node"/>
     <node pkg="spiderbot_simulation" exec="simulation_node"/>
 </launch>
