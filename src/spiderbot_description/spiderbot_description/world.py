@@ -39,6 +39,7 @@ class World:
         model_filepath = os.path.join(
             self._get_model_path(),
             'test_world.xml'
+            # 'test_living_room.xml'
         )
         return model_filepath
 
