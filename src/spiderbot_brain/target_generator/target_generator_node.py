@@ -32,8 +32,8 @@ class TargetGeneratorNode(Node):
         self.training_started = False
 
         # Training parameters
-        self.time_to_reach_target_s = 30.0
-        self.num_targets_per_episodes = 30
+        self.time_to_reach_target_s = 3.0
+        self.num_targets_per_episodes = 10
         self.num_episodes_per_candidate = 10
         self.num_candidates_per_generation = 3
         self.train_parallel = True
@@ -48,10 +48,17 @@ class TargetGeneratorNode(Node):
         )
 
         # Target parameters
-        self.distance_scaling = 0.10
-        self.rotation_half_range = math.pi / 16.0
-        self.direction_jitter_half_range = math.pi / 16.0
-        self.rotation_jitter_half_range = math.pi / 32.0
+        self.stationary_target = False
+        if self.stationary_target:
+            self.distance_scaling = 0.0
+            self.rotation_half_range = 0.0
+            self.direction_jitter_half_range = 0.0
+            self.rotation_jitter_half_range = 0.0
+        else:
+            self.distance_scaling = 0.10
+            self.rotation_half_range = math.pi / 16.0
+            self.direction_jitter_half_range = math.pi / 16.0
+            self.rotation_jitter_half_range = math.pi / 32.0
         self.create_new_target_on_reaching = not self.train_parallel and False
 
         self.waiting_for_simulation_reply = True
@@ -59,6 +66,7 @@ class TargetGeneratorNode(Node):
         self.time_left_to_reach_target_s = 0.0
         self.num_targets_remaining = 0
 
+        self.episode_terminated = {}
         self.spiderbot_body_xs = {}
         self.spiderbot_body_ys = {}
         self.spiderbot_yaws = {}
@@ -66,6 +74,7 @@ class TargetGeneratorNode(Node):
         self.episode_rotations = {}
         self.new_episode = True
         for topic_prefix in self.topic_prefixes:
+            self.episode_terminated[topic_prefix] = False
             self.spiderbot_body_xs[topic_prefix] = 0.0
             self.spiderbot_body_ys[topic_prefix] = 0.0
             self.spiderbot_yaws[topic_prefix] = 0.0
@@ -133,18 +142,6 @@ class TargetGeneratorNode(Node):
                 )
             )
 
-            training_status_callback_full = (
-                partial(self.training_status_callback, topic_prefix)
-            )
-            self.training_status_subscriptions[topic_prefix] = (
-                self.create_subscription(
-                    TrainingStatus,
-                    f'{topic_prefix}training_status',
-                    training_status_callback_full,
-                    10
-                )
-            )
-
             spiderbot_pose_callback_full = (
                 partial(self.spiderbot_pose_callback, topic_prefix)
             )
@@ -153,6 +150,18 @@ class TargetGeneratorNode(Node):
                     SpiderbotPose,
                     f'{topic_prefix}spiderbot_pose',
                     spiderbot_pose_callback_full,
+                    10
+                )
+            )
+
+            training_status_callback_full = (
+                partial(self.training_status_callback, topic_prefix)
+            )
+            self.training_status_subscriptions[topic_prefix] = (
+                self.create_subscription(
+                    TrainingStatus,
+                    f'{topic_prefix}training_status',
+                    training_status_callback_full,
                     10
                 )
             )
@@ -200,24 +209,36 @@ class TargetGeneratorNode(Node):
         # If we are training in series and the episode has terminated,
         # set the number of targets remaining to 0 to trigger a simulation
         # reset when generating the next target
-        if not self.train_parallel and msg.episode_terminated:
-            self.num_targets_remaining = 0
-            self._generate_targets()
+        if msg.episode_terminated:
+            if self.train_parallel:
+                self.episode_terminated[topic_prefix] = True
+                if all(self.episode_terminated.values()):
+                    self._start_new_episode()
+            else:
+                self._start_new_episode()
 
     def _start_new_episode(self):
         """Reset the simulation and locomotion nodes and start an episode."""
         self.new_episode = True
         self.waiting_for_simulation_reply = True
         self.waiting_for_locomotion_reply = True
-        sim_request = Trigger.Request()
-        sim_future = self.reset_simulation_client.call_async(sim_request)
-        sim_future.add_done_callback(self.reset_simulation_callback)
-        loco_request = Trigger.Request()
-        loco_future = self.start_training_episode_client.call_async(
-            loco_request
+        simulation_request = Trigger.Request()
+        simulation_future = self.reset_simulation_client.call_async(
+            simulation_request
         )
-        loco_future.add_done_callback(self.start_training_episode_callback)
+        simulation_future.add_done_callback(
+            self.reset_simulation_callback
+        )
+        locomotion_request = Trigger.Request()
+        locomotion_future = self.start_training_episode_client.call_async(
+            locomotion_request
+        )
+        locomotion_future.add_done_callback(
+            self.start_training_episode_callback
+        )
         self.num_targets_remaining = self.num_targets_per_episodes
+        for topic_prefix in self.topic_prefixes:
+            self.episode_terminated[topic_prefix] = False
 
     def _generate_targets(self):
         """Create a training target near the Spiderbot and publish it."""

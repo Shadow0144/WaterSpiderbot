@@ -13,9 +13,6 @@ from spiderbot_interfaces.msg import TrainingStatus
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 from spiderbot_interfaces.srv import GetTrainingConfiguration
 
-from std_msgs.msg import Bool
-from std_msgs.msg import Empty
-
 from std_srvs.srv import Trigger
 
 from .locomotion_module import LocomotionModule
@@ -158,8 +155,6 @@ class LocomotionNode(Node):
         """Create all the topics unique to each spiderbot."""
         self.spiderbot_target_pose_publishers = {}
         self.leg_set_targets_publishers = {}
-        self.target_reached_publishers = {}
-        self.training_episode_terminated_publishers = {}
         self.spiderbot_pose_subscriptions = {}
         self.target_subscriptions = {}
         for topic_prefix in self.topic_prefixes:
@@ -175,22 +170,6 @@ class LocomotionNode(Node):
                 self.create_publisher(
                     LegTargets,
                     f'{topic_prefix}set_leg_targets',
-                    10
-                )
-            )
-
-            self.target_reached_publishers[topic_prefix] = (
-                self.create_publisher(
-                    Bool,
-                    f'{topic_prefix}target_reached',
-                    10
-                )
-            )
-
-            self.training_episode_terminated_publishers[topic_prefix] = (
-                self.create_publisher(
-                    Empty,
-                    f'{topic_prefix}training_episode_terminated',
                     10
                 )
             )
@@ -238,19 +217,6 @@ class LocomotionNode(Node):
     def publish_target_pose(self, topic_prefix, msg):
         """Publish target angles for the leg actuators."""
         self.spiderbot_target_pose_publishers[topic_prefix].publish(msg)
-
-    def publish_target_reached(self, topic_prefix, target_reached):
-        """Publish if the training target was reached."""
-        msg = Bool()
-        msg.data = target_reached
-        self.target_reached_publishers[topic_prefix].publish(msg)
-
-    def publish_training_episode_terminated(self, topic_prefix):
-        """Publish that the training episode was terminated early."""
-        msg = Empty()
-        self.training_episode_terminated_publishers[topic_prefix].publish(
-            msg
-        )
 
     def publish_training_status(self, topic_prefix, training_status):
         """Publish information on the training and the reward."""
