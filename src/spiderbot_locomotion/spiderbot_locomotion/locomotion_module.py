@@ -86,7 +86,7 @@ class LocomotionModule():
                 'model_weights.pt',
                 self.force_use_pretrained_weights
             )
-            self.policy.load_weights()
+            self.policy.load_model_weights()
             self.are_actions_normalized = (
                 self.policy.get_are_actions_normalized()
             )
@@ -166,10 +166,6 @@ class LocomotionModule():
                     'Target reached',
                     throttle_duration_sec=1.0
                 )
-        self.locomotion_node.publish_target_reached(
-            topic_prefix,
-            training_status.target_reached
-        )
 
         if training_status.episode_terminated:
             if topic_prefix:
@@ -183,9 +179,6 @@ class LocomotionModule():
                     'Training episode terminated',
                     throttle_duration_sec=1.0
                 )
-            self.locomotion_node.publish_training_episode_terminated(
-                topic_prefix
-            )
 
         return action_t, training_status
 
@@ -193,7 +186,7 @@ class LocomotionModule():
         """Publish target action_t for the leg actuators."""
         if action_t is None:
             return
-        tendon_tension = float(action_t[0])
+        tendon_slide_action = float(action_t[0])
         target_action_t_per_leg = {}
         num_segments = 4
         for i, leg_name in enumerate(self.leg_names):
@@ -204,7 +197,7 @@ class LocomotionModule():
         msg = utils.construct_target_pose_msg(
                     time.time(),
                     self.are_actions_normalized,
-                    tendon_tension,
+                    tendon_slide_action,
                     self.leg_names,
                     target_action_t_per_leg
                 )
