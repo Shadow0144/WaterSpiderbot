@@ -34,9 +34,11 @@ class SimulationNode(Node):
 
         self.get_logger().info('Starting spiderbot simulation node')
 
+        self.last_timestamp = time.time()
+
         target_publish_rate_ps = 60.0
         self.publish_interval = 1.0 / target_publish_rate_ps
-        self.last_timestamp = time.time()
+        self.last_publish_timestamp = self.last_timestamp
 
         self.training_mode_enabled = False
         self.num_targets_per_episode = 0
@@ -95,7 +97,7 @@ class SimulationNode(Node):
         spec.compiler.meshdir = self.spiderbot_description.mesh_dir
         spec.compiler.texturedir = self.spiderbot_description.texture_dir
         model = spec.compile()
-        self.timestep = model.opt.timestep
+        self.simulation_timestep = model.opt.timestep
 
         self._create_spiderbot_topics()
 
@@ -294,23 +296,20 @@ class SimulationNode(Node):
             return
 
         current_timestamp = time.time()
+        time_elapsed = current_timestamp - self.last_timestamp
+        publish_time_elapsed = current_timestamp - self.last_publish_timestamp
+        self.last_timestamp = current_timestamp
 
         # Step the physics
-        for spiderbot in self.simulated_spiderbots.values():
-            spiderbot.step()
+        num_simulation_steps = int(time_elapsed / self.simulation_timestep)
+        for _ in range(num_simulation_steps):
+            for spiderbot in self.simulated_spiderbots.values():
+                spiderbot.step()
 
         # Publish the current pose if enough time has elapsed
-        if current_timestamp - self.last_timestamp >= self.publish_interval:
-            self.last_timestamp = current_timestamp
+        if publish_time_elapsed >= self.publish_interval:
             self._publish_poses()
+            self.last_publish_timestamp = current_timestamp
 
-        # Update the renderer
+        # Update the renderer (It maintains its own internal interval)
         self.viewer.update(current_timestamp)
-
-        # Sleep until it is time for the next simulation step
-        time_elapsed = time.time() - current_timestamp
-        time_until_next_step = (
-            self.timestep - time_elapsed
-        )
-        if time_until_next_step > 0.0:
-            time.sleep(time_until_next_step)
