@@ -1,4 +1,4 @@
 float64 timestamp
 bool actions_normalized
-float32 tendon_tension
+float32 tendon_slide_action
 LegPose[] leg_poses

@@ -37,7 +37,7 @@ class CanonicalPoseRewardFunction():
         self.tibia_divergence_strength = 1.0
         self.tarsus_divergence_strength = 1.0
         self.pose_divergence_penalty = -0.001
-        self.torque_penalty = -0.001
+        self.torque_penalty = -10.0
         self.arrival_reward = 100.0
         self.terminated_early_penalty = -10_000.0
         self.reward_component_labels = [
@@ -158,7 +158,7 @@ class CanonicalPoseRewardFunction():
         qpose_divergence *= qpose_divergence  # Square it
         reward_pose = qpose_divergence * self.pose_divergence_penalty
 
-        reward_torque = spiderbot_pose.torque * self.torque_penalty
+        reward_torque = spiderbot_pose.normalized_torque * self.torque_penalty
 
         reward_arrival = 0.0
         self.target_reached = False

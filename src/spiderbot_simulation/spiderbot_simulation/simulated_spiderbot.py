@@ -120,6 +120,9 @@ class SimulatedSpiderbot():
             f'{self.topic_prefix}pose_arrow_geom'
         ).id
 
+        max_forceranges = self.model.actuator_forcerange[:, 1]
+        self.max_total_torque = np.sum(max_forceranges)
+
     def reset(self):
         """Reset the Spiderbot to its starting state."""
         mujoco.mj_resetData(self.model, self.data)
@@ -136,8 +139,12 @@ class SimulatedSpiderbot():
             self.legs[leg_name].reset_leg()
 
     def scale_action_to_range(self, action, range_low, half_range):
-        """Scale up the action in the range [-1, 1] to the full range."""
+        """Scale up an action in the range [-1, 1] to its full range."""
         return (range_low + ((action + 1.0) * half_range))
+
+    def scale_position_to_action(self, position, range_low, half_range):
+        """Scale down a position in its full range to the range [-1, 1]."""
+        return ((position - (range_low + half_range)) / half_range)
 
     def set_leg_targets(self, targets_msg):
         """Move the mocaps to the targets."""
@@ -157,13 +164,13 @@ class SimulatedSpiderbot():
         leg_poses_values = target_pose_msg.leg_poses
         if len(leg_poses_values) != len(self.leg_names):
             return  # Break early
-        tendon_tension = self.scale_action_to_range(
-            target_pose_msg.tendon_tension,
+        tendon_slide_position = self.scale_action_to_range(
+            target_pose_msg.tendon_slide_action,
             self.tendon_actuator_limit_low,
             self.tendon_actuator_limit_half_range
         )
         self.data.ctrl[self.servo_tendon_actuator_id] = (
-            tendon_tension
+            tendon_slide_position
         )
         leg_poses = dict(zip(self.leg_names, leg_poses_values))
         if target_pose_msg.actions_normalized:
@@ -211,6 +218,14 @@ class SimulatedSpiderbot():
         """Get the tendon position."""
         return self.data.qpos[self.tendon_joint_qpos_adr]
 
+    def _get_tendon_action(self):
+        """Get the tendon position."""
+        return self.scale_position_to_action(
+            self._get_tendon_position(),
+            self.tendon_actuator_limit_low,
+            self.tendon_actuator_limit_half_range
+        )
+
     def _get_torque(self):
         """Get the torque of the actuators."""
         total_torque = 0.0
@@ -218,15 +233,19 @@ class SimulatedSpiderbot():
             total_torque += self.legs[leg_name].get_torque()
         return total_torque
 
+    def _get_normalized_torque(self):
+        """Get the normalized torque of all the actuators."""
+        return (self._get_torque() / self.max_total_torque)
+
     def create_pose_message(self, last_timestamp):
         """Get the pose as a message."""
         spiderbot_pose_msg = utils.construct_pose_msg(
             last_timestamp,
             self.body,
-            self._get_tendon_position(),
+            self._get_tendon_action(),
             self.leg_names,
             self.legs,
-            self._get_torque()
+            self._get_normalized_torque()
         )
         return spiderbot_pose_msg
 

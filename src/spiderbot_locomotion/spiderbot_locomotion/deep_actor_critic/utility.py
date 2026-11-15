@@ -1,5 +1,7 @@
 """Utility functions for neural networks."""
 
+import numpy as np
+
 import torch
 
 
@@ -10,17 +12,33 @@ def construct_input_vector(target, spiderbot_pose_msg, device):
     body_orientation = body_odometry.pose.pose.orientation
     body_pose_vel = body_odometry.twist.twist.linear
     body_orientation_vel = body_odometry.twist.twist.angular
+
+    dx = target[0] - body_pose.x
+    dy = target[1] - body_pose.y
+    distance = np.hypot(dx, dy)
+    divisor = max(1.0, distance)
+    dist_x = dx / divisor
+    dist_y = dy / divisor
+    height = body_pose.z
+
+    qx = body_orientation.x
+    qy = body_orientation.y
+    qz = body_orientation.z
+    qw = body_orientation.w
+    roll = np.atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx**2 + qy**2))
+    pitch = np.asin(max(-1.0, min(1.0, 2 * (qw * qy - qz * qx))))
+    yaw = np.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
+    dtheta = yaw - target[2]
+    dist_theta = (dtheta + np.pi) % (2.0 * np.pi) - np.pi  # Clamp to [-pi, pi]
+
     data = [
-        target[0],  # x
-        target[1],  # y
-        target[2],  # theta
-        body_pose.x,
-        body_pose.y,
-        body_pose.z,
-        body_orientation.x,
-        body_orientation.y,
-        body_orientation.z,
-        body_orientation.w,
+        dist_x,
+        dist_y,
+        height,
+        dist_theta,
+        roll,
+        pitch,
+        yaw,
         body_pose_vel.x,
         body_pose_vel.y,
         body_pose_vel.z,
@@ -30,7 +48,7 @@ def construct_input_vector(target, spiderbot_pose_msg, device):
     ]
     data.extend(
         [
-            spiderbot_pose_msg.tendon_tension,
+            spiderbot_pose_msg.tendon_slide_action,
         ]
     )
     for leg_pose in spiderbot_pose_msg.leg_poses:
@@ -54,7 +72,7 @@ def construct_input_vector(target, spiderbot_pose_msg, device):
         )
     data.extend(
         [
-            spiderbot_pose_msg.torque,
+            spiderbot_pose_msg.normalized_torque,
         ]
     )
     data = torch.tensor(data, dtype=torch.float32, device=device)

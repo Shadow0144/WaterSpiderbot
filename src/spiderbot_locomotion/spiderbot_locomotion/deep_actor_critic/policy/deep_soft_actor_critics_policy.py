@@ -62,8 +62,8 @@ class DeepSoftActorCriticsPolicy():
 
         self.are_actions_normalized = True
 
-        self.batch_size = 100
-        self.buffer_size = 10_000
+        self.batch_size = 256
+        self.buffer_size = 2_048
         self.training_observations = deque(maxlen=self.buffer_size)
         self.current_training_observation = None
 
@@ -84,26 +84,37 @@ class DeepSoftActorCriticsPolicy():
     def _determine_layer_sizes(self):
         """Set all the layer sizes."""
         # Inputs:
-        #  target_x, target_y, target_theta,
-        #  body_x, body_y, body_z,
-        #  body_rx, body_ry, body_rz, body_rw,
+        #  dist_x, dist_y,
+        #  height,
+        #  dist_theta,
+        #  roll, pitch, yaw,
         #  body_vx, body_vy, body_vz
         #  body_vrp, body_vrr, body_vry,
-        #  tendon_tension,
+        #  tendon_slide_action,
         #  for each leg: # 8
         #   leg_q1, leg_q2, leg_q3, leg_q3,
         #   leg_vq1, leg_vq2, leg_vq3, leg_vq3,
         #   claw_x, claw_y, claw_z,
         #   claw_rx, claw_ry, claw_rz,
-        #  torque
+        #  normalized_torque
         # Outputs:
-        # tendon_tension,
+        # tendon_slide_action,
         # for each leg: # 8
         #  leg_q1, leg_q2, leg_q3, leg_q4
 
         self.num_frames_k = 100  # Number of frames in each state
 
-        self.num_actor_inputs = 3 + 13 + 1 + (8 * 14) + 1  # 130
+        self.num_actor_inputs = (
+            2 +
+            1 +
+            1 +
+            3 +
+            3 +
+            3 +
+            1 +
+            (8 * 14) +
+            1
+        )  # 130
         self.num_actor_inputs_k = self.num_actor_inputs * self.num_frames_k
         self.num_actor_feature_hiddens = 512
         self.num_actor_recurrent_hiddens = 256
@@ -283,7 +294,7 @@ class DeepSoftActorCriticsPolicy():
         self.target = target
         self.reward_function.set_target(self.target)
 
-    def select_action(self, spiderbot_pose_msg, deterministic=False):
+    def select_action(self, spiderbot_pose_msg, deterministic=True):
         """Select the next action."""
         if self.target is None:
             return None  # Exit early if there is no target
@@ -302,7 +313,7 @@ class DeepSoftActorCriticsPolicy():
         action_t_np = None
         with torch.no_grad():
             action_distribution_t = self.actor(state_t)
-            action_t = action_distribution_t.mode
+            action_t = action_distribution_t.mean
             bounded_action_t = torch.tanh(action_t)
             action_t_np = bounded_action_t.squeeze(0).cpu().numpy()
         return action_t_np

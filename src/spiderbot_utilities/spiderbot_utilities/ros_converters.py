@@ -88,10 +88,10 @@ def construct_leg_pose_msg(leg, leg_name):
 def construct_pose_msg(
         timestamp,
         body,
-        tendon_tension,
+        tendon_slide_action,
         leg_names,
         legs,
-        torque
+        normalized_torque
         ):
     """Construct a SpiderbotPose message."""
     msg = SpiderbotPose()
@@ -99,14 +99,14 @@ def construct_pose_msg(
     msg.body_odometry = create_odometry(
         body
     )
-    msg.tendon_tension = tendon_tension
+    msg.tendon_slide_action = tendon_slide_action
     leg_poses = []
     for leg_name in leg_names:
         leg_poses.append(construct_leg_pose_msg(
             legs[leg_name], leg_name
         ))
     msg.leg_poses = leg_poses
-    msg.torque = torque
+    msg.normalized_torque = normalized_torque
     return msg
 
 
@@ -127,7 +127,7 @@ def construct_target_pose_msg_from_legs(timestamp, leg_names, legs):
 def construct_target_pose_msg(
         timestamp,
         actions_normalized,
-        tendon_tension,
+        tendon_slide_action,
         leg_names,
         target_qposes
         ):
@@ -135,7 +135,7 @@ def construct_target_pose_msg(
     msg = SpiderbotTargetPose()
     msg.timestamp = timestamp
     msg.actions_normalized = actions_normalized
-    msg.tendon_tension = tendon_tension
+    msg.tendon_slide_action = tendon_slide_action
     leg_poses = []
     for leg_name in leg_names:
         qposes = target_qposes[leg_name]

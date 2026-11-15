@@ -1,5 +1,5 @@
 float64 timestamp
 nav_msgs/Odometry body_odometry
-float32 tendon_tension
+float32 tendon_slide_action
 LegPose[] leg_poses
-float32 torque
+float32 normalized_torque
