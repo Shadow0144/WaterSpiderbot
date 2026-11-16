@@ -235,3 +235,6 @@ Makefile
 *.a
 *.o
 *.dylib
+
+# Windows
+*:Zone.Identifier
