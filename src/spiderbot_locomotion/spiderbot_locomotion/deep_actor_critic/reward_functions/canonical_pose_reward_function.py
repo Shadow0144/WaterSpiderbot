@@ -19,7 +19,7 @@ class CanonicalPoseRewardFunction():
         self.episode_terminated = False
 
         # Convergence parameters
-        self.distance_convergence = 0.05
+        self.distance_convergence = 0.1
         self.angle_convergence = 0.05
 
         # Hyperparameters for ranges
