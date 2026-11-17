@@ -117,15 +117,15 @@ class Controller:
             self.pressed_keys['backward'] = False
         # Left
         if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]:
-            target_x += self.keyboard_step_x * sin_yaw
-            target_y -= self.keyboard_step_y * cos_yaw
+            target_x -= self.keyboard_step_x * sin_yaw
+            target_y += self.keyboard_step_y * cos_yaw
             self.pressed_keys['left'] = True
         else:
             self.pressed_keys['left'] = False
         # Right
         if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
-            target_x -= self.keyboard_step_x * sin_yaw
-            target_y += self.keyboard_step_y * cos_yaw
+            target_x += self.keyboard_step_x * sin_yaw
+            target_y -= self.keyboard_step_y * cos_yaw
             self.pressed_keys['right'] = True
         else:
             self.pressed_keys['right'] = False
