@@ -9,6 +9,8 @@ import mujoco
 
 from nav_msgs.msg import Odometry
 
+import numpy as np
+
 from spiderbot_interfaces.msg import LegPose
 from spiderbot_interfaces.msg import LegTargets
 from spiderbot_interfaces.msg import SpiderbotPose
@@ -47,15 +49,21 @@ def create_odometry(body):
         z=float(body.xquat[3]),
         w=float(body.xquat[0])
     )
-    msg.twist.twist.angular = Vector3(
-        x=float(body.cvel[0]),
-        y=float(body.cvel[1]),
-        z=float(body.cvel[2])
-    )
+    # Transform the velocities into local space
+    rotation = np.array(body.xmat).reshape(3, 3)
+    lin_vel_world = np.array([body.cvel[3], body.cvel[4], body.cvel[5]])
+    ang_vel_world = np.array([body.cvel[0], body.cvel[1], body.cvel[2]])
+    lin_vel_body = rotation.T @ lin_vel_world
+    ang_vel_body = rotation.T @ ang_vel_world
     msg.twist.twist.linear = Vector3(
-        x=float(body.cvel[3]),
-        y=float(body.cvel[4]),
-        z=float(body.cvel[5])
+        x=float(lin_vel_body[0]),
+        y=float(lin_vel_body[1]),
+        z=float(lin_vel_body[2])
+    )
+    msg.twist.twist.angular = Vector3(
+        x=float(ang_vel_body[0]),
+        y=float(ang_vel_body[1]),
+        z=float(ang_vel_body[2])
     )
     return msg
 
@@ -64,8 +72,6 @@ def construct_leg_pose_msg(leg, leg_name):
     """Construct a LegPose message."""
     qposes = leg.get_qposes()
     qvels = leg.get_qvels()
-    xyz = leg.get_claw_xyz()
-    rpy = leg.get_claw_rpy()
     leg_pose = LegPose()
     leg_pose.leg_name = leg_name
     leg_pose.coxa_qpos = qposes[0]
@@ -76,12 +82,6 @@ def construct_leg_pose_msg(leg, leg_name):
     leg_pose.femur_qvel = qvels[1]
     leg_pose.tibia_qvel = qvels[2]
     leg_pose.tarsus_qvel = qvels[3]
-    leg_pose.claw_x = xyz[0]
-    leg_pose.claw_y = xyz[1]
-    leg_pose.claw_z = xyz[2]
-    leg_pose.claw_roll = rpy[0]
-    leg_pose.claw_pitch = rpy[1]
-    leg_pose.claw_yaw = rpy[2]
     return leg_pose
 
 

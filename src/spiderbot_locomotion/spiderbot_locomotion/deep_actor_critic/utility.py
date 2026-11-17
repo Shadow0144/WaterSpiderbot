@@ -62,19 +62,8 @@ def construct_input_vector(target, spiderbot_pose_msg, device):
                 leg_pose.femur_qvel,
                 leg_pose.tibia_qvel,
                 leg_pose.tarsus_qvel,
-                leg_pose.claw_x,
-                leg_pose.claw_y,
-                leg_pose.claw_z,
-                leg_pose.claw_roll,
-                leg_pose.claw_pitch,
-                leg_pose.claw_yaw,
             ]
         )
-    data.extend(
-        [
-            spiderbot_pose_msg.normalized_torque,
-        ]
-    )
     data = torch.tensor(data, dtype=torch.float32, device=device)
     data = data.unsqueeze(0)
     return data

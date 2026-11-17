@@ -94,9 +94,6 @@ class DeepSoftActorCriticsPolicy():
         #  for each leg: # 8
         #   leg_q1, leg_q2, leg_q3, leg_q3,
         #   leg_vq1, leg_vq2, leg_vq3, leg_vq3,
-        #   claw_x, claw_y, claw_z,
-        #   claw_rx, claw_ry, claw_rz,
-        #  normalized_torque
         # Outputs:
         # tendon_slide_action,
         # for each leg: # 8
@@ -112,9 +109,14 @@ class DeepSoftActorCriticsPolicy():
             3 +
             3 +
             1 +
-            (8 * 14) +
-            1
-        )  # 130
+            (
+                8 *
+                (
+                    4 +
+                    4
+                )
+            )
+        )  # 46
         self.num_actor_inputs_k = self.num_actor_inputs * self.num_frames_k
         self.num_actor_feature_hiddens = 512
         self.num_actor_recurrent_hiddens = 256
@@ -294,7 +296,7 @@ class DeepSoftActorCriticsPolicy():
         self.target = target
         self.reward_function.set_target(self.target)
 
-    def select_action(self, spiderbot_pose_msg, deterministic=True):
+    def select_action(self, spiderbot_pose_msg, deterministic=False):
         """Select the next action."""
         if self.target is None:
             return None  # Exit early if there is no target

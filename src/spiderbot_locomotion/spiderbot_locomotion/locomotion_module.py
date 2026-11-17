@@ -109,30 +109,22 @@ class LocomotionModule():
         """Walk the spiderbot towards its target."""
         self._update_delta_time(spiderbot_pose_msg)
 
+        action_t = None
         if not self.training:
             action_t = self.policy.select_action(
                 spiderbot_pose_msg
             )
-            if action_t is not None:
-                self.publish_target_pose(
-                    topic_prefix,
-                    action_t
-                )
         else:
-            action_t, training_status = self.train_step(
+            action_t = self.train_step(
                 topic_prefix,
                 spiderbot_pose_msg
             )
-            if action_t is not None:
-                self.publish_target_pose(
-                    topic_prefix,
-                    action_t
-                )
-            if training_status is not None:
-                self.publish_training_status(
-                    topic_prefix,
-                    training_status
-                )
+
+        if action_t is not None:
+            self.publish_target_pose(
+                topic_prefix,
+                action_t
+            )
 
     def train_step(self, topic_prefix, spiderbot_pose_msg):
         """Perform a single training step."""
@@ -143,7 +135,7 @@ class LocomotionModule():
         )
 
         if not training_status:
-            return None, None
+            return None
 
         training_status.using_population_training = (
             self.using_population_training
@@ -180,7 +172,7 @@ class LocomotionModule():
                     throttle_duration_sec=1.0
                 )
 
-        return action_t, training_status
+        return action_t
 
     def publish_target_pose(self, topic_prefix, action_t):
         """Publish target action_t for the leg actuators."""

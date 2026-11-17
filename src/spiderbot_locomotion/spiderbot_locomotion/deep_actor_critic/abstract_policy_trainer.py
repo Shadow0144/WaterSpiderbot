@@ -120,8 +120,8 @@ class AbstractPolicyTrainer(ABC):
                     candidate.load_model_weights()
 
             self.logger.info('Loaded population')
-        except (RuntimeError, FileNotFoundError):
-            self.logger.warning('Failed to load population')
+        except (RuntimeError, FileNotFoundError) as e:
+            self.logger.warning(f'Failed to load population: {e}')
 
     def delete_population_checkpoint(self):
         """Delete a population checkpoint file."""
