@@ -101,35 +101,41 @@ class Controller:
         cos_yaw = math.cos(self.spiderbot_yaw)
         sin_yaw = math.sin(self.spiderbot_yaw)
         keys_pressed = pygame.key.get_pressed()
+        # Forward
         if keys_pressed[pygame.K_w] or keys_pressed[pygame.K_UP]:
             target_x += self.keyboard_step_x * cos_yaw
             target_y += self.keyboard_step_y * sin_yaw
             self.pressed_keys['forward'] = True
         else:
             self.pressed_keys['forward'] = False
-        if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]:
-            target_x += self.keyboard_step_x * sin_yaw
-            target_y += self.keyboard_step_y * cos_yaw
-            self.pressed_keys['left'] = True
-        else:
-            self.pressed_keys['left'] = False
+        # Back
         if keys_pressed[pygame.K_s] or keys_pressed[pygame.K_DOWN]:
             target_x -= self.keyboard_step_x * cos_yaw
             target_y -= self.keyboard_step_y * sin_yaw
             self.pressed_keys['backward'] = True
         else:
             self.pressed_keys['backward'] = False
+        # Left
+        if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]:
+            target_x += self.keyboard_step_x * sin_yaw
+            target_y -= self.keyboard_step_y * cos_yaw
+            self.pressed_keys['left'] = True
+        else:
+            self.pressed_keys['left'] = False
+        # Right
         if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]:
             target_x -= self.keyboard_step_x * sin_yaw
-            target_y -= self.keyboard_step_y * cos_yaw
+            target_y += self.keyboard_step_y * cos_yaw
             self.pressed_keys['right'] = True
         else:
             self.pressed_keys['right'] = False
+        # Counterclockwise
         if keys_pressed[pygame.K_q] or keys_pressed[pygame.K_RCTRL]:
             target_theta += self.keyboard_step_theta
             self.pressed_keys['counterclockwise'] = True
         else:
             self.pressed_keys['counterclockwise'] = False
+        # Clockwise
         if keys_pressed[pygame.K_e] or keys_pressed[pygame.K_KP0]:
             target_theta -= self.keyboard_step_theta
             self.pressed_keys['clockwise'] = True
