@@ -27,6 +27,16 @@ class TargetGeneratorNode(Node):
             'Starting spiderbot training target generator node'
         )
 
+        self.declare_parameter('stationary_target', True)
+        self.stationary_target = self.get_parameter(
+            'stationary_target'
+        ).get_parameter_value().bool_value
+
+        self.declare_parameter('relative_target', False)
+        self.relative_target = self.get_parameter(
+            'relative_target'
+        ).get_parameter_value().bool_value
+
         self.last_timestamp = -1
 
         self.training_started = False
@@ -48,7 +58,6 @@ class TargetGeneratorNode(Node):
         )
 
         # Target parameters
-        self.stationary_target = False
         if self.stationary_target:
             self.distance_scaling = 0.0
             self.rotation_half_range = 0.0
@@ -60,6 +69,10 @@ class TargetGeneratorNode(Node):
             self.direction_jitter_half_range = math.pi / 16.0
             self.rotation_jitter_half_range = math.pi / 32.0
         self.create_new_target_on_reaching = not self.train_parallel and False
+
+        self.targets = {}
+        for topic_prefix in self.topic_prefixes:
+            self.targets[topic_prefix] = [0.0, 0.0, 0.0]
 
         self.waiting_for_simulation_reply = True
         self.waiting_for_locomotion_reply = True
@@ -256,46 +269,79 @@ class TargetGeneratorNode(Node):
             self.num_targets_remaining -= 1
 
             for topic_prefix in self.topic_prefixes:
-                if self.new_episode:
-                    self.episode_directions[topic_prefix] = random.uniform(
-                        0.0, 2.0 ** math.pi
-                    )
-                    self.episode_rotations[topic_prefix] = (
-                        random.uniform(
-                            -self.rotation_half_range, self.rotation_half_range
+                if self.stationary_target:
+                    self.targets[topic_prefix] = [
+                        0.0,
+                        0.0,
+                        0.0
+                    ]
+                else:
+                    if self.new_episode:
+                        self.episode_directions[topic_prefix] = random.uniform(
+                            0.0, 2.0 ** math.pi
+                        )
+                        self.episode_rotations[topic_prefix] = (
+                            random.uniform(
+                                -self.rotation_half_range,
+                                +self.rotation_half_range
+                            )
+                        )
+
+                    direction = (
+                        self.episode_directions[topic_prefix] + random.uniform(
+                            -self.direction_jitter_half_range,
+                            self.direction_jitter_half_range
                         )
                     )
+                    direction_x = math.cos(direction) * self.distance_scaling
+                    direction_y = math.sin(direction) * self.distance_scaling
+                    if self.relative_target:
+                        target_x = (
+                            self.spiderbot_body_xs[topic_prefix] + direction_x
+                        )
+                        target_y = (
+                            self.spiderbot_body_ys[topic_prefix] + direction_y
+                        )
 
-                direction = (
-                    self.episode_directions[topic_prefix] + random.uniform(
-                        -self.direction_jitter_half_range,
-                        self.direction_jitter_half_range
-                    )
-                )
-                direction_x = math.cos(direction) * self.distance_scaling
-                direction_y = math.sin(direction) * self.distance_scaling
-                target_x = (
-                    self.spiderbot_body_xs[topic_prefix] + direction_x
-                )
-                target_y = (
-                    self.spiderbot_body_ys[topic_prefix] + direction_y
-                )
+                        rotation = (
+                            self.episode_rotations[topic_prefix] +
+                            random.uniform(
+                                -self.rotation_jitter_half_range,
+                                +self.rotation_jitter_half_range
+                            )
+                        )
+                        target_angle = (
+                            self.spiderbot_yaws[topic_prefix] + rotation
+                        )
+                    else:
+                        target_x = (
+                            self.targets[topic_prefix][0] + direction_x
+                        )
+                        target_y = (
+                            self.targets[topic_prefix][1] + direction_y
+                        )
 
-                rotation = (
-                    self.episode_rotations[topic_prefix] + random.uniform(
-                        -self.rotation_jitter_half_range,
-                        self.rotation_jitter_half_range
-                    )
+                        rotation = (
+                            self.episode_rotations[topic_prefix] +
+                            random.uniform(
+                                -self.rotation_jitter_half_range,
+                                +self.rotation_jitter_half_range
+                            )
+                        )
+                        target_angle = (
+                            self.targets[topic_prefix][2] + rotation
+                        )
+
+                    self.targets[topic_prefix] = [
+                        target_x,
+                        target_y,
+                        target_angle
+                    ]
+
+                self._set_target(
+                    topic_prefix,
+                    self.targets[topic_prefix]
                 )
-                target_angle = self.spiderbot_yaws[topic_prefix] + rotation
-
-                target = [
-                    target_x,
-                    target_y,
-                    target_angle
-                ]
-
-                self._set_target(topic_prefix, target)
 
             self.new_episode = False
             self.time_left_to_reach_target_s = self.time_to_reach_target_s

@@ -6,7 +6,16 @@ Provides high-level planning and goal setting for a Spiderbot. Currently, just g
 
 ### target_generator_node
 
-Provides the training targets and times.
+Provides training information and targets for training the Spiderbot locomotion module.
+
+- Parameters:
+ * stationary_target -> bool
+  If True, each target will generate with a position and rotation offset of [0.0, 0.0, 0.0];
+  if False, each target will generate with an offset from the previous target plus some jitter,
+  the offset changes every episode
+ * relative_target -> bool
+ If True, each target will generate relative to the Spiderbot's current position and rotation;
+ if False, each target will generate relative to world origin
 
 - Publishers:
  * target -> Target
