@@ -2,6 +2,8 @@
 
 import mujoco
 
+import numpy as np
+
 from .camera_overlay import CameraOverlay
 from .scene_overlay import SceneOverlay
 
@@ -181,6 +183,36 @@ class Scene():
         """Enable displaying the step reward and update it."""
         self.scene_overlay.update_training_status(
             training_status_msg
+        )
+
+    def update_spiderbot_pose(self, spiderbot_pose_msg):
+        """Enable displaying the Spiderbots' pose information and update it."""
+        body_odometry = spiderbot_pose_msg.body_odometry
+        body_pose = body_odometry.pose.pose.position
+        body_orientation = body_odometry.pose.pose.orientation
+        qx = body_orientation.x
+        qy = body_orientation.y
+        qz = body_orientation.z
+        qw = body_orientation.w
+        yaw = np.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy**2 + qz**2))
+        spiderbot_pose = [
+            body_pose.x,
+            body_pose.y,
+            yaw
+        ]
+        self.scene_overlay.update_spiderbot_pose(
+                spiderbot_pose
+        )
+
+    def update_target(self, target_msg):
+        """Enable displaying the targets' information and update it."""
+        target = [
+            target_msg.target_x,
+            target_msg.target_y,
+            target_msg.target_theta
+        ]
+        self.scene_overlay.update_target(
+            target
         )
 
     def update_scene(self, viewer_config):

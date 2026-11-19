@@ -2,6 +2,8 @@
 
 import mujoco
 
+import numpy as np
+
 
 class SceneOverlay():
     """Overlay."""
@@ -36,6 +38,16 @@ class SceneOverlay():
         self.num_targets_per_episode = 0
         self.num_episodes_per_candidate = 0
         self.num_candidates_per_generation = 0
+
+        self.displaying_pose_information = False
+        self.spiderbot_pose = None
+        self.spiderbot_pose_str = None
+        self.displaying_target_information = False
+        self.target = None
+        self.target_str = None
+        self.displaying_distance_information = False
+        self.distance = None
+        self.distance_str = None
 
         self.reward_component_labels = None
         self.reward_component_values = None
@@ -78,12 +90,68 @@ class SceneOverlay():
         component_values = training_status_msg.reward_component_values
         # Convert to strings with 3 decimal places
         self.reward_component_values = (
-            [f'{component_value:.3f}'
-             for component_value in
-             component_values]
+            [
+                f'{component_value:.3f}'
+                for component_value in
+                component_values
+            ]
         )
         self.target_reached = training_status_msg.target_reached
         self.episode_terminated = training_status_msg.episode_terminated
+
+    def update_spiderbot_pose(self, spiderbot_pose):
+        """Enable displaying the Spiderbots' pose information and update it."""
+        self.displaying_pose_information = True
+        self.spiderbot_pose = spiderbot_pose
+        # Convert to strings with 3 decimal places
+        spiderbot_pose_str = (
+            [
+                f'{spiderbot_pose_value:.3f}'
+                for spiderbot_pose_value in
+                self.spiderbot_pose
+            ]
+        )
+        self.spiderbot_pose_str = f"[{', '.join(spiderbot_pose_str)}]"
+        self._calculate_distance()
+
+    def update_target(self, target):
+        """Enable displaying the targets' information and update it."""
+        self.displaying_target_information = True
+        self.target = target
+        # Convert to strings with 3 decimal places
+        target_str = (
+            [
+                f'{target_value:.3f}'
+                for target_value in
+                self.target
+            ]
+        )
+        self.target_str = f"[{', '.join(target_str)}]"
+        self._calculate_distance()
+
+    def _calculate_distance(self):
+        """Attempt to calculate the distance to the target."""
+        if self.spiderbot_pose is not None and self.target is not None:
+            self.displaying_distance_information = True
+            linear_distance = (
+                np.hypot(
+                    self.spiderbot_pose[0] - self.target[0],
+                    self.spiderbot_pose[1] - self.target[1]
+                )
+            )
+            angular_distance = abs(np.atan2(
+                np.sin(self.spiderbot_pose[2] - self.target[2]),
+                np.cos(self.spiderbot_pose[2] - self.target[2])
+            ))
+            self.distance = [linear_distance, angular_distance]
+            distance_str = (
+                [
+                    f'{distance_value:.3f}'
+                    for distance_value in
+                    self.distance
+                ]
+            )
+            self.distance_str = f"[{', '.join(distance_str)}]"
 
     def add_overlays(self, viewer_config):
         """Add the viewer settings and training overlays to the viewport."""
@@ -191,6 +259,37 @@ class SceneOverlay():
                 self.viewport,
                 '\n'.join(reward_component_labels),
                 '\n'.join(reward_component_values),
+                self.viewer_context
+            )
+
+        pose_information_labels = []
+        pose_information_values = []
+        if (
+            self.displaying_pose_information and
+            self.spiderbot_pose_str is not None
+        ):
+            pose_information_labels.append('Spiderbot [x, y, theta]:')
+            pose_information_values.append(self.spiderbot_pose_str)
+        if (
+            self.displaying_target_information and
+            self.target_str is not None
+        ):
+            pose_information_labels.append('Target [x, y, theta]:')
+            pose_information_values.append(self.target_str)
+        if (
+            self.displaying_distance_information and
+            self.distance_str is not None
+        ):
+            pose_information_labels.append('Distance [linear, angular]:')
+            pose_information_values.append(self.distance_str)
+
+        if pose_information_labels and pose_information_values:
+            mujoco.mjr_overlay(
+                mujoco.mjtFont.mjFONT_NORMAL,
+                mujoco.mjtGridPos.mjGRID_BOTTOMLEFT,
+                self.viewport,
+                '\n'.join(pose_information_labels),
+                '\n'.join(pose_information_values),
                 self.viewer_context
             )
 

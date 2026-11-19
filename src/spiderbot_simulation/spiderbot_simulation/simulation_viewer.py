@@ -274,6 +274,20 @@ class SimulationViewer():
                 training_status_msg
             )
 
+    def update_spiderbot_pose(self, topic_prefix, spiderbot_pose):
+        """Enable displaying the Spiderbots' pose information and update it."""
+        if topic_prefix in self.scenes.keys():
+            self.scenes[topic_prefix].update_spiderbot_pose(
+                spiderbot_pose
+            )
+
+    def update_target(self, topic_prefix, target):
+        """Enable displaying the targets' information and update it."""
+        if topic_prefix in self.scenes.keys():
+            self.scenes[topic_prefix].update_target(
+                target
+            )
+
     def update(self, current_timestamp):
         """Update the render if enough time has elapsed."""
         if (current_timestamp - self.last_render_time) >= self.render_interval:

@@ -259,6 +259,7 @@ class SimulationNode(Node):
         """Move the target to the location and make it visible."""
         if topic_prefix in self.simulated_spiderbots.keys():
             self.simulated_spiderbots[topic_prefix].set_target(msg)
+            self.viewer.update_target(topic_prefix, msg)
 
     def target_number_callback(self, topic_prefix, msg):
         """Update the viewer with the current target number."""
@@ -284,10 +285,14 @@ class SimulationNode(Node):
                 topic_prefix in self.spiderbot_pose_publishers.keys()
             ):
                 spiderbot = self.simulated_spiderbots[topic_prefix]
+                spiderbot_pose_msg = spiderbot.create_pose_message(
+                    self.last_timestamp
+                )
                 self.spiderbot_pose_publishers[topic_prefix].publish(
-                    spiderbot.create_pose_message(
-                        self.last_timestamp
-                    )
+                    spiderbot_pose_msg
+                )
+                self.viewer.update_spiderbot_pose(
+                    topic_prefix, spiderbot_pose_msg
                 )
 
     def update(self):
