@@ -6,8 +6,11 @@ import mujoco
 
 import numpy as np
 
-import spiderbot_utilities as utils
-from spiderbot_utilities import SpiderLeg
+from spiderbot_common import (
+    SpiderLeg,
+    construct_pose_msg,
+    convert_vector3_to_list
+)
 
 
 class SimulatedSpiderbot():
@@ -156,7 +159,7 @@ class SimulatedSpiderbot():
             # Move the mocap to the target point
             self.legs[leg_name].set_mocap_target_visible(True)
             self.legs[leg_name].set_mocap_target(
-                utils.convert_vector3_to_list(leg_targets[leg_name])
+                convert_vector3_to_list(leg_targets[leg_name])
             )
 
     def set_target_pose(self, target_pose_msg):
@@ -239,7 +242,7 @@ class SimulatedSpiderbot():
 
     def create_pose_message(self, last_timestamp):
         """Get the pose as a message."""
-        spiderbot_pose_msg = utils.construct_pose_msg(
+        spiderbot_pose_msg = construct_pose_msg(
             last_timestamp,
             self.body,
             self._get_tendon_action(),

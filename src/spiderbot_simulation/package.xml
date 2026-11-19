@@ -8,7 +8,7 @@
   <license>MIT</license>
 
   <exec_depend>spiderbot_description</exec_depend>
-  <exec_depend>spiderbot_utilities</exec_depend>
+  <exec_depend>spiderbot_common</exec_depend>
   
   <exec_depend>spiderbot_interfaces</exec_depend>
   <exec_depend>std_msgs</exec_depend>

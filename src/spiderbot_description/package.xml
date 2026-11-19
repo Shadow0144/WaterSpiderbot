@@ -7,7 +7,7 @@
   <maintainer email="1351027+Shadow0144@users.noreply.github.com">Shadow0144</maintainer>
   <license>MIT</license>
 
-  <exec_depend>spiderbot_utilities</exec_depend>
+  <exec_depend>spiderbot_common</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

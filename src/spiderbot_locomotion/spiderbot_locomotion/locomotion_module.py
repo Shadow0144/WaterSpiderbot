@@ -2,7 +2,10 @@
 
 import time
 
-import spiderbot_utilities as utils
+from spiderbot_common import (
+    construct_target_pose_msg,
+    convert_spiderbot_description_to_variables
+)
 
 from .deep_actor_critic.parallel_policy_trainer import ParallelPolicyTrainer
 from .deep_actor_critic.policy.deep_soft_actor_critics_policy import (
@@ -36,7 +39,7 @@ class LocomotionModule():
             self.data,
             self.body,
             self.legs
-        ) = utils.convert_spiderbot_description_to_variables(
+        ) = convert_spiderbot_description_to_variables(
             self.spiderbot_description
         )
 
@@ -186,7 +189,7 @@ class LocomotionModule():
             target_action_t_per_leg[leg_name] = (
                 [float(x) for x in action_t[index:(index + num_segments)]]
             )
-        msg = utils.construct_target_pose_msg(
+        msg = construct_target_pose_msg(
                     time.time(),
                     self.are_actions_normalized,
                     tendon_slide_action,

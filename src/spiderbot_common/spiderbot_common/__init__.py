@@ -1,4 +1,4 @@
-"""Spiderbot utilities."""
+"""Spiderbot common classes and utilities."""
 
 from .converters import matrix_to_rpy
 from .converters import rpy_to_matrix

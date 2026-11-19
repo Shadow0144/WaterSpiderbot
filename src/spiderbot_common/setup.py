@@ -2,7 +2,7 @@
 
 from setuptools import find_packages, setup
 
-package_name = 'spiderbot_utilities'
+package_name = 'spiderbot_common'
 
 setup(
     name=package_name,
@@ -17,7 +17,7 @@ setup(
     zip_safe=True,
     maintainer='shadow0144',
     maintainer_email='1351027+Shadow0144@users.noreply.github.com',
-    description='Spiderbot utilities',
+    description='Spiderbot common',
     license='MIT',
     extras_require={
         'test': [
