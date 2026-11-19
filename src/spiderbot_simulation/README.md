@@ -17,9 +17,9 @@ Provides a simulation of the Spiderbot.
  Updates the visualization of the x,y,z targets for the end effector of the Spiderbot legs
  * spiderbot_target_pose -> SpiderbotTargetPose
  Sets the target actions for the actuators of the simulated Spiderbot
- * target -> Target
+ * locomotion_target -> LocomotionTarget
  Updates the visualization of where the Spiderbot's target (position and facing) is
- * target_number -> Int32
+ * locomotion_target_number -> Int32
  Updates the overlays with information on the current target's number in the episode
  * training_status -> TrainingStatus
  Updates the overlays with information on the current status of the training

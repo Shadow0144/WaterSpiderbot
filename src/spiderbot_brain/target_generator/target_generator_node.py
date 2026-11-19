@@ -6,8 +6,8 @@ from functools import partial
 
 from rclpy.node import Node
 
+from spiderbot_interfaces.msg import LocomotionTarget
 from spiderbot_interfaces.msg import SpiderbotPose
-from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.msg import TrainingStatus
 from spiderbot_interfaces.srv import GetTrainingConfiguration
 
@@ -57,7 +57,7 @@ class TargetGeneratorNode(Node):
             ['']
         )
 
-        # Target parameters
+        # Locomotion target parameters
         if self.stationary_target:
             self.distance_scaling = 0.0
             self.rotation_half_range = 0.0
@@ -141,8 +141,8 @@ class TargetGeneratorNode(Node):
         for topic_prefix in self.topic_prefixes:
             self.target_publishers[topic_prefix] = (
                 self.create_publisher(
-                    Target,
-                    f'{topic_prefix}target',
+                    LocomotionTarget,
+                    f'{topic_prefix}locomotion_target',
                     10
                 )
             )
@@ -150,7 +150,7 @@ class TargetGeneratorNode(Node):
             self.target_number_publishers[topic_prefix] = (
                 self.create_publisher(
                     Int32,
-                    f'{topic_prefix}target_number',
+                    f'{topic_prefix}locomotion_target_number',
                     10
                 )
             )
@@ -374,7 +374,7 @@ class TargetGeneratorNode(Node):
 
     def _set_target(self, topic_prefix, target):
         """Publish a new training target."""
-        target_message = Target()
+        target_message = LocomotionTarget()
         target_message.target_x = target[0]
         target_message.target_y = target[1]
         target_message.target_theta = target[2]

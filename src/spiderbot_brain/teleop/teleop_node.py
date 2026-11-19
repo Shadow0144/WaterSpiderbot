@@ -2,8 +2,8 @@
 
 from rclpy.node import Node
 
+from spiderbot_interfaces.msg import LocomotionTarget
 from spiderbot_interfaces.msg import SpiderbotPose
-from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.srv import GetTrainingConfiguration
 
 from .controller import Controller
@@ -19,8 +19,8 @@ class TeleopNode(Node):
         self.controller = Controller(self)
 
         self.target_publisher = self.create_publisher(
-            Target,
-            'target',
+            LocomotionTarget,
+            'locomotion_target',
             10
         )
 
@@ -57,7 +57,7 @@ class TeleopNode(Node):
 
     def set_target(self, target):
         """Publish a new target."""
-        msg = Target()
+        msg = LocomotionTarget()
         msg.target_x = target[0]
         msg.target_y = target[1]
         msg.target_theta = target[2]

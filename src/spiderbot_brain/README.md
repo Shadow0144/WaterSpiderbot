@@ -18,10 +18,10 @@ Provides training information and targets for training the Spiderbot locomotion 
  if False, each target will generate relative to world origin
 
 - Publishers:
- * target -> Target
+ * locomotion_target -> LocomotionTarget
   Publishes a target position (x, y) and facing (yaw) for the Spiderbot to locomote toward
- * target_number -> Int32
-  Publishes the number of the current target in the episode
+ * locomotion_target_number -> Int32
+  Publishes the number of the current locomotion target in the episode
  * start_training_episode -> Empty
   Starts a new training episode in the locomotion node
 
@@ -48,7 +48,7 @@ Provides training information and targets for training the Spiderbot locomotion 
 Provides an interface to teleoperate a Spiderbot.
 
 - Publishers:
- * target -> Target
+ * locomotion_target -> LocomotionTarget
   Publishes a target position (x, y) and facing (yaw) for the Spiderbot to locomote toward
 
 - Subscriptions:

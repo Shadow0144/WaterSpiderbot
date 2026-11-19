@@ -10,12 +10,12 @@ Provides the ROS 2 message, service, and action interface definitions.
  Provides a name, angle, and angular velocity for each of the leg actuators, as well as a position and orientation for the claw tip for a leg
 - LegTargets
  Provides a timestamp and a set of coordinate for each leg that the leg is trying to position the claw at
+- LocomotionTarget
+ Provides a target x- and y-coordinate and angle for the Spiderbot to reach
 - SpiderbotPose
  Provides a timestamp, a position and orientation of the Spiderbot body, and a pose for each of the legs
 - SpiderbotTargetPose
  Provides a timestamp and a target pose for each of the legs
-- Target
- Provides a target x- and y-coordinate and angle for the Spiderbot to reach
 - TrainingStatus
  Provides information on the current status of the train
 

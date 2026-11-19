@@ -6,9 +6,9 @@ import rclpy
 from rclpy.node import Node
 
 from spiderbot_interfaces.msg import LegTargets
+from spiderbot_interfaces.msg import LocomotionTarget
 from spiderbot_interfaces.msg import SpiderbotPose
 from spiderbot_interfaces.msg import SpiderbotTargetPose
-from spiderbot_interfaces.msg import Target
 from spiderbot_interfaces.msg import TrainingStatus
 from spiderbot_interfaces.srv import GetSpiderbotDescription
 from spiderbot_interfaces.srv import GetTrainingConfiguration
@@ -191,8 +191,8 @@ class LocomotionNode(Node):
             )
             self.target_subscriptions[topic_prefix] = (
                 self.create_subscription(
-                    Target,
-                    f'{topic_prefix}target',
+                    LocomotionTarget,
+                    f'{topic_prefix}locomotion_target',
                     target_callback_full,
                     10
                 )

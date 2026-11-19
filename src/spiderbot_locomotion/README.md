@@ -31,7 +31,7 @@ Learned model weights are stored in the install/spiderbot_locomotion/share/spide
 - Subscriptions:
  * spiderbot_pose -> SpiderbotPose
   Listens for the current pose of the Spiderbot
- * target -> Target
+ * locomotion_target -> LocomotionTarget
   Listens for a new training target to start a new training episode
 
 - Services:
